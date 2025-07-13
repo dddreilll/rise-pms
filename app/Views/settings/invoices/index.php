@@ -25,7 +25,7 @@
                             <div class="form-group">
                                 <div class="row">
                                     <label for="invoice_prefix" class=" col-md-2"><?php echo app_lang('invoice_prefix'); ?></label>
-                                    <div class=" col-md-10">
+                                    <div class=" col-md-4">
                                         <?php
                                         echo form_input(array(
                                             "id" => "invoice_prefix",
@@ -39,59 +39,60 @@
                                 </div>
                             </div>
 
-                            <?php
-                            $invoice_number_format_dropdown = array(
-                                "1_DIGITS" => "1",
-                                "2_DIGITS" => "01",
-                                "3_DIGITS" => "001",
-                                "4_DIGITS" => "0001",
-                                "5_DIGITS" => "00001",
-                                "YEAR-1_DIGITS" => "YYYY-1",
-                                "YEAR-2_DIGITS" => "YYYY-01",
-                                "YEAR-3_DIGITS" => "YYYY-001",
-                                "YEAR-4_DIGITS" => "YYYY-0001",
-                                "YEAR-5_DIGITS" => "YYYY-00001",
-                                "YEAR/1_DIGITS" => "YYYY/1",
-                                "YEAR/2_DIGITS" => "YYYY/01",
-                                "YEAR/3_DIGITS" => "YYYY/001",
-                                "YEAR/4_DIGITS" => "YYYY/0001",
-                                "YEAR/5_DIGITS" => "YYYY/00001"
-                            );
-                            ?>
                             <div class="form-group">
                                 <div class="row">
                                     <label for="invoice_number_format" class=" col-md-2"><?php echo app_lang('invoice_number_format'); ?></label>
 
-                                    <div class="col-md-3">
+                                    <div class=" col-md-4">
+                                        <div>
+                                            <?php
+                                            echo form_input(array(
+                                                "id" => "invoice_number_format",
+                                                "name" => "invoice_number_format",
+                                                "value" => get_setting("invoice_number_format"),
+                                                "class" => "form-control mb10",
+                                                "placeholder" => app_lang("invoice_number_format"),
+                                                "autocomplete" => "off",
+                                                "data-rule-required" => true,
+                                                "data-msg-required" => app_lang("field_required"),
+                                            ));
+                                            ?>
+                                        </div>
+                                        <div id="invoice-display-id-preview-section" class="ml10"></div>
+                                    </div>
+
+                                    <div class="col-md-6 cursor-default">
+                                        <span class="clickable invoice_number_format_variabls ml10">{YEAR}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{MONTH}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{SERIAL}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{2_DIGIT_SERIAL}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{3_DIGIT_SERIAL}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{4_DIGIT_SERIAL}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{5_DIGIT_SERIAL}</span>
+                                        <span class="clickable invoice_number_format_variabls ml10">{6_DIGIT_SERIAL}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="form-group" id="invoice-number-format-year-section">
+                                <div class="row">
+                                    <label for="year_based_on" class=" col-md-2"><?php echo app_lang('year_or_month_based_on'); ?></label>
+
+                                    <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                            "invoice_number_format",
-                                            $invoice_number_format_dropdown,
-                                            get_setting('invoice_number_format'),
-                                            "class='select2 mini' id='invoice_number_format'"
+                                            "year_based_on",
+                                            array("due_date" => app_lang("due_date"), "bill_date" => app_lang("bill_date")),
+                                            get_setting('year_based_on'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group <?php echo strpos(get_setting("invoice_number_format"), "YEAR") !== false ? '' : 'hide'; ?>" id="invoice-number-format-year-section">
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label for="year_based_on" class=" col-md-2"><?php echo app_lang('year_based_on'); ?></label>
 
-                                        <div class="col-md-10">
-                                            <?php
-                                            echo form_dropdown(
-                                                "year_based_on",
-                                                array("due_date" => app_lang("due_date"), "bill_date" => app_lang("bill_date")),
-                                                get_setting('year_based_on'),
-                                                "class='select2 mini'"
-                                            );
-                                            ?>
-                                        </div>
-                                    </div>
-                                </div>
-
+                            <div class="form-group" id="reset-invoice-number-section">
                                 <div class="row">
                                     <label for="reset_invoice_number_every_year" class="col-md-2"><?php echo app_lang('reset_invoice_number_every_year'); ?></label>
                                     <div class="col-md-10">
@@ -102,7 +103,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group <?php echo (strpos(get_setting("invoice_number_format"), "YEAR") !== false && get_setting("reset_invoice_number_every_year")) ? "hide" : "" ?>" id="initial-number-of-the-invoice">
+                            <div class="form-group" id="initial-number-of-the-invoice">
                                 <input type="hidden" id="last_invoice_id" name="last_invoice_id" value="<?php echo $last_id; ?>" />
                                 <div class="row">
                                     <label for="initial_number_of_the_invoice" class="col-md-2"><?php echo app_lang('initial_number_of_the_invoice'); ?></label>
@@ -217,7 +218,10 @@
                                             "id" => "invoice_footer",
                                             "name" => "invoice_footer",
                                             "value" => process_images_from_content(get_setting("invoice_footer"), false),
-                                            "class" => "form-control"
+                                            "class" => "form-control",
+                                            "data-toolbar" => "pdf_friendly_toolbar",
+                                            "data-height" => 100,
+                                            "data-encode_ajax_post_data" => "1"
                                         ));
                                         ?>
                                     </div>
@@ -238,26 +242,10 @@
 </div>
 <?php echo view("includes/cropbox"); ?>
 
-<?php
-load_css(array(
-    "assets/js/summernote/summernote.css"
-));
-load_js(array(
-    "assets/js/summernote/summernote.min.js"
-));
-?>
-
 <script type="text/javascript">
     $(document).ready(function() {
         $("#invoice-settings-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function(data) {
-                $.each(data, function(index, obj) {
-                    if (obj.name === "invoice_footer") {
-                        data[index]["value"] = encodeAjaxPostData(getWYSIWYGEditorHTML("#invoice_footer"));
-                    }
-                });
-            },
             onSuccess: function(result) {
                 if (result.success) {
                     appAlert.success(result.message, {
@@ -271,9 +259,7 @@ load_js(array(
 
         $("#invoice-settings-form .select2").select2();
 
-        initWYSIWYGEditor("#invoice_footer", {
-            height: 100
-        });
+        initWYSIWYGEditor("#invoice_footer");
 
         $(".cropbox-upload").change(function() {
             showCropBox(this);
@@ -304,27 +290,46 @@ load_js(array(
             maxFiles: 1
         });
 
-        $("#invoice_number_format").select2().on("change", function() {
-            var value = $(this).val();
+        var showHideInputFields = function() {
+            var value = $("#invoice_number_format").val() || "",
+                hasYear = value.includes("YEAR"),
+                hasMonth = value.includes("MONTH"),
+                $yearSection = $("#invoice-number-format-year-section"),
+                $resetSection = $("#reset-invoice-number-section"),
+                $initialNumber = $("#initial-number-of-the-invoice");
+
 
             // Check if the value includes "YEAR" and show/hide the year section accordingly
-            if (value.includes("YEAR")) {
-                $("#invoice-number-format-year-section").removeClass("hide");
-            } else {
-                $("#invoice-number-format-year-section").addClass("hide");
+            if (hasYear) {
+                $yearSection.removeClass("hide");
+                $resetSection.removeClass("hide");
+            }else{
+                $resetSection.addClass("hide");
+            }
+
+            if (hasMonth) {
+                $yearSection.removeClass("hide");
+            }
+
+            if (!hasYear && !hasMonth) {
+                $yearSection.addClass("hide");
+                $resetSection.addClass("hide");
             }
 
             // Check if the value does not include "YEAR" and show/hide the initial number section accordingly
-            if (!value.includes("YEAR")) {
-                $("#initial-number-of-the-invoice").removeClass("hide");
+
+            if ($("#reset_invoice_number_every_year").is(":checked")) {
+                $initialNumber.addClass("hide");
             } else {
-                if ($("#reset_invoice_number_every_year").is(":checked")) {
-                    $("#initial-number-of-the-invoice").addClass("hide");
-                } else {
-                    $("#initial-number-of-the-invoice").removeClass("hide");
-                }
+                $initialNumber.removeClass("hide");
             }
+        }
+
+        $("#invoice_number_format").on("input", function() {
+            showHideInputFields();
         });
+
+        showHideInputFields();
 
         $("#reset_invoice_number_every_year").click(function() {
             if ($("#invoice_number_format").val().includes("YEAR") && $(this).is(":checked")) {
@@ -333,5 +338,102 @@ load_js(array(
                 $("#initial-number-of-the-invoice").removeClass("hide");
             }
         });
+
+        $(".invoice_number_format_variabls").click(function() {
+            $("#invoice_number_format").val($("#invoice_number_format").val() + $(this).text());
+            $("#invoice_number_format").focus();
+            $("#invoice_number_format").trigger("input");
+            setTimeout(function() {
+                $("#invoice_prefix").focus();
+            });
+            setTimeout(function() {
+                $("#invoice_number_format").focus();
+            });
+
+        });
+
+        $("#invoice_number_format").on("input", function() {
+            var inputValue = $(this).val();
+
+            var duplicateVariablesFoundMsg = "<?php echo app_lang("please_do_not_use_duplicate_variables") ?>";
+            $(this).attr("data-rule-noDuplicateVariables", inputValue);
+            $(this).attr("data-msg-noDuplicateVariables", duplicateVariablesFoundMsg);
+
+            var invalidSpecialCharMsg = "<?php echo app_lang("please_do_not_use_invalid_special_character") ?>";
+            $(this).attr("data-rule-invalidSpecialChar", inputValue);
+            $(this).attr("data-msg-invalidSpecialChar", invalidSpecialCharMsg);
+
+            var mustUseSerialMsg = "<?php echo app_lang('please_use_any_serial') ?>";
+            $(this).attr("data-rule-mustUseSerial", inputValue);
+            $(this).attr("data-msg-mustUseSerial", mustUseSerialMsg);
+        });
+
+        // Initial preview generation
+        generatePreview();
+
+        // Call generatePreview function when input values change
+        $("#invoice_prefix, #invoice_number_format").on("input", generatePreview);
     });
+
+    $.validator.addMethod("mustUseSerial", function(value, element) {
+        var serialVariables = ['{SERIAL}', '{2_DIGIT_SERIAL}', '{3_DIGIT_SERIAL}', '{4_DIGIT_SERIAL}', '{5_DIGIT_SERIAL}', '{6_DIGIT_SERIAL}'];
+        return serialVariables.some(function(variable) {
+            return value.includes(variable);
+        });
+    }, 'You must use one of the serial variables.');
+
+    //Finding duplicate variables
+    $.validator.addMethod("noDuplicateVariables",
+        function(value, element) {
+            var variables = value.match(/\{(.*?)\}/g);
+            if (variables) {
+                var uniqueVariables = new Set(variables);
+                if (uniqueVariables.size === variables.length) {
+                    var serialVariables = ['{SERIAL}', '{2_DIGIT_SERIAL}', '{3_DIGIT_SERIAL}', '{4_DIGIT_SERIAL}', '{5_DIGIT_SERIAL}', '{6_DIGIT_SERIAL}'];
+                    var countSerial = 0;
+                    variables.forEach(function(variable) {
+                        if (serialVariables.includes(variable)) {
+                            countSerial++;
+                        }
+                    });
+                    return countSerial <= 1;
+                }
+            }
+
+            return false;
+        }, 'Duplicate variables found.');
+
+
+    //Fiending invalid special character
+    $.validator.addMethod("invalidSpecialChar",
+        function(value, element) {
+            var invalidChars = value.match(/[^a-zA-Z0-9\-_/:()#\\{}]|(?<!\{)(?<!YEAR)(?<!MONTH)(?<!SERIAL)(?<!2_DIGIT_SERIAL)(?<!3_DIGIT_SERIAL)(?<!4_DIGIT_SERIAL)(?<!5_DIGIT_SERIAL)(?<!6_DIGIT_SERIAL)\{(?!\w*\})|(?<!\})(?<!YEAR)(?<!MONTH)(?<!SERIAL)(?<!2_DIGIT_SERIAL)(?<!3_DIGIT_SERIAL)(?<!4_DIGIT_SERIAL)(?<!5_DIGIT_SERIAL)(?<!6_DIGIT_SERIAL)\}(?!\{)|(?<!\})(?<!YEAR)(?<!MONTH)(?<!SERIAL)(?<!2_DIGIT_SERIAL)(?<!3_DIGIT_SERIAL)(?<!4_DIGIT_SERIAL)(?<!5_DIGIT_SERIAL)(?<!6_DIGIT_SERIAL)(?<!\/)\//g); // Get all invalid special characters except those inside {}
+            if (!invalidChars) {
+                return true;
+            }
+        }, 'Invalid special character found.');
+
+
+    // Function to generate preview based on input values
+    function generatePreview() {
+        var prefix = $("#invoice_prefix").val() || 'INVOICE #';
+        var format = $("#invoice_number_format").val();
+
+        // Ensure both prefix and format are defined
+        if (prefix && format) {
+            format = format.replace("{YEAR}", new Date().getFullYear());
+            format = format.replace("{MONTH}", ('0' + (new Date().getMonth() + 1)).slice(-2));
+
+            format = format.replace("{SERIAL}", ('1'));
+            format = format.replace("{2_DIGIT_SERIAL}", ('01'));
+            format = format.replace("{3_DIGIT_SERIAL}", ('001'));
+            format = format.replace("{4_DIGIT_SERIAL}", ('0001'));
+            format = format.replace("{5_DIGIT_SERIAL}", ('00001'));
+            format = format.replace("{6_DIGIT_SERIAL}", ('000001'));
+
+            $("#invoice-display-id-preview-section").text(prefix + format);
+        } else {
+            $("#invoice-display-id-preview-section").text('');
+        }
+    }
 </script>

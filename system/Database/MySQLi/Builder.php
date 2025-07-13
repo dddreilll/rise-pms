@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -49,7 +51,7 @@ class Builder extends BaseBuilder
      */
     protected function _fromTables(): string
     {
-        if (! empty($this->QBJoin) && count($this->QBFrom) > 1) {
+        if ($this->QBJoin !== [] && count($this->QBFrom) > 1) {
             return '(' . implode(', ', $this->QBFrom) . ')';
         }
 
@@ -113,7 +115,7 @@ class Builder extends BaseBuilder
             $sql .= implode(
                 ",\n",
                 array_map(
-                    static fn ($key, $value) => $table . '.' . $key . ($value instanceof RawSql ?
+                    static fn ($key, $value): string => $table . '.' . $key . ($value instanceof RawSql ?
                         ' = ' . $value :
                         ' = ' . $alias . '.' . $value),
                     array_keys($updateFields),
@@ -130,8 +132,8 @@ class Builder extends BaseBuilder
             $data = implode(
                 " UNION ALL\n",
                 array_map(
-                    static fn ($value) => 'SELECT ' . implode(', ', array_map(
-                        static fn ($key, $index) => $index . ' ' . $key,
+                    static fn ($value): string => 'SELECT ' . implode(', ', array_map(
+                        static fn ($key, $index): string => $index . ' ' . $key,
                         $keys,
                         $value
                     )),

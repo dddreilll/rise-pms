@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -13,7 +15,6 @@ namespace CodeIgniter\Session\Handlers;
 
 use CodeIgniter\I18n\Time;
 use CodeIgniter\Session\Exceptions\SessionException;
-use Config\App as AppConfig;
 use Config\Session as SessionConfig;
 use Memcached;
 use ReturnTypeWillChange;
@@ -54,31 +55,24 @@ class MemcachedHandler extends BaseHandler
     /**
      * @throws SessionException
      */
-    public function __construct(AppConfig $config, string $ipAddress)
+    public function __construct(SessionConfig $config, string $ipAddress)
     {
         parent::__construct($config, $ipAddress);
 
-        /** @var SessionConfig|null $session */
-        $session = config('Session');
-
-        $this->sessionExpiration = ($session instanceof SessionConfig)
-            ? $session->expiration : $config->sessionExpiration;
+        $this->sessionExpiration = $config->expiration;
 
         if (empty($this->savePath)) {
             throw SessionException::forEmptySavepath();
         }
 
         // Add sessionCookieName for multiple session cookies.
-        $this->keyPrefix .= ($session instanceof SessionConfig)
-            ? $session->cookieName : $config->sessionCookieName . ':';
+        $this->keyPrefix .= $config->cookieName . ':';
 
         if ($this->matchIP === true) {
             $this->keyPrefix .= $this->ipAddress . ':';
         }
 
-        if (! empty($this->keyPrefix)) {
-            ini_set('memcached.sess_prefix', $this->keyPrefix);
-        }
+        ini_set('memcached.sess_prefix', $this->keyPrefix);
     }
 
     /**
@@ -99,12 +93,12 @@ class MemcachedHandler extends BaseHandler
         }
 
         if (
-            ! preg_match_all(
+            preg_match_all(
                 '#,?([^,:]+)\:(\d{1,5})(?:\:(\d+))?#',
                 $this->savePath,
                 $matches,
                 PREG_SET_ORDER
-            )
+            ) === 0
         ) {
             $this->memcached = null;
             $this->logger->error('Session: Invalid Memcached save path format: ' . $this->savePath);
@@ -131,7 +125,7 @@ class MemcachedHandler extends BaseHandler
             }
         }
 
-        if (empty($serverList)) {
+        if ($serverList === []) {
             $this->logger->error('Session: Memcached server pool is empty.');
 
             return false;
@@ -273,7 +267,7 @@ class MemcachedHandler extends BaseHandler
         $attempt = 0;
 
         do {
-            if ($this->memcached->get($lockKey)) {
+            if ($this->memcached->get($lockKey) !== false) {
                 sleep(1);
 
                 continue;

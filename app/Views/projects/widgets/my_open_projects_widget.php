@@ -34,8 +34,10 @@
 
 <script>
     $(document).ready(function () {
-        initScrollbar('#open-projects-container', {
-            setHeight: 330
-        });
+        if(!isMobile()){
+            initScrollbar('#open-projects-container', {
+                setHeight: 330
+            });
+        }
     });
 </script>

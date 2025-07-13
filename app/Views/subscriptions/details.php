@@ -1,4 +1,4 @@
-<div class="clearfix default-bg">
+<div class="clearfix default-bg details-view-container">
     <div class="row">
         <div class="col-md-9 d-flex align-items-stretch">
             <div class="card p15 b-t w-100" id="subscription-item-section">
@@ -10,7 +10,7 @@
                 <div class="clearfix">
                     <?php if (!$has_item_in_this_subscription && $subscription_info->status != "active") { ?>
                         <div class="float-start mt20 ml15" id="subscription-add-item-btn">
-                            <?php echo modal_anchor(get_uri("subscriptions/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item'), "data-post-subscription_id" => $subscription_info->id)); ?>
+                            <?php echo modal_anchor(get_uri("subscriptions/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-primary text-white", "title" => app_lang('add_item'), "data-post-subscription_id" => $subscription_info->id)); ?>
                         </div>
                     <?php } ?>
                     <div class="float-end pr15" id="subscription-total-section">
@@ -33,7 +33,7 @@
                     </div>
                 <?php } ?>
 
-                <p class="b-t b-info pt10 m15"><?php echo nl2br($subscription_info->note); ?></p>
+                <p class="b-t b-info pt10 m15"><?php echo custom_nl2br($subscription_info->note); ?></p>
             </div>
         </div>
         <div class="col-md-3 d-flex align-items-stretch">
@@ -72,7 +72,7 @@
                         <?php } ?>
                         <?php if ($subscription_info->payment_status === "failed") { ?>
                             <div class="col-md-12 mb15"><?php
-                                echo "<strong>" . app_lang("payment_status") . ": </strong>" . "<span class='mt0 badge bg-danger large'>" . app_lang("failed") . "</span>";
+                                echo "<strong>" . app_lang("payment_status") . ": </strong>" . "<span class='mt0 badge bg-danger'>" . app_lang("failed") . "</span>";
                                 ?>
                             </div> 
                         <?php } ?>
@@ -124,10 +124,10 @@
             hideTools: true,
             displayLength: 100,
             columns: [
-                {title: '<?php echo app_lang("item") ?> ', sortable: false},
+                {title: '<?php echo app_lang("item") ?> ', sortable: false, "class": "all"},
                 {title: '<?php echo app_lang("quantity") ?>', "class": "text-right w15p", sortable: false},
                 {title: '<?php echo app_lang("rate") ?>', "class": "text-right w15p", sortable: false},
-                {title: '<?php echo app_lang("total") ?>', "class": "text-right w15p", sortable: false},
+                {title: '<?php echo app_lang("total") ?>', "class": "text-right w15p all", sortable: false},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100", sortable: false, visible: optionVisibility}
             ]
         });

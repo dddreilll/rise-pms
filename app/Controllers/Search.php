@@ -10,7 +10,6 @@ class Search extends Security_Controller {
     }
 
     public function index() {
-        
     }
 
     function search_modal_form() {
@@ -79,7 +78,6 @@ class Search extends Security_Controller {
             echo json_encode($result_array);
         }
     }
-
 }
 
 /* End of file Search.php */

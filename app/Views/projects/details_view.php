@@ -65,7 +65,7 @@ if (!function_exists("make_project_tabs_data")) {
                             </div>
                         </div>
                     </div>
-                    <ul id="project-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs rounded classic mb20 scrollable-tabs border-white" role="tablist">
+                    <ul id="project-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs rounded classic mb20 scrollable-tabs" role="tablist">
                         <?php
                         if ($login_user->user_type === "staff") {
                             //default tab order
@@ -88,7 +88,7 @@ if (!function_exists("make_project_tabs_data")) {
                             }
 
                             if ($show_files) {
-                                $project_tabs["files"] = "projects/files/" . $project_info->id;
+                                $project_tabs["files"] = "projects/files/" . $project_info->id . "/" . $files_tab . "/" . $folder_id;
                             }
 
                             if ($can_comment_on_projects) {
@@ -164,6 +164,10 @@ if (!function_exists("make_project_tabs_data")) {
                                 }
                             }
 
+                            if (get_setting("project_reference_in_tickets") && $project_info->project_type === "client_project" && can_client_access($login_user->client_permissions, "ticket")) {
+                                $project_tabs["tickets"] = "projects/tickets/" . $project_info->id . "/" . $login_user->client_id;
+                            }
+
                             $project_tabs_of_hook_of_client = array();
                             $project_tabs_of_hook_of_client = app_hooks()->apply_filters('app_filter_clients_project_details_tab', $project_tabs_of_hook_of_client, $project_info->id);
                             $project_tabs_of_hook_of_client = is_array($project_tabs_of_hook_of_client) ? $project_tabs_of_hook_of_client : array();
@@ -208,9 +212,6 @@ if (!function_exists("make_project_tabs_data")) {
         </div>
     </div>
 </div>
-<div class="project-footer-button-section">
-    <?php echo view("projects/project_title_buttons"); ?>
-</div>
 
 <?php
 //if we get any task parameter, we'll show the task details modal automatically
@@ -239,7 +240,7 @@ load_js(array(
                 $("[data-bs-target='#project-comments-section']").trigger("click");
             } else if (tab === "customer_feedback") {
                 $("[data-bs-target='#project-customer_feedback-section']").trigger("click");
-            } else if (tab === "files") {
+            } else if (tab === "files" || tab === "file_manager") {
                 $("[data-bs-target='#project-files-section']").trigger("click");
             } else if (tab === "gantt") {
                 $("[data-bs-target='#project-gantt-section']").trigger("click");
@@ -262,5 +263,4 @@ load_js(array(
     });
 </script>
 
-<?php echo view("tasks/batch_update/batch_update_script"); ?>
 <?php echo view("tasks/sub_tasks_helper_js"); ?>

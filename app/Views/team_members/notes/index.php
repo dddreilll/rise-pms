@@ -21,6 +21,7 @@
                 {targets: [1], visible: false},
                 {title: '<?php echo app_lang("created_date"); ?>', "class": "w200"},
                 {title: '<?php echo app_lang("title"); ?>'},
+                {visible: false, searchable: false},
                 {title: '<?php echo app_lang("files") ?>', "class": "w250"},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]

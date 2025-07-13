@@ -29,9 +29,7 @@ class Checklist_groups_model extends Crud_model {
     function get_group_suggestion($keyword = "") {
         $checklist_groups_table = $this->db->prefixTable('checklist_groups');
 
-        if ($keyword) {
-            $keyword = $this->db->escapeString($keyword);
-        }
+        $keyword = $this->_get_clean_value(array("keyword" => $keyword), "keyword");
 
         $where = "";
 
@@ -46,12 +44,8 @@ class Checklist_groups_model extends Crud_model {
         $checklist_items_table = $this->db->prefixTable('checklist_items');
         $checklist_groups_table = $this->db->prefixTable('checklist_groups');
 
-        $where = "";
         $id = $this->_get_clean_value($options, "id");
-        if ($id) {
-            $where = " AND $checklist_items_table.id=$id";
-        }
-
+      
         $sql = "SELECT $checklist_items_table.*
                 FROM $checklist_items_table
                 WHERE $checklist_items_table.id IN(SELECT $checklist_groups_table.checklists FROM $checklist_groups_table WHERE $checklist_groups_table.id=$id )";

@@ -5,7 +5,7 @@
     <div class="card-body rounded-bottom p20" id="ticket-status-widget">
         <div class="row">
             <div class="col-md-6 col b-r-2 ps-4 pe-4">
-                <a href="<?php echo get_uri('tickets/index/open'); ?>" class="text-default ">
+                <a href="<?php echo get_uri('tickets/index/new'); ?>" class="text-default ">
                     <div class="pb-2">
                         <div class="color-tag border-circle me-3 wh10" style="background-color: #DEA701;"></div><?php echo app_lang("new"); ?>
                         <span class="strong float-end"><?php echo $new; ?></span>
@@ -106,7 +106,7 @@
 
     $(document).ready(function () {
         initScrollbar('#ticket-status-widget', {
-            setHeight: 327
+            setHeight: 330
         });
 
     });

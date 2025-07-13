@@ -1,4 +1,4 @@
-<div class="card rounded-bottom">
+<div class="card rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('estimates'); ?></h4>
         <div class="title-button-group">
@@ -23,10 +23,10 @@
             order: [[0, "desc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
-                {title: "<?php echo app_lang("estimate") ?>", "class": "w20p"},
+                {title: "<?php echo app_lang("estimate") ?>", "class": "w20p all"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("estimate_date") ?>", "iDataSort": 2, "class": "w20p"},
+                {title: "<?php echo app_lang("estimate_date") ?>", "iDataSort": 2, "class": "w20p all"},
                 {title: "<?php echo app_lang("amount") ?>", "class": "text-right w20p"},
                 {title: "<?php echo app_lang("status") ?>", "class": "text-center w20p"},
                 {visible: showCommentOption, title: '<i data-feather="message-circle" class="icon-16"></i>', "class": "text-center w50"}

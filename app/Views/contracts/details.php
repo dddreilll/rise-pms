@@ -1,4 +1,4 @@
-<div class="clearfix default-bg">
+<div class="clearfix default-bg details-view-container">
     <div class="row">
         <div class="col-md-9 d-flex">
             <div class="card p15 w-100 pt0">
@@ -14,7 +14,7 @@
                             <div class="tab-content">
                                 <div role="tabpanel" class="tab-pane fade" id="contract-items">
 
-                                    <div class="p15 b-t mb15 card">
+                                    <div class="p15 mb15">
                                         <div class="clearfix p20">
                                             <!-- small font size is required to generate the pdf, overwrite that for screen -->
                                             <style type="text/css"> .invoice-meta {
@@ -53,7 +53,7 @@
                                             </div>
                                             <?php if ($is_contract_editable) { ?>
                                                 <div class="float-start ml15 mt20 mb20">
-                                                    <?php echo modal_anchor(get_uri("contracts/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item'), "data-post-contract_id" => $contract_info->id)); ?>
+                                                    <?php echo modal_anchor(get_uri("contracts/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-primary text-white", "title" => app_lang('add_item'), "data-post-contract_id" => $contract_info->id)); ?>
                                                 </div>
                                             <?php } ?>
                                             <div class="float-end pr15" id="contract-total-section">
@@ -76,7 +76,7 @@
                                             </div>
                                         <?php } ?>
 
-                                        <p class="b-t b-info pt10 m15"><?php echo nl2br($contract_info->note ? process_images_from_content($contract_info->note) : ""); ?></p>
+                                        <p class="b-t b-info pt10 m15"><?php echo custom_nl2br($contract_info->note ? process_images_from_content($contract_info->note) : ""); ?></p>
                                     </div>
                                 </div>
                                 <div role="tabpanel" class="tab-pane fade" id="contract-editor"></div>

@@ -47,16 +47,6 @@ class Invoice_payments extends Security_Controller {
         return json_encode($payment_method_dropdown);
     }
 
-    //load the payment list yearly view
-    function yearly() {
-        return $this->template->view("invoices/yearly_payments");
-    }
-
-    //load custom payment list
-    function custom() {
-        return $this->template->view("invoices/custom_payments_list");
-    }
-
     /* load payment modal */
 
     function payment_modal_form() {
@@ -121,6 +111,8 @@ class Invoice_payments extends Security_Controller {
             "created_at" => get_current_utc_time(),
             "created_by" => $this->login_user->id,
         );
+
+        $invoice_payment_data = clean_data($invoice_payment_data);
 
         $invoice_payment_id = $this->Invoice_payments_model->ci_save($invoice_payment_data, $id);
         if ($invoice_payment_id) {
@@ -250,7 +242,7 @@ class Invoice_payments extends Security_Controller {
             $data->note,
             to_currency($data->amount, $data->currency_symbol),
             modal_anchor(get_uri("invoice_payments/payment_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_payment'), "data-post-id" => $data->id, "data-post-invoice_id" => $data->invoice_id,))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("invoice_payments/delete_payment"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("invoice_payments/delete_payment"), "data-action" => "delete"))
         );
     }
 
@@ -420,6 +412,8 @@ class Invoice_payments extends Security_Controller {
     }
 
     function get_invoice_payment_amount_suggestion($invoice_id) {
+        validate_numeric_value($invoice_id);
+
         $invoice_total_summary = $this->Invoices_model->get_invoice_total_summary($invoice_id);
         if ($invoice_total_summary) {
             $invoice_total_summary->balance_due = $invoice_total_summary->balance_due ? to_decimal_format($invoice_total_summary->balance_due) : "";
@@ -448,7 +442,6 @@ class Invoice_payments extends Security_Controller {
         }
         echo json_encode(array("data" => $result));
     }
-
 }
 
 /* End of file payments.php */

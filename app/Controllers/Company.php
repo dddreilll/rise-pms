@@ -28,7 +28,8 @@ class Company extends Security_Controller {
     function save() {
         $this->validate_submitted_data(array(
             "id" => "numeric",
-            "name" => "required"
+            "name" => "required",
+            "email" => "valid_email"
         ));
 
         $is_default = $this->request->getPost('is_default');
@@ -45,6 +46,8 @@ class Company extends Security_Controller {
 
         $id = $this->request->getPost('id');
         $company_info = $this->Company_model->get_one($id);
+
+        $data = clean_data($data);
 
         $save_id = $this->Company_model->ci_save($data, $id);
 

@@ -1,4 +1,4 @@
-<div class="card clearfix rounded-0 <?php
+<div class="card border-top-0 rounded-top-0 clearfix <?php
 if (isset($page_type) && $page_type === "full") {
     echo "m20";
 }
@@ -40,9 +40,9 @@ if (isset($page_type) && $page_type === "full") {
                         columns: [
                             {targets: [1], visible: false, searchable: false},
                             {title: '<?php echo app_lang("leave_type") ?>'},
-                            {title: '<?php echo app_lang("date") ?>', "class": "w20p"},
+                            {title: '<?php echo app_lang("date") ?>', "class": "w20p all"},
                             {title: '<?php echo app_lang("duration") ?>', "class": "w20p"},
-                            {title: '<?php echo app_lang("status") ?>', "class": "w15p"},
+                            {title: '<?php echo app_lang("status") ?>', "class": "w15p all"},
                             {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
                         ],
                         printColumns: [1, 2, 3, 4],

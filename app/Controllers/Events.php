@@ -35,6 +35,25 @@ class Events extends Security_Controller {
         }
     }
 
+    function get_sharing_options_view($return_json = false, $model_info = null) {
+
+        $view_data["id"] =  isset($model_info->id) ? $model_info->id : $this->request->getPost('id');
+        $view_data["client_id"] =  isset($model_info->client_id) ? $model_info->client_id : $this->request->getPost('client_id');
+        $view_data["share_with"] = isset($model_info->share_with) ? $model_info->share_with : $this->request->getPost('share_with');
+
+        $view_data["options"] = array("only_me", "all_team_members", 'specific_members_and_teams', 'all_contacts_of_the_client', 'specific_contacts_of_the_client');
+        $view_data["members_and_teams_dropdown_source_url"] = get_uri("events/get_members_and_teams_dropdown");
+        $view_data["client_contacts_of_selected_client_source_url"] = get_uri("events/get_all_contacts_of_client");
+
+        $sharing_options_view = view("includes/sharing_options", $view_data);
+
+        if ($return_json) {
+            return json_encode(array("sharing_options_view" => $sharing_options_view));
+        } else {
+            return $sharing_options_view;
+        }
+    }
+
     //show add/edit event modal form
     function modal_form() {
         $encrypted_event_id = $this->request->getPost('encrypted_event_id');
@@ -42,19 +61,14 @@ class Events extends Security_Controller {
             $encrypted_event_id = "";
         }
         $event_id = decode_id($encrypted_event_id, "event_id");
+        validate_numeric_value($event_id);
+
         $model_info = $this->Events_model->get_one($event_id);
 
         $model_info->start_date = $model_info->start_date ? $model_info->start_date : $this->request->getPost('start_date');
         $model_info->end_date = $model_info->end_date ? $model_info->end_date : $this->request->getPost('end_date');
         $model_info->start_time = $model_info->start_time ? $model_info->start_time : $this->request->getPost('start_time');
         $model_info->end_time = $model_info->end_time ? $model_info->end_time : $this->request->getPost('end_time');
-
-        //for a specific share, we have to find that if it's been shared with team member or client's contact
-        $model_info->share_with_specific = "";
-        if ($model_info->share_with && $model_info->share_with != "all") {
-            $share_with_explode = explode(":", $model_info->share_with);
-            $model_info->share_with_specific = $share_with_explode[0];
-        }
 
         $view_data['client_id'] = $this->request->getPost('client_id');
 
@@ -65,14 +79,13 @@ class Events extends Security_Controller {
         }
 
         $view_data['model_info'] = $model_info;
-        $view_data['members_and_teams_dropdown'] = json_encode(get_team_members_and_teams_select2_data_list(true));
+        $view_data['members_and_teams_dropdown'] = $this->get_members_and_teams_dropdown();
         $view_data['time_format_24_hours'] = get_setting("time_format") == "24_hours" ? true : false;
 
         //prepare clients dropdown, check if user has permission to access the client
-        $client_access_info = $this->get_access_info("client");
 
         $clients_dropdown = array();
-        if ($this->login_user->is_admin || $client_access_info->access_type == "all") {
+        if ($this->_can_access_clients()) {
             $clients_dropdown = $this->get_clients_and_leads_dropdown(true);
         }
 
@@ -83,15 +96,27 @@ class Events extends Security_Controller {
         //prepare label suggestion dropdown
         $view_data['label_suggestions'] = $this->make_labels_dropdown("event", $model_info->labels);
 
+        $view_data['get_sharing_options_view'] = $this->get_sharing_options_view(false, $model_info);
+
         $view_data["custom_fields"] = $this->Custom_fields_model->get_combined_details("events", $view_data['model_info']->id, $this->login_user->is_admin, $this->login_user->user_type)->getResult();
 
         return $this->template->view('events/modal_form', $view_data);
+    }
+
+    function _can_access_clients() {
+        $client_access_info = $this->get_access_info("client");
+        return $this->login_user->is_admin || $client_access_info->access_type == "all";
+    }
+
+    function get_members_and_teams_dropdown() {
+        return json_encode(get_team_members_and_teams_select2_data_list(true));
     }
 
     //save an event
     function save() {
         $type = $this->request->getPost('type');
         $validation_array = array(
+            "id" => "numeric",
             "title" => "required",
             "start_date" => "required"
         );
@@ -120,16 +145,11 @@ class Events extends Security_Controller {
             $end_time = convert_time_to_24hours_format($end_time);
         }
 
-
-
-
-        //prepare share with data
         $share_with = $this->request->getPost('share_with');
-        if ($share_with == "specific") {
-            $share_with = $this->request->getPost('share_with_specific');
-        } else if ($share_with == "specific_client_contacts") {
-            $share_with = $this->request->getPost('share_with_specific_client_contact');
-        }
+        validate_share_with_value($share_with);
+
+        $labels = $this->request->getPost('labels');
+        validate_list_of_numbers($labels);
 
         $start_date = $this->request->getPost('start_date');
         $end_date = $this->request->getPost('end_date');
@@ -171,7 +191,7 @@ class Events extends Security_Controller {
             "start_time" => $start_time,
             "end_time" => $end_time,
             "location" => $this->request->getPost('location'),
-            "labels" => $this->request->getPost('labels'),
+            "labels" => $labels,
             "color" => $this->request->getPost('color'),
             "created_by" => $this->login_user->id,
             "share_with" => $share_with,
@@ -181,16 +201,17 @@ class Events extends Security_Controller {
             "no_of_cycles" => $no_of_cycles ? $no_of_cycles : 0,
             "client_id" => $client_id ? $client_id : 0,
             "type" => $type ? $type : "event",
-            "task_id" => $this->request->getPost('task_id'),
-            "project_id" => $this->request->getPost('project_id'),
-            "lead_id" => $this->request->getPost('lead_id'),
-            "ticket_id" => $this->request->getPost('ticket_id'),
-            "proposal_id" => $this->request->getPost('proposal_id'),
-            "contract_id" => $this->request->getPost('contract_id'),
-            "subscription_id" => $this->request->getPost('subscription_id'),
-            "invoice_id" => $this->request->getPost('invoice_id'),
-            "order_id" => $this->request->getPost('order_id'),
-            "estimate_id" => $this->request->getPost('estimate_id'),
+            "task_id" => get_only_numeric_value($this->request->getPost('task_id')),
+            "project_id" => get_only_numeric_value($this->request->getPost('project_id')),
+            "lead_id" => get_only_numeric_value($this->request->getPost('lead_id')),
+            "ticket_id" => get_only_numeric_value($this->request->getPost('ticket_id')),
+            "proposal_id" => get_only_numeric_value($this->request->getPost('proposal_id')),
+            "contract_id" => get_only_numeric_value($this->request->getPost('contract_id')),
+            "subscription_id" => get_only_numeric_value($this->request->getPost('subscription_id')),
+            "invoice_id" => get_only_numeric_value($this->request->getPost('invoice_id')),
+            "order_id" => get_only_numeric_value($this->request->getPost('order_id')),
+            "estimate_id" => get_only_numeric_value($this->request->getPost('estimate_id')),
+            "related_user_id" => get_only_numeric_value($this->request->getPost('related_user_id')),
         );
 
         if ($end_date) {
@@ -241,9 +262,8 @@ class Events extends Security_Controller {
             $new_files = update_saved_files($timeline_file_path, $event_info->files, $new_files);
         }
 
-        $data["files"] = serialize($new_files);
-
         $data = clean_data($data);
+        $data["files"] = serialize($new_files);
 
         $save_id = $this->Events_model->ci_save($data, $id);
         if ($save_id) {
@@ -422,13 +442,13 @@ class Events extends Security_Controller {
             $options = array(
                 "start_date" => $start,
                 "deadline" => $end,
-                "project_status" => 1,
                 "show_assigned_tasks_only_user_id" => $this->show_assigned_tasks_only_user_id(),
                 "for_events" => true
             );
 
-            if (!$this->can_manage_all_projects()) {
-                $options["project_member_id"] = $this->login_user->id; //don't show all tasks to non-admin users
+            //for non-admin users, show only the assigned tasks
+            if (!$this->login_user->is_admin) {
+                $options["show_assigned_tasks_only_user_id"] =  $this->login_user->id;
             }
 
             if (in_array("task_deadline", $filter_values_array)) {
@@ -544,7 +564,7 @@ class Events extends Security_Controller {
             $end = $data->start_date;
         }
 
-        if (date("H:i:s", strtotime($end)) == "00:00:00") {
+        if ($end && date("H:i:s", strtotime($end)) == "00:00:00") {
             $end = get_date_from_datetime($end) . " 23:59:59";
         }
 
@@ -587,6 +607,8 @@ class Events extends Security_Controller {
 
     private function _make_view_data($encrypted_event_id, $cycle = "0") {
         $event_id = decode_id($encrypted_event_id, "event_id");
+        validate_numeric_value($event_id);
+        validate_numeric_value($cycle);
 
         $model_info = $this->Events_model->get_details(array("id" => $event_id))->getRow();
 
@@ -624,10 +646,10 @@ class Events extends Security_Controller {
             $status_reject = modal_anchor(get_uri("events/save_event_status/"), "<i data-feather='x-circle' class='icon-16'></i> " . app_lang('reject'), array("class" => "btn btn-danger float-start", "data-post-encrypted_event_id" => $encrypted_event_id, "title" => app_lang('event_details'), "data-post-status" => "rejected", "data-post-editable" => "1"));
 
             if (in_array($this->login_user->id, $confirmed_by_array)) {
-                $status = "<span class='badge large' style='background-color:#5CB85C;' title=" . app_lang("event_status") . ">" . app_lang("confirmed") . "</span> ";
+                $status = "<span class='badge' style='background-color:#5CB85C;' title=" . app_lang("event_status") . ">" . app_lang("confirmed") . "</span> ";
                 $status_button = $status_reject;
             } else if (in_array($this->login_user->id, $rejected_by_array)) {
-                $status = "<span class='badge large' style='background-color:#D9534F;' title=" . app_lang("event_status") . ">" . app_lang("rejected") . "</span> ";
+                $status = "<span class='badge' style='background-color:#D9534F;' title=" . app_lang("event_status") . ">" . app_lang("rejected") . "</span> ";
                 $status_button = $status_confirm;
             } else {
                 $status_button = $status_confirm . $status_reject;
@@ -679,6 +701,7 @@ class Events extends Security_Controller {
     function save_event_status() {
         $encrypted_event_id = $this->request->getPost('encrypted_event_id');
         $event_id = decode_id($encrypted_event_id, "event_id");
+        validate_numeric_value($event_id);
 
         $status = $this->request->getPost('status');
         $user_id = $this->login_user->id;
@@ -692,10 +715,9 @@ class Events extends Security_Controller {
 
     //get all contacts of a selected client
     function get_all_contacts_of_client($client_id) {
-
-        $client_access_info = $this->get_access_info("client");
         validate_numeric_value($client_id);
-        if ($client_id && ($this->login_user->is_admin || $client_access_info->access_type == "all")) {
+
+        if ($client_id && $this->_can_access_clients()) {
             $client_contacts = $this->Users_model->get_all_where(array("status" => "active", "client_id" => $client_id, "deleted" => 0))->getResult();
             $client_contacts_array = array();
 
@@ -720,6 +742,7 @@ class Events extends Security_Controller {
     function save_google_calendar_settings() {
         if (get_setting("enable_google_calendar_api") && (get_setting("google_calendar_authorized") || get_setting('user_' . $this->login_user->id . '_google_calendar_authorized'))) {
             $integrate_with_google_calendar = $this->request->getPost("integrate_with_google_calendar");
+            $integrate_with_google_calendar = clean_data($integrate_with_google_calendar);
             $this->Settings_model->save_setting("user_" . $this->login_user->id . "_integrate_with_google_calendar", $integrate_with_google_calendar, "user");
 
             //save calendar ids
@@ -733,7 +756,10 @@ class Events extends Security_Controller {
                 }
 
                 $calendar_ids_array = array_unique($calendar_ids_array);
-                $this->Settings_model->save_setting("user_" . $this->login_user->id . "_calendar_ids", serialize($calendar_ids_array), "user");
+                $calendar_ids_array = clean_data($calendar_ids_array);
+                $calendar_ids_array = serialize($calendar_ids_array);
+
+                $this->Settings_model->save_setting("user_" . $this->login_user->id . "_calendar_ids", $calendar_ids_array, "user");
             }
 
             echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
@@ -776,15 +802,17 @@ class Events extends Security_Controller {
 
     function reminders() {
         $this->can_create_reminders();
-        $view_data["project_id"] = $this->request->getPost("project_id");
-        $view_data["client_id"] = $this->request->getPost("client_id");
-        $view_data["lead_id"] = $this->request->getPost("lead_id");
-        $view_data["ticket_id"] = $this->request->getPost("ticket_id");
+        $view_data["project_id"] = get_only_numeric_value($this->request->getPost("project_id"));
+        $view_data["client_id"] = get_only_numeric_value($this->request->getPost("client_id"));
+        $view_data["lead_id"] = get_only_numeric_value($this->request->getPost("lead_id"));
+        $view_data["ticket_id"] = get_only_numeric_value($this->request->getPost("ticket_id"));
+        $view_data["related_user_id"] = get_only_numeric_value($this->request->getPost("related_user_id"));
         $view_data["reminder_view_type"] = $this->request->getPost("reminder_view_type");
         return $this->template->view("reminders/index", $view_data);
     }
 
     function reminders_list_data($type = "", $reminder_context = "", $reminder_context_id = 0) {
+        validate_numeric_value($reminder_context_id);
         $this->can_create_reminders();
 
         $options = array(
@@ -1020,7 +1048,6 @@ class Events extends Security_Controller {
         $reminders = $this->Events_model->count_missed_reminders($this->login_user->id, $this->login_user->notification_checked_at);
         echo json_encode(array("success" => true, 'total_reminders' => $reminders));
     }
-
 }
 
 /* End of file events.php */

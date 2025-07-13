@@ -38,6 +38,7 @@ class Email_templates_model extends Crud_model {
 
     function get_final_template($template_name = "", $return_all = false) {
         $email_templates_table = $this->db->prefixTable('email_templates');
+        $template_name = $this->_get_clean_value($template_name);
 
         $where = "";
         if (!$return_all) {

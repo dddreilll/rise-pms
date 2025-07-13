@@ -74,7 +74,8 @@ class Custom_fields_model extends Crud_model {
     }
 
     function get_fields_of_a_context($context) {
-        $related_to = $this->db->escapeString($context);
+        $related_to = $this->_get_clean_value(array("context" => $context), "context");
+
         $custom_fields_table = $this->db->prefixTable('custom_fields');
 
         $sql = "SELECT $custom_fields_table.id, $custom_fields_table.title, $custom_fields_table.field_type
@@ -86,6 +87,7 @@ class Custom_fields_model extends Crud_model {
 
     function get_max_sort_value($related_to = "") {
         $custom_fields_table = $this->db->prefixTable('custom_fields');
+        $related_to = $this->_get_clean_value($related_to);
 
         $sql = "SELECT MAX($custom_fields_table.sort) as sort
         FROM $custom_fields_table
@@ -120,7 +122,7 @@ class Custom_fields_model extends Crud_model {
             $related_to_id = 0;
         }
 
-        $related_to_id = $related_to_id ? $this->db->escapeString($related_to_id) : $related_to_id;
+        $related_to_id = $this->_get_clean_value($related_to_id);
 
         $sql = "SELECT $custom_fields_table.*,
                 $custom_field_values_table.id AS custom_field_values_id, $custom_field_values_table.value
@@ -195,6 +197,7 @@ class Custom_fields_model extends Crud_model {
 
     function get_available_filters($related_to, $is_admin = 0, $user_type = "") {
         $custom_fields_table = $this->db->prefixTable('custom_fields');
+        $related_to = $this->_get_clean_value($related_to);
 
         $where = "";
 
@@ -212,7 +215,7 @@ class Custom_fields_model extends Crud_model {
 
         $sql = "SELECT id, title, options
                 FROM $custom_fields_table
-                WHERE $custom_fields_table.related_to='$related_to' AND $custom_fields_table.add_filter=1 AND $custom_fields_table.deleted=0 AND ($custom_fields_table.field_type='select' OR $custom_fields_table.field_type='multi_select') $where    
+                WHERE $custom_fields_table.related_to='$related_to' AND $custom_fields_table.add_filter=1 AND $custom_fields_table.deleted=0 AND ($custom_fields_table.field_type='select' OR $custom_fields_table.field_type='multi_select' OR $custom_fields_table.field_type='multiple_choice' OR $custom_fields_table.field_type='checkboxes') $where    
                 ORDER BY $custom_fields_table.sort ASC";
 
         return $this->db->query($sql)->getResult();

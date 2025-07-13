@@ -18,7 +18,7 @@
                     </div>
                 </div>
 
-                <div class="bg-off-white">
+                <div class="default-bg">
                     <div class="client-dashboard-help-message"><?php echo app_lang("client_dashboard_help_message"); ?></div>
 
                     <?php echo $dashboard_view; ?>

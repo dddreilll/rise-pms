@@ -11,9 +11,3 @@ echo form_textarea(array(
     "data-keep-rich-text-editor-after-submit" => true
 ));
 ?>
-
-<script type="text/javascript">
-    $(document).ready(function () {
-        setSummernoteToAll(true);
-    });
-</script>

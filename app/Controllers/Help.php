@@ -254,9 +254,11 @@ class Help extends Security_Controller {
         $files_data = move_files_from_temp_dir_to_permanent_dir($target_path, "help");
         $new_files = unserialize($files_data);
 
+        $description = decode_ajax_post_data($this->request->getPost('description'));
+
         $data = array(
             "title" => $this->request->getPost('title'),
-            "description" => $this->request->getPost('description'),
+            "description" => $description,
             "category_id" => $this->request->getPost('category_id'),
             "sort" => $this->request->getPost('sort'),
             "status" => $this->request->getPost('status')

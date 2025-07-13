@@ -16,7 +16,10 @@ class Leave_types extends Security_Controller {
 
     //load leave type add/edit form
     function modal_form() {
-        $view_data['model_info'] = $this->Leave_types_model->get_one($this->request->getPost('id'));
+        $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
+        $view_data['model_info'] = $this->Leave_types_model->get_one($id);
         return $this->template->view('leave_types/modal_form', $view_data);
     }
 
@@ -89,10 +92,9 @@ class Leave_types extends Security_Controller {
             $data->description ? $data->description : "-",
             app_lang($data->status),
             modal_anchor(get_uri("leave_types/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_leave_type'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_leave_type'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("leave_types/delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_leave_type'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("leave_types/delete"), "data-action" => "delete"))
         );
     }
-
 }
 
 /* End of file leave_types.php */

@@ -36,11 +36,6 @@ class Stripe_redirect extends App_Controller {
 
         //so, the payment is valid
         //save the payment
-        //set login user id = contact id for future processing
-        $this->login_user = new \stdClass();
-        $this->login_user->id = $stripe_ipn_info->contact_user_id;
-        $this->login_user->user_type = "client";
-
         $invoice_id = $stripe_ipn_info->invoice_id;
 
         $invoice_payment_data = array(
@@ -51,29 +46,24 @@ class Stripe_redirect extends App_Controller {
             "amount" => $payment->amount / 100,
             "transaction_id" => $payment->id,
             "created_at" => get_current_utc_time(),
-            "created_by" => $this->login_user->id,
+            "created_by" => $stripe_ipn_info->contact_user_id,
         );
 
-        //check if already a payment done with this transaction
+        //the payment could be saved by webhook, check that first
         $existing = $this->Invoice_payments_model->get_one_where(array("transaction_id" => $payment->id));
-        if ($existing->id) {
-            show_404();
+        if (!$existing->id) {
+            $invoice_payment_id = $this->Invoice_payments_model->ci_save($invoice_payment_data);
+
+            //as receiving payment for the invoice, we'll remove the 'draft' status from the invoice 
+            $this->Invoices_model->update_invoice_status($invoice_id);
+
+            log_notification("invoice_payment_confirmation", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), "0");
+
+            log_notification("invoice_online_payment_received", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), $stripe_ipn_info->contact_user_id);
+
+            //delete the ipn data
+            $this->Stripe_ipn_model->delete($stripe_ipn_info->id);
         }
-
-        $invoice_payment_id = $this->Invoice_payments_model->ci_save($invoice_payment_data);
-        if (!$invoice_payment_id) {
-            show_404();
-        }
-
-        //as receiving payment for the invoice, we'll remove the 'draft' status from the invoice 
-        $this->Invoices_model->update_invoice_status($invoice_id);
-
-        log_notification("invoice_payment_confirmation", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), "0");
-
-        log_notification("invoice_online_payment_received", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), $this->login_user->id);
-
-        //delete the ipn data
-        $this->Stripe_ipn_model->delete($stripe_ipn_info->id);
 
         $verification_code = $stripe_ipn_info->verification_code;
         if ($verification_code) {
@@ -173,7 +163,7 @@ class Stripe_redirect extends App_Controller {
 
             //delete the ipn data
             $this->Stripe_ipn_model->delete($stripe_ipn_info->id);
-            
+
             log_notification("subscription_started", array("subscription_id" => $stripe_ipn_info->subscription_id));
 
             $this->session->setFlashdata("success_message", app_lang("subscription_success_message"));
@@ -182,7 +172,6 @@ class Stripe_redirect extends App_Controller {
             echo json_encode(array("success" => false, "message" => $ex->getMessage()));
         }
     }
-
 }
 
 /* End of file Stripe_redirect.php */

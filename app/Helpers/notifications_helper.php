@@ -12,8 +12,7 @@ use App\Controllers\App_Controller;
 
 if (!function_exists('get_notification_config')) {
 
-    function get_notification_config($event = "", $key = "", $info_options = array())
-    {
+    function get_notification_config($event = "", $key = "", $info_options = array()) {
 
         $task_link = function ($options) {
 
@@ -527,6 +526,18 @@ if (!function_exists('get_notification_config')) {
             "proposal_commented" => array(
                 "notify_to" => array("client_primary_contact", "client_all_contacts", "proposal_creator", "team_members", "team"),
                 "info" => $proposal_link
+            ),
+            "proposal_preview_opened" => array(
+                "notify_to" => array("team_members", "team"),
+                "info" => $proposal_link
+            ),
+            "proposal_email_opened" => array(
+                "notify_to" => array("team_members", "team"),
+                "info" => $proposal_link
+            ),
+            "subscription_renewal_reminder" => array(
+                "notify_to" => array("client_primary_contact", "client_all_contacts", "team_members", "team"),
+                "info" => $subscription_link
             )
         );
 
@@ -562,8 +573,7 @@ if (!function_exists('get_notification_config')) {
  */
 if (!function_exists('send_notification_emails')) {
 
-    function send_notification_emails($notification_id, $email_notify_to = array(), $extra_data = array())
-    {
+    function send_notification_emails($notification_id, $email_notify_to = array(), $extra_data = array()) {
 
         $ci = new App_Controller();
 
@@ -605,14 +615,16 @@ if (!function_exists('send_notification_emails')) {
             $parser_data["TICKET_ID"] = $notification->ticket_id;
             $parser_data["TICKET_TITLE"] = $notification->ticket_title;
             $parser_data["USER_NAME"] = $notification->user_name;
-            $parser_data["TICKET_CONTENT"] = nl2br($notification->ticket_comment_description ? $notification->ticket_comment_description : "");
+            $parser_data["TICKET_CONTENT"] = custom_nl2br($notification->ticket_comment_description ? $notification->ticket_comment_description : "");
             $parser_data["TICKET_URL"] = $url;
 
             //add attachment
-            $comments_options = array("id" => $notification->ticket_comment_id);
-            $comment_info = $ci->Ticket_comments_model->get_details($comments_options)->getRow();
-            if ($comment_info->files) {
-                $email_options["attachments"] = prepare_attachment_of_files(get_setting("timeline_file_path"), $comment_info->files);
+            if ($notification->ticket_comment_id) {
+                $comments_options = array("id" => $notification->ticket_comment_id);
+                $comment_info = $ci->Ticket_comments_model->get_details($comments_options)->getRow();
+                if ($comment_info->files) {
+                    $email_options["attachments"] = prepare_attachment_of_files(get_setting("timeline_file_path"), $comment_info->files);
+                }
             }
 
             //add imap email as reply-to email address, if it's enabled
@@ -688,12 +700,13 @@ if (!function_exists('send_notification_emails')) {
             $primary_contact = $ci->Clients_model->get_primary_contact($invoice_info->client_id, true);
 
             $parser_data["INVOICE_ID"] = $notification->invoice_id;
-            $parser_data["CONTACT_FIRST_NAME"] = $primary_contact->first_name;
-            $parser_data["CONTACT_LAST_NAME"] = $primary_contact->last_name;
+            $parser_data["CONTACT_FIRST_NAME"] = isset($primary_contact->first_name) ? $primary_contact->first_name : "";
+            $parser_data["CONTACT_LAST_NAME"] = isset($primary_contact->last_name) ? $primary_contact->last_name : "";
             $parser_data["BALANCE_DUE"] = to_currency($invoice_total_summary->balance_due, $invoice_total_summary->currency_symbol);
             $parser_data["DUE_DATE"] = format_to_date($invoice_info->due_date, false);
             $parser_data["PROJECT_TITLE"] = $invoice_info->project_title;
             $parser_data["INVOICE_URL"] = $url;
+            $parser_data["INVOICE_FULL_ID"] = $notification->invoice_display_id;
 
             $attachement_url = prepare_invoice_pdf($invoice_data, "send_email");
             $email_options["attachments"] = array(array("file_path" => $attachement_url));
@@ -720,7 +733,7 @@ if (!function_exists('send_notification_emails')) {
 
                 $parser_data["ESTIMATE_ID"] = $notification->estimate_id;
                 $parser_data["USER_NAME"] = $notification->user_name;
-                $parser_data["COMMENT_CONTENT"] = nl2br($notification->estimate_comment_description ? $notification->estimate_comment_description : "");
+                $parser_data["COMMENT_CONTENT"] = custom_nl2br($notification->estimate_comment_description ? $notification->estimate_comment_description : "");
                 $parser_data["ESTIMATE_URL"] = $url;
             } else if ($notification->event == "estimate_request_received") {
                 $template_name = "estimate_request_received";
@@ -728,8 +741,8 @@ if (!function_exists('send_notification_emails')) {
                 $estimate_request_info = $ci->Estimate_requests_model->get_one($notification->estimate_request_id);
                 $primary_contact = $ci->Clients_model->get_primary_contact($estimate_request_info->client_id, true);
 
-                $parser_data["CONTACT_FIRST_NAME"] = $primary_contact->first_name;
-                $parser_data["CONTACT_LAST_NAME"] = $primary_contact->last_name;
+                $parser_data["CONTACT_FIRST_NAME"] = isset($primary_contact->first_name) ? $primary_contact->first_name : "";
+                $parser_data["CONTACT_LAST_NAME"] = isset($primary_contact->last_name) ? $primary_contact->last_name : "";
 
                 $parser_data["ESTIMATE_REQUEST_ID"] = $notification->estimate_request_id;
                 $parser_data["ESTIMATE_REQUEST_URL"] = $url;
@@ -762,7 +775,7 @@ if (!function_exists('send_notification_emails')) {
             $contract_options = array("id" => $notification->contract_id);
             $contract_info = $ci->Contracts_model->get_details($contract_options)->getRow();
             $parser_data["PROJECT_TITLE"] = $contract_info->project_title;
-        } else if ($notification->category == "proposal") {
+        } else if ($notification->event == "proposal_rejected" || $notification->event == "proposal_accepted" || $notification->event == "proposal_commented") {
             if ($notification->event == "proposal_rejected") {
                 $template_name = "proposal_rejected";
             } else if ($notification->event == "proposal_accepted") {
@@ -771,7 +784,7 @@ if (!function_exists('send_notification_emails')) {
                 $template_name = "proposal_commented";
 
                 $parser_data["USER_NAME"] = $notification->user_name;
-                $parser_data["COMMENT_CONTENT"] = nl2br($notification->proposal_comment_description ? $notification->proposal_comment_description : "");
+                $parser_data["COMMENT_CONTENT"] = custom_nl2br($notification->proposal_comment_description ? $notification->proposal_comment_description : "");
             }
 
             $parser_data["PROPOSAL_ID"] = $notification->proposal_id;
@@ -784,11 +797,19 @@ if (!function_exists('send_notification_emails')) {
                 $template_name = "order_status_updated";
             }
 
-            $order_info = $ci->Orders_model->get_one($notification->order_id);
-            $primary_contact = $ci->Clients_model->get_primary_contact($order_info->client_id, true);
+            $user_info = $ci->Users_model->get_one($notification->user_id);
+            if (isset($user_info) && $user_info->user_type == "client") {
+                $parser_data["CONTACT_FIRST_NAME"] = $user_info->first_name;
+                $parser_data["CONTACT_LAST_NAME"] = $user_info->last_name;
+            } else {
+                $order_info = $ci->Orders_model->get_one($notification->order_id);
+                $primary_contact = $ci->Clients_model->get_primary_contact($order_info->client_id, true);
 
-            $parser_data["CONTACT_FIRST_NAME"] = $primary_contact->first_name;
-            $parser_data["CONTACT_LAST_NAME"] = $primary_contact->last_name;
+                if (isset($primary_contact) && $primary_contact) {
+                    $parser_data["CONTACT_FIRST_NAME"] = $primary_contact->first_name;
+                    $parser_data["CONTACT_LAST_NAME"] = $primary_contact->last_name;
+                }
+            }
 
             $parser_data["ORDER_ID"] = $notification->order_id;
             $parser_data["ORDER_URL"] = $url;
@@ -807,48 +828,53 @@ if (!function_exists('send_notification_emails')) {
         } else if ($notification->category == "subscription") {
             $template_name = "subscription_request_sent";
 
-            if ($notification->event == "subscription_started") {
-                $template_name = "subscription_started";
-            } else if ($notification->event == "subscription_invoice_created_via_cron_job") {
-                $template_name = "subscription_invoice_created_via_cron_job";
-                $invoice_data = get_invoice_making_data($notification->invoice_id);
-                $invoice_info = get_array_value($invoice_data, "invoice_info");
-                $invoice_total_summary = get_array_value($invoice_data, "invoice_total_summary");
-                $parser_data["INVOICE_ID"] = $notification->invoice_id;
-                $parser_data["INVOICE_FULL_ID"] = $notification->invoice_display_id;
-                $parser_data["BALANCE_DUE"] = to_currency($invoice_total_summary->balance_due, $invoice_total_summary->currency_symbol);
-                $parser_data["DUE_DATE"] = format_to_date($invoice_info->due_date, false);
-                $parser_data["INVOICE_URL"] = $url;
+            if ($notification->event == "subscription_started" || $notification->event == "subscription_invoice_created_via_cron_job") {
+                if ($notification->event == "subscription_started") {
+                    $template_name = "subscription_started";
+                } else {
+                    $template_name = "subscription_invoice_created_via_cron_job";
+                    $invoice_data = get_invoice_making_data($notification->invoice_id);
+                    $invoice_info = get_array_value($invoice_data, "invoice_info");
+                    $invoice_total_summary = get_array_value($invoice_data, "invoice_total_summary");
+                    $parser_data["INVOICE_ID"] = $notification->invoice_id;
+                    $parser_data["INVOICE_FULL_ID"] = $notification->invoice_display_id;
+                    $parser_data["BALANCE_DUE"] = to_currency($invoice_total_summary->balance_due, $invoice_total_summary->currency_symbol);
+                    $parser_data["DUE_DATE"] = format_to_date($invoice_info->due_date, false);
+                    $parser_data["INVOICE_URL"] = $url;
 
-                $default_bcc = get_setting('send_bcc_to');
-                if ($default_bcc) {
-                    $email_options["bcc"] = $default_bcc;
+                    $default_bcc = get_setting('send_bcc_to');
+                    if ($default_bcc) {
+                        $email_options["bcc"] = $default_bcc;
+                    }
+
+                    $attachement_url = prepare_invoice_pdf($invoice_data, "send_email");
+                    $email_options["attachments"] = array(array("file_path" => $attachement_url));
                 }
-
-                $attachement_url = prepare_invoice_pdf($invoice_data, "send_email");
-                $email_options["attachments"] = array(array("file_path" => $attachement_url));
-            }
-            if ($notification->event == "subscription_cancelled") {
-                $template_name = "subscription_cancelled";
-
-                $parser_data["CANCELLED_BY"] = $notification->user_name;
 
                 //if invoice is sending to client, change the invoice last email sent date.
                 $notify_to_terms = get_array_value($extra_data, "notify_to_terms");
-                if (array_search("client_all_contacts", $notify_to_terms) !== false || array_search("client_primary_contact", $notify_to_terms) !== false) {
+                if ($notification->invoice_id && (array_search("client_all_contacts", $notify_to_terms) !== false || array_search("client_primary_contact", $notify_to_terms) !== false)) {
                     if (get_array_value($extra_data, "email_sending_to_client")) {
                         $invoice_status_data["last_email_sent_date"] = get_my_local_time();
                     }
 
                     $ci->Invoices_model->ci_save($invoice_status_data, $notification->invoice_id);
                 }
+            } else if ($notification->event == "subscription_cancelled") {
+                $template_name = "subscription_cancelled";
+
+                $parser_data["CANCELLED_BY"] = $notification->user_name;
+            } else if ($notification->event == "subscription_renewal_reminder") {
+                $template_name = "subscription_renewal_reminder";
+
+                $parser_data["NEXT_RENEW_DATE"] = format_to_date($notification->subscription_next_renewal_date, false);
             }
 
             $subscription_info = $ci->Subscriptions_model->get_one($notification->subscription_id);
             $primary_contact = $ci->Clients_model->get_primary_contact($subscription_info->client_id, true);
 
-            $parser_data["CONTACT_FIRST_NAME"] = $primary_contact->first_name;
-            $parser_data["CONTACT_LAST_NAME"] = $primary_contact->last_name;
+            $parser_data["CONTACT_FIRST_NAME"] = isset($primary_contact->first_name) ? $primary_contact->first_name : "";
+            $parser_data["CONTACT_LAST_NAME"] = isset($primary_contact->last_name) ? $primary_contact->last_name : "";
 
             $parser_data["SUBSCRIPTION_ID"] = $notification->subscription_id;
             $parser_data["SUBSCRIPTION_TITLE"] = $notification->subscription_title;
@@ -982,18 +1008,18 @@ if (!function_exists('send_notification_emails')) {
                         $contact_id = $user->id;
                         //add public pay invoice url 
                         if (get_setting("client_can_pay_invoice_without_login") && strpos($message, "PUBLIC_PAY_INVOICE_URL")) {
+                            $code = make_random_string();
                             $verification_data = array(
                                 "type" => "invoice_payment",
-                                "code" => make_random_string(),
+                                "code" => $code,
                                 "params" => serialize(array(
                                     "invoice_id" => $notification->invoice_id,
                                     "client_id" => $invoice_info->client_id,
                                     "contact_id" => $contact_id
                                 ))
                             );
-                            $save_id = $ci->Verification_model->ci_save($verification_data);
-                            $verification_info = $ci->Verification_model->get_one($save_id);
-                            $parser_data["PUBLIC_PAY_INVOICE_URL"] = get_uri("pay_invoice/index/" . $verification_info->code);
+                            $ci->Verification_model->ci_save($verification_data);
+                            $parser_data["PUBLIC_PAY_INVOICE_URL"] = get_uri("pay_invoice/index/" . $code);
                         }
                     }
 
@@ -1060,8 +1086,7 @@ if (!function_exists('send_notification_emails')) {
  */
 if (!function_exists('send_push_notifications')) {
 
-    function send_push_notifications($event, $push_notify_to, $user_id = 0, $notification_id = 0)
-    {
+    function send_push_notifications($event, $push_notify_to, $user_id = 0, $notification_id = 0) {
         $ci = new App_Controller();
 
         //get credentials
@@ -1137,8 +1162,7 @@ if (!function_exists('send_push_notifications')) {
  */
 if (!function_exists('get_notification_url_attributes')) {
 
-    function get_notification_url_attributes($notification)
-    {
+    function get_notification_url_attributes($notification) {
         $url = "#";
         $url_attributes = "href='$url'";
 
@@ -1172,8 +1196,7 @@ if (!function_exists('get_notification_url_attributes')) {
  */
 if (!function_exists('get_notification_multiple_tasks_data')) {
 
-    function get_notification_multiple_tasks_data($tasks, $event)
-    {
+    function get_notification_multiple_tasks_data($tasks, $event) {
         $ci = new App_Controller();
         $user_wise_tasks = array();
 
@@ -1198,12 +1221,12 @@ if (!function_exists('get_notification_multiple_tasks_data')) {
 
             //add all tasks to notify to users
             foreach ($notify_to_users_from_settings as $user_id) {
-                $user_wise_tasks[$user_id][] = $task_data;
+                $user_wise_tasks[$user_id][$task->id] = $task_data;
             }
 
             //add assigned task to related users
             if ($task->assigned_to && in_array("task_assignee", $notify_to_terms_array) && !in_array($task->assigned_to, $notify_to_users_from_settings)) {
-                $user_wise_tasks[$task->assigned_to][] = $task_data;
+                $user_wise_tasks[$task->assigned_to][$task->id] = $task_data;
             }
 
             //add project members 
@@ -1211,7 +1234,7 @@ if (!function_exists('get_notification_multiple_tasks_data')) {
                 $options = array("project_id" => $task->project_id);
                 $project_members = $ci->Project_members_model->get_details($options)->getResult();
                 foreach ($project_members as $project_member) {
-                    $user_wise_tasks[$project_member->user_id][] = $task_data;
+                    $user_wise_tasks[$project_member->user_id][$task->id] = $task_data;
                 }
 
                 array_push($project_ids, $task->project_id);
@@ -1233,8 +1256,7 @@ if (!function_exists('get_notification_multiple_tasks_data')) {
 
 if (!function_exists('send_slack_notification')) {
 
-    function send_slack_notification($event, $user_id = 0, $notification_id = 0, $webhook_url = "")
-    {
+    function send_slack_notification($event, $user_id = 0, $notification_id = 0, $webhook_url = "") {
         if ($webhook_url) {
             $ci = new App_Controller();
 

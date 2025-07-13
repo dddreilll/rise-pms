@@ -56,7 +56,9 @@ if ($can_order) {
 
             //if the chat icon is visible, show the cart icon beside the chat icon
             if ($("#js-init-chat-icon").length) {
-                $cartIcon.css({right: "90px"});
+                if(!isMobile()){
+                    $cartIcon.css({right: "90px"});
+                }
                 if (!$("#js-rise-chat-wrapper").hasClass("hide")) {
                     //chat box is open
                     $cartIcon.css({right: "430px"});

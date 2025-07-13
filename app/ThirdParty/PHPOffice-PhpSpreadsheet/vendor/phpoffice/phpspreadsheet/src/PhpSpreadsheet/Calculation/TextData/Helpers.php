@@ -5,6 +5,7 @@ namespace PhpOffice\PhpSpreadsheet\Calculation\TextData;
 use PhpOffice\PhpSpreadsheet\Calculation\Calculation;
 use PhpOffice\PhpSpreadsheet\Calculation\Exception as CalcExp;
 use PhpOffice\PhpSpreadsheet\Calculation\Functions;
+use PhpOffice\PhpSpreadsheet\Calculation\Information\ErrorValue;
 use PhpOffice\PhpSpreadsheet\Calculation\Information\ExcelError;
 
 class Helpers
@@ -21,19 +22,19 @@ class Helpers
     /**
      * @param mixed $value String value from which to extract characters
      */
-    public static function extractString($value): string
+    public static function extractString(mixed $value, bool $throwIfError = false): string
     {
         if (is_bool($value)) {
             return self::convertBooleanValue($value);
+        }
+        if ($throwIfError && is_string($value) && ErrorValue::isError($value, true)) {
+            throw new CalcExp($value);
         }
 
         return (string) $value;
     }
 
-    /**
-     * @param mixed $value
-     */
-    public static function extractInt($value, int $minValue, int $gnumericNull = 0, bool $ooBoolOk = false): int
+    public static function extractInt(mixed $value, int $minValue, int $gnumericNull = 0, bool $ooBoolOk = false): int
     {
         if ($value === null) {
             // usually 0, but sometimes 1 for Gnumeric
@@ -53,10 +54,7 @@ class Helpers
         return (int) $value;
     }
 
-    /**
-     * @param mixed $value
-     */
-    public static function extractFloat($value): float
+    public static function extractFloat(mixed $value): float
     {
         if ($value === null) {
             $value = 0.0;
@@ -65,21 +63,28 @@ class Helpers
             $value = (float) $value;
         }
         if (!is_numeric($value)) {
+            if (is_string($value) && ErrorValue::isError($value, true)) {
+                throw new CalcExp($value);
+            }
+
             throw new CalcExp(ExcelError::VALUE());
         }
 
         return (float) $value;
     }
 
-    /**
-     * @param mixed $value
-     */
-    public static function validateInt($value): int
+    public static function validateInt(mixed $value, bool $throwIfError = false): int
     {
         if ($value === null) {
             $value = 0;
         } elseif (is_bool($value)) {
             $value = (int) $value;
+        } elseif ($throwIfError && is_string($value) && !is_numeric($value)) {
+            if (!ErrorValue::isError($value, true)) {
+                $value = ExcelError::VALUE();
+            }
+
+            throw new CalcExp($value);
         }
 
         return (int) $value;

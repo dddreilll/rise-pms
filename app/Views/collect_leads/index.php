@@ -1,6 +1,6 @@
 <style type="text/css">
     .lead-info-section .form-group {
-        margin: 25px 15px;
+        margin: 10px;
     }
 
     #page-content.page-wrapper {
@@ -23,22 +23,6 @@
 
             <h3 class=" pl15 pr10 pb20 b-b"> <?php echo app_lang("please_submit_the_form"); ?></h3>
             <?php $hidden_fields = explode(",", get_setting("hidden_fields_on_lead_embedded_form")); ?>
-
-            <div class="form-group">
-                <label for="company_name"><?php echo app_lang('company_name'); ?>*</label>
-                <div>
-                    <?php
-                    echo form_input(array(
-                        "id" => "company_name",
-                        "name" => "company_name",
-                        "class" => "form-control",
-                        "placeholder" => app_lang('company_name'),
-                        "data-rule-required" => true,
-                        "data-msg-required" => app_lang("field_required"),
-                    ));
-                    ?>
-                </div>
-            </div>
 
             <?php if (!in_array("first_name", $hidden_fields)) { ?>
                 <div class="form-group">
@@ -70,6 +54,22 @@
                             "placeholder" => app_lang('last_name'),
                             "data-rule-required" => true,
                             "data-msg-required" => app_lang("field_required"),
+                        ));
+                        ?>
+                    </div>
+                </div>
+            <?php } ?>
+
+            <?php if (!in_array("company_name", $hidden_fields)) { ?>
+                <div class="form-group">
+                    <label for="company_name"><?php echo app_lang('company_name'); ?></label>
+                    <div>
+                        <?php
+                        echo form_input(array(
+                            "id" => "company_name",
+                            "name" => "company_name",
+                            "class" => "form-control",
+                            "placeholder" => app_lang('company_name')
                         ));
                         ?>
                     </div>

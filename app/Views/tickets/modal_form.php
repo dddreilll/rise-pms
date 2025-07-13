@@ -25,7 +25,7 @@
             </div>
 
             <!-- client can't be changed during editing -->
-            <?php if ($client_id) { ?>
+            <?php if ($client_id || $model_info->client_id) { ?>
                 <input type="hidden" name="client_id" value="<?php echo $client_id; ?>" />
             <?php } else if (!$model_info->creator_email) { ?>
                 <div class="form-group">
@@ -47,7 +47,7 @@
                             <label for="requested_by_id" class=" col-md-3"><?php echo app_lang('requested_by'); ?></label>
                             <div class="col-md-9" id="requested-by-dropdown-section">
                                 <?php
-                                if ($project_id) {
+                                if ($project_id || $client_id) {
                                     echo form_dropdown("requested_by_id", $requested_by_dropdown, "", "class='select2'");
                                 } else {
                                     echo form_input(array(
@@ -186,32 +186,7 @@
 
         $("#ticket-form").appForm({
             onSuccess: function (result) {
-                if (editMode) {
-
-                    appAlert.success(result.message, {duration: 10000});
-
-                    //don't reload whole page when it's the list view
-                    if ($("#ticket-table").length) {
-                        if (result.data.length > 2) {
-                            $("#ticket-table").appTable({newData: result.data, dataId: result.id});
-                        } else {
-                            location.reload();
-                        }
-                    } else {
-                        if (result.data.length > 2) {
-                            location.reload();
-                        } else {
-                            window.location = "<?php echo site_url('tickets'); ?>";
-                        }
-                    }
-                } else {
-                    if (result.data.length > 2) {
-                        $("#ticket-table").appTable({newData: result.data, dataId: result.id});
-                    } else {
-                        location.reload();
-                    }
-                }
-
+                appAlert.success(result.message, {duration: 10000});
             }
         });
         setTimeout(function () {

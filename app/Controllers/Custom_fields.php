@@ -20,8 +20,10 @@ class Custom_fields extends Security_Controller {
 
     //add/edit fields
     function modal_form() {
+        $id = $this->request->getPost('id');
+        validate_numeric_value($id);
 
-        $model_info = $this->Custom_fields_model->get_one($this->request->getPost('id'));
+        $model_info = $this->Custom_fields_model->get_one($id);
         $related_to = $model_info->related_to;
         if (!$related_to) {
             $related_to = $this->request->getPost("related_to");
@@ -87,6 +89,8 @@ class Custom_fields extends Security_Controller {
             $data["sort"] = $max_sort_value * 1 + 1; //increase sort value
         }
 
+        $data = clean_data($data);
+
         $save_id = $this->Custom_fields_model->ci_save($data, $id);
         if ($save_id) {
             echo json_encode(array("success" => true, "data" => $this->_row_data($save_id), 'newData' => $id ? false : true, 'id' => $save_id, 'message' => app_lang('record_saved')));
@@ -144,7 +148,7 @@ class Custom_fields extends Security_Controller {
             $field,
             $data->sort,
             modal_anchor(get_uri("custom_fields/modal_form/"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_field'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_field'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("custom_fields/delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_field'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("custom_fields/delete"), "data-action" => "delete"))
         );
     }
 
@@ -261,7 +265,6 @@ class Custom_fields extends Security_Controller {
     function project_files() {
         return $this->template->view('custom_fields/settings/project_files');
     }
-
 }
 
 /* End of file custom_fields.php */

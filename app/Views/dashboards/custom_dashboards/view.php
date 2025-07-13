@@ -1,3 +1,5 @@
+<?php echo view("dashboards/install_pwa"); ?>
+
 <div id="page-content" class="page-wrapper clearfix dashboard-view">
 
     <?php
@@ -31,39 +33,41 @@
 <?php echo view("dashboards/helper_js"); ?>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         //we have to reload the same page when editting title
-        $("#dashboard-edit-title-button").click(function () {
+        $("#dashboard-edit-title-button").click(function() {
             window.dashboardTitleEditMode = true;
         });
 
         //update dashboard link
         $(".dashboard-menu, .dashboard-image").closest("a").attr("href", window.location.href);
 
-        onDashboardDeleteSuccess = function (result, $selector) {
+        onDashboardDeleteSuccess = function(result, $selector) {
             window.location.href = "<?php echo get_uri("dashboard"); ?>";
         };
 
-        initScrollbar('#project-timeline-container', {
-            setHeight: 719
-        });
+        if (!isMobile()) {
+            initScrollbar('#project-timeline-container', {
+                setHeight: 728
+            });
 
-        initScrollbar('#upcoming-event-container', {
-            setHeight: 330
-        });
+            initScrollbar('#upcoming-event-container', {
+                setHeight: 330
+            });
 
-        initScrollbar('#client-projects-list', {
-            setHeight: 316
-        });
+            initScrollbar('#client-projects-list', {
+                setHeight: 316
+            });
+        }
 
-<?php if ($dashboard_id && $dashboard_id === get_setting("staff_default_dashboard") && $login_user->user_type === "staff") { ?>
-            $(".dashboards-row").each(function () { //each widgets row
+        <?php if ($dashboard_id && $dashboard_id === get_setting("staff_default_dashboard") && $login_user->user_type === "staff") { ?>
+            $(".dashboards-row").each(function() { //each widgets row
                 var $rowInstance = $(this),
-                        totalColumns = $rowInstance.find(".widget-container").length,
-                        invalidWidgetRemoved = false;
+                    totalColumns = $rowInstance.find(".widget-container").length,
+                    invalidWidgetRemoved = false;
 
                 //remove invalid widgets and columns
-                $rowInstance.find(".widget-container").each(function () { //each widgets column
+                $rowInstance.find(".widget-container").each(function() { //each widgets column
                     var invalidWidget = $(this).find(".dashboard-invalid-widget");
 
                     if (invalidWidget) { //has invalid widget in this column
@@ -77,16 +81,21 @@
 
                 if (invalidWidgetRemoved) {
                     var totalNewColumns = $rowInstance.find(".widget-container").length,
-                            columnsArray = {1: 12, 2: 6, 3: 4, 4: 3};
+                        columnsArray = {
+                            1: 12,
+                            2: 6,
+                            3: 4,
+                            4: 3
+                        };
 
                     if (totalColumns !== totalNewColumns) { //any column has been totally removed in this row
-                        $rowInstance.find(".widget-container").each(function () {
+                        $rowInstance.find(".widget-container").each(function() {
                             $(this).addClass("col-md-" + columnsArray[totalNewColumns]); //apply the appropriate column class
                         });
                     }
                 }
             });
-<?php } ?>
+        <?php } ?>
 
     });
 </script>

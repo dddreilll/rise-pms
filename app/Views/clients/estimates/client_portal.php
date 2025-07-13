@@ -35,16 +35,22 @@
             showCommentOption = true;
         }
 
+        var idColumnClass = "w25p";
+
+        if (isMobile()) {
+            idColumnClass = "";
+        }
+
         var currencySymbol = "<?php echo $client_info->currency_symbol; ?>";
         $("#estimate-table").appTable({
             source: '<?php echo_uri("estimates/estimate_list_data_of_client/" . $client_id) ?>',
             order: [[0, "desc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
-                {title: "<?php echo app_lang("estimate") ?>", "class": "w25p"},
+                {title: "<?php echo app_lang("estimate") ?>", "class": idColumnClass + " all"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("estimate_date") ?>", "iDataSort": 2},
+                {title: "<?php echo app_lang("estimate_date") ?>", "class": "all", "iDataSort": 2},
                 {title: "<?php echo app_lang("amount") ?>", "class": "text-right"},
                 {title: "<?php echo app_lang("status") ?>", "class": "text-center"},
                 {visible: showCommentOption, title: '<i data-feather="message-circle" class="icon-16"></i>', "class": "text-center w50"}

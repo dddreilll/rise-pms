@@ -119,19 +119,9 @@ class Orders extends Security_Controller {
         }
 
         $row_data[] = modal_anchor(get_uri("orders/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_order'), "data-post-id" => $data->id))
-                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_order'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("orders/delete"), "data-action" => "delete"));
+            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_order'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("orders/delete"), "data-action" => "delete"));
 
         return $row_data;
-    }
-
-    //load the yearly view of order list
-    function yearly() {
-        return $this->template->view("orders/yearly_orders");
-    }
-
-    //load the custom view of order list
-    function custom() {
-        return $this->template->view("orders/custom_orders");
     }
 
     /* load new order modal */
@@ -611,7 +601,6 @@ class Orders extends Security_Controller {
             return $this->template->view('orders/order_total_section', $view_data);
         }
     }
-
 }
 
 /* End of file orders.php */

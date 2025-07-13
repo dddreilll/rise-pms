@@ -139,7 +139,7 @@ class Plugins extends Security_Controller {
         if ($include_directories && is_dir(PLUGINPATH)) {
             if ($dh = opendir(PLUGINPATH)) {
                 while (($file = readdir($dh)) !== false) {
-                    if ($file && $file != "." && $file != ".." && $file != "index.html" && $file != ".gitkeep" && !array_key_exists($file, $plugins)) {
+                    if ($file && $file != "." && $file != ".." && $file != "index.html" && $file != ".gitkeep" && $file != ".DS_Store" && !array_key_exists($file, $plugins)) {
                         $plugins[$file] = "indexed";
                     }
                 }
@@ -190,7 +190,7 @@ class Plugins extends Security_Controller {
             //since this plugin isn't activated, the index file won't be loaded
             //that's why, load it's index file to register activation hook
             if (file_exists(PLUGINPATH . $plugin_name . "/index.php")) {
-                include (PLUGINPATH . $plugin_name . "/index.php");
+                include(PLUGINPATH . $plugin_name . "/index.php");
             }
 
             app_hooks()->do_action("app_hook_activate_plugin_$plugin_name");
@@ -201,7 +201,10 @@ class Plugins extends Security_Controller {
         $plugins[$plugin_name] = $status;
         save_plugins_config($plugins);
 
-        $this->Settings_model->save_setting("plugins", serialize($plugins));
+        $plugins = clean_data($plugins);
+        $plugins = serialize($plugins);
+
+        $this->Settings_model->save_setting("plugins", $plugins);
 
         if ($echo_json) {
             echo json_encode(array("success" => true));
@@ -216,7 +219,7 @@ class Plugins extends Security_Controller {
             exit();
         }
 
-        include (PLUGINPATH . $plugin_name . '/index.php');
+        include(PLUGINPATH . $plugin_name . '/index.php');
 
         //call plugin installation hook
         $item_purchase_code = $this->request->getPost("file_description");
@@ -231,38 +234,34 @@ class Plugins extends Security_Controller {
 
         $plugins = $this->get_plugins_array();
         $plugin_folder = PLUGINPATH . $plugin_name;
-        if (!is_dir($plugin_folder)) {
-            //no accurate directory found
-            show_404();
-        }
+
 
         if (array_key_exists($plugin_name, $plugins)) {
             //this is not on indexed state, means installed before
             $plugin_index_file = PLUGINPATH . $plugin_name . '/index.php';
-            if (!file_exists($plugin_index_file)) {
-                show_404();
+            if (file_exists($plugin_index_file)) {
+                include($plugin_index_file);
+
+                //call plugin uninstallation hook
+                app_hooks()->do_action("app_hook_uninstall_plugin_$plugin_name");
             }
-
-            //call uninstallation hook
-            include ($plugin_index_file);
-
-            //call plugin uninstallation hook
-            app_hooks()->do_action("app_hook_uninstall_plugin_$plugin_name");
         }
 
         //delete files
-        helper("filesystem");
-        if (!delete_files($plugin_folder, true, false, true)) {
-            show_404();
-        }
+        if (is_dir($plugin_folder)) {
+            helper("filesystem");
+            delete_files($plugin_folder, true, false, true);
 
-        //delete empty folder
-        rmdir($plugin_folder);
+            //delete empty folder
+            rmdir($plugin_folder);
+        }
 
         //save plugins
         if (array_key_exists($plugin_name, $plugins)) {
             unset($plugins[$plugin_name]);
-            $this->Settings_model->save_setting("plugins", serialize($plugins));
+            $plugins = clean_data($plugins);
+            $plugins = serialize($plugins);
+            $this->Settings_model->save_setting("plugins", $plugins);
         }
 
         echo json_encode(array("success" => true, 'message' => app_lang('record_deleted')));
@@ -361,7 +360,7 @@ class Plugins extends Security_Controller {
         return array(
             $plugin,
             $this->prepare_plugin_description($plugin_info),
-            "<span class='mt0 badge $status_class large'>" . app_lang($status) . "</span>",
+            "<span class='mt0 badge $status_class'>" . app_lang($status) . "</span>",
             $option
         );
     }

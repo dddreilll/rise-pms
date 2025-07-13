@@ -16,6 +16,8 @@ class Leave_applications_model extends Crud_model {
         $users_table = $this->db->prefixTable('users');
         $leave_types_table = $this->db->prefixTable('leave_types');
 
+        $id = $this->_get_clean_value($id);
+
         $sql = "SELECT $leave_applications_table.*, 
                 CONCAT(applicant_table.first_name, ' ',applicant_table.last_name) AS applicant_name, applicant_table.image as applicant_avatar, applicant_table.job_title,
                 CONCAT(checker_table.first_name, ' ',checker_table.last_name) AS checker_name, checker_table.image as checker_avatar,

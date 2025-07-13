@@ -11,43 +11,47 @@ class ExcelError
     /**
      * List of error codes.
      *
-     * @var array
+     * @var array<string, string>
      */
-    public static $errorCodes = [
-        'null' => '#NULL!',
-        'divisionbyzero' => '#DIV/0!',
-        'value' => '#VALUE!',
-        'reference' => '#REF!',
-        'name' => '#NAME?',
-        'num' => '#NUM!',
-        'na' => '#N/A',
-        'gettingdata' => '#GETTING_DATA',
-        'spill' => '#SPILL!',
+    public const ERROR_CODES = [
+        'null' => '#NULL!', // 1
+        'divisionbyzero' => '#DIV/0!', // 2
+        'value' => '#VALUE!', // 3
+        'reference' => '#REF!', // 4
+        'name' => '#NAME?', // 5
+        'num' => '#NUM!', // 6
+        'na' => '#N/A', // 7
+        'gettingdata' => '#GETTING_DATA', // 8
+        'spill' => '#SPILL!', // 9
+        'connect' => '#CONNECT!', //10
+        'blocked' => '#BLOCKED!', //11
+        'unknown' => '#UNKNOWN!', //12
+        'field' => '#FIELD!', //13
+        'calculation' => '#CALC!', //14
     ];
+
+    public static function throwError(mixed $value): string
+    {
+        return in_array($value, self::ERROR_CODES, true) ? $value : self::ERROR_CODES['value'];
+    }
 
     /**
      * ERROR_TYPE.
      *
      * @param mixed $value Value to check
-     *
-     * @return array|int|string
      */
-    public static function type($value = '')
+    public static function type(mixed $value = ''): array|int|string
     {
         if (is_array($value)) {
             return self::evaluateSingleArgumentArray([self::class, __FUNCTION__], $value);
         }
 
         $i = 1;
-        foreach (self::$errorCodes as $errorCode) {
+        foreach (self::ERROR_CODES as $errorCode) {
             if ($value === $errorCode) {
                 return $i;
             }
             ++$i;
-        }
-
-        if ($value === self::CALC()) {
-            return 14;
         }
 
         return self::NA();
@@ -60,9 +64,9 @@ class ExcelError
      *
      * @return string #NULL!
      */
-    public static function null()
+    public static function null(): string
     {
-        return self::$errorCodes['null'];
+        return self::ERROR_CODES['null'];
     }
 
     /**
@@ -72,9 +76,9 @@ class ExcelError
      *
      * @return string #NUM!
      */
-    public static function NAN()
+    public static function NAN(): string
     {
-        return self::$errorCodes['num'];
+        return self::ERROR_CODES['num'];
     }
 
     /**
@@ -84,9 +88,9 @@ class ExcelError
      *
      * @return string #REF!
      */
-    public static function REF()
+    public static function REF(): string
     {
-        return self::$errorCodes['reference'];
+        return self::ERROR_CODES['reference'];
     }
 
     /**
@@ -100,9 +104,9 @@ class ExcelError
      *
      * @return string #N/A!
      */
-    public static function NA()
+    public static function NA(): string
     {
-        return self::$errorCodes['na'];
+        return self::ERROR_CODES['na'];
     }
 
     /**
@@ -112,9 +116,9 @@ class ExcelError
      *
      * @return string #VALUE!
      */
-    public static function VALUE()
+    public static function VALUE(): string
     {
-        return self::$errorCodes['value'];
+        return self::ERROR_CODES['value'];
     }
 
     /**
@@ -124,9 +128,9 @@ class ExcelError
      *
      * @return string #NAME?
      */
-    public static function NAME()
+    public static function NAME(): string
     {
-        return self::$errorCodes['name'];
+        return self::ERROR_CODES['name'];
     }
 
     /**
@@ -134,18 +138,28 @@ class ExcelError
      *
      * @return string #DIV/0!
      */
-    public static function DIV0()
+    public static function DIV0(): string
     {
-        return self::$errorCodes['divisionbyzero'];
+        return self::ERROR_CODES['divisionbyzero'];
     }
 
     /**
      * CALC.
      *
-     * @return string #Not Yet Implemented
+     * @return string #CALC!
      */
-    public static function CALC()
+    public static function CALC(): string
     {
-        return '#CALC!';
+        return self::ERROR_CODES['calculation'];
+    }
+
+    /**
+     * SPILL.
+     *
+     * @return string #SPILL!
+     */
+    public static function SPILL(): string
+    {
+        return self::ERROR_CODES['spill'];
     }
 }

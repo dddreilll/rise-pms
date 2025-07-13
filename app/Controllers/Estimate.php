@@ -104,7 +104,8 @@ class Estimate extends Security_Controller {
     function accept_estimate() {
         $validation_array = array(
             "id" => "numeric|required",
-            "public_key" => "required"
+            "public_key" => "required",
+            "email" => "valid_email"
         );
 
         if (get_setting("add_signature_option_on_accepting_estimate")) {
@@ -147,8 +148,8 @@ class Estimate extends Security_Controller {
                 show_404();
             }
 
-            $meta_data["name"] = $name;
-            $meta_data["email"] = $email;
+            $meta_data["name"] = clean_data($name);
+            $meta_data["email"] = clean_data($email);
         } else {
             //from preview, should be logged in client contact
             $this->init_permission_checker("estimate");
@@ -170,7 +171,6 @@ class Estimate extends Security_Controller {
             echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
         }
     }
-
 }
 
 /* End of file Estimate.php */

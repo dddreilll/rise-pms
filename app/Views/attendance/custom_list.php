@@ -4,11 +4,12 @@
 </div>
 <script type="text/javascript">
     $(document).ready(function () {
+        var dynamicDates = getDynamicDates();
         $("#custom-attendance-table").appTable({
             source: '<?php echo_uri("attendance/list_data/"); ?>',
             order: [[2, "desc"]],
             filterDropdown: [{name: "user_id", class: "w200", options: <?php echo $team_members_dropdown; ?>}],
-            rangeDatepicker: [{startDate: {name: "start_date", value: moment().format("YYYY-MM-DD")}, endDate: {name: "end_date", value: moment().format("YYYY-MM-DD")}}],
+            rangeDatepicker: [{startDate: {name: "start_date", value: dynamicDates.start_of_month}, endDate: {name: "end_date", value: dynamicDates.end_of_month}, label: "<?php echo app_lang('date'); ?>", ranges: ['this_month', 'last_month', 'this_year', 'last_year', 'last_30_days', 'last_7_days']}],
             columns: [
                 {title: "<?php echo app_lang("team_member"); ?>", "class": "w20p"},
                 {visible: false, searchable: false},

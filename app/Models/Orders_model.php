@@ -89,6 +89,9 @@ class Orders_model extends Crud_model {
         $users_table = $this->db->prefixTable('users');
         $taxes_table = $this->db->prefixTable('taxes');
 
+        $user_id = $this->_get_clean_value($user_id);
+        $created_by_hash = $this->_get_clean_value($created_by_hash);
+
         if ($user_id) {
             $where = " AND $order_items_table.created_by=$user_id ";
         } else if ($created_by_hash) {
@@ -150,6 +153,8 @@ class Orders_model extends Crud_model {
         $orders_table = $this->db->prefixTable('orders');
         $clients_table = $this->db->prefixTable('clients');
         $taxes_table = $this->db->prefixTable('taxes');
+
+        $order_id = $this->_get_clean_value($order_id);
 
         $item_sql = "SELECT SUM($order_items_table.total) AS order_subtotal
         FROM $order_items_table
@@ -221,6 +226,8 @@ class Orders_model extends Crud_model {
     //save initial number of order
     function save_initial_number_of_order($value) {
         $orders_table = $this->db->prefixTable('orders');
+
+        $value = $this->_get_clean_value($value);
 
         $sql = "ALTER TABLE $orders_table AUTO_INCREMENT=$value;";
 

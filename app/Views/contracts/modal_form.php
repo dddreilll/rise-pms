@@ -4,8 +4,14 @@
         <div class="container-fluid">
             <input type="hidden" name="id" value="<?php echo $model_info->id; ?>" />
 
-            <?php if ($is_clone) { ?>
-                <input type="hidden" name="is_clone" value="1" />
+            <?php if ($is_clone || $proposal_id) { ?>
+                <?php if ($is_clone) { ?>
+                    <input type="hidden" name="is_clone" value="1" />
+                <?php } ?>
+                <input type="hidden" name="discount_amount" value="<?php echo $model_info->discount_amount; ?>" />
+                <input type="hidden" name="discount_amount_type" value="<?php echo $model_info->discount_amount_type; ?>" />
+                <input type="hidden" name="discount_type" value="<?php echo $model_info->discount_type; ?>" />
+                <input type="hidden" name="content" value="<?php echo htmlspecialchars($model_info->content); ?>" />
             <?php } ?>
 
             <div class="form-group">
@@ -24,7 +30,7 @@
                             "data-msg-required" => app_lang("field_required"),
                         ));
                         ?>
-                    </div> 
+                    </div>
                 </div>
             </div>
 
@@ -160,30 +166,45 @@
                 </div>
             </div>
 
-            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?> 
+            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?>
+
+            <?php if ($proposal_id) { ?>
+                <input type="hidden" name="proposal_id" value="<?php echo $proposal_id; ?>" />
+                <div class="form-group">
+                    <div class="row">
+                        <label for="proposal_id_checkbox" class=" col-md-12">
+                            <input type="hidden" name="copy_items_from_proposal" value="<?php echo $proposal_id; ?>" />
+                            <?php
+                            echo form_checkbox("proposal_id_checkbox", $proposal_id, true, " class='float-start form-check-input' disabled='disabled'");
+                            ?>
+                            <span class="float-start ml15"> <?php echo app_lang('include_all_items_of_this_proposal'); ?> </span>
+                        </label>
+                    </div>
+                </div>
+            <?php } ?>
 
             <?php if ($is_clone) { ?>
                 <div class="form-group">
                     <div class="row">
-                        <label for="copy_items"class=" col-md-12">
+                        <label for="copy_items" class=" col-md-12">
                             <?php
                             echo form_checkbox("copy_items", "1", true, "id='copy_items' disabled='disabled' class='float-start mr15 form-check-input'");
-                            ?>    
+                            ?>
                             <?php echo app_lang('copy_items'); ?>
                         </label>
                     </div>
                 </div>
                 <div class="form-group">
                     <div class="row">
-                        <label for="copy_discount"class=" col-md-12">
+                        <label for="copy_discount" class=" col-md-12">
                             <?php
                             echo form_checkbox("copy_discount", "1", true, "id='copy_discount' disabled='disabled' class='float-start mr15 form-check-input'");
-                            ?>    
+                            ?>
                             <?php echo app_lang('copy_discount'); ?>
                         </label>
                     </div>
                 </div>
-            <?php } ?> 
+            <?php } ?>
 
             <div class="form-group">
                 <div class="col-md-12 row">
@@ -207,10 +228,13 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
+        if ("<?php echo $proposal_id; ?>") {
+            RELOAD_VIEW_AFTER_UPDATE = false; //go to related page
+        }
 
         $("#contract-form").appForm({
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 if (typeof RELOAD_VIEW_AFTER_UPDATE !== "undefined" && RELOAD_VIEW_AFTER_UPDATE) {
                     location.reload();
                 } else {
@@ -221,33 +245,41 @@
         $("#contract-form .tax-select2").select2();
         $("#contract_client_id").select2();
 
-        setTimeout(function () {
+        setTimeout(function() {
             $("#title").focus();
         }, 200);
 
         setDatePicker("#contract_date, #valid_until");
 
         //load all projects of selected client
-        $("#contract_client_id").select2().on("change", function () {
+        $("#contract_client_id").select2().on("change", function() {
             var client_id = $(this).val();
             if ($(this).val()) {
                 $('#contract_project_id').select2("destroy");
                 $("#contract_project_id").hide();
-                appLoader.show({container: "#contract-porject-dropdown-section"});
+                appLoader.show({
+                    container: "#contract-porject-dropdown-section"
+                });
                 $.ajax({
                     url: "<?php echo get_uri("contracts/get_project_suggestion") ?>" + "/" + client_id,
                     dataType: "json",
-                    success: function (result) {
+                    success: function(result) {
                         $("#contract_project_id").show().val("");
-                        $('#contract_project_id').select2({data: result});
+                        $('#contract_project_id').select2({
+                            data: result
+                        });
                         appLoader.hide();
                     }
                 });
             }
         });
 
-        $('#contract_project_id').select2({data: <?php echo json_encode($projects_suggestion); ?>});
-        $("#company_id").select2({data: <?php echo json_encode($companies_dropdown); ?>});
+        $('#contract_project_id').select2({
+            data: <?php echo json_encode($projects_suggestion); ?>
+        });
+        $("#company_id").select2({
+            data: <?php echo json_encode($companies_dropdown); ?>
+        });
 
         if ("<?php echo $project_id; ?>") {
             $("#contract_client_id").select2("readonly", true);

@@ -1,6 +1,6 @@
 <?php echo view("includes/cropbox"); ?>
-<div id="page-content" class="clearfix">
-    <div class="bg-success p20">
+<div id="page-content" class="page-wrapper clearfix">
+    <div class="bg-primary card mb0 rounded-bottom-0 p20">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-6">
@@ -54,7 +54,7 @@
     </div>
 
 
-    <ul data-bs-toggle="ajax-tab" class="nav nav-tabs no-border-top-radius" role="tablist">
+    <ul data-bs-toggle="ajax-tab" class="nav nav-tabs no-border-top-radius border-top-0" role="tablist">
         <li><a data-bs-toggle="tab" role="presentation" href="<?php echo_uri("leads/contact_general_info_tab/" . $user_info->id); ?>" data-bs-target="#tab-general-info"> <?php echo app_lang('general_info'); ?></a></li>
         <li><a data-bs-toggle="tab" role="presentation" href="<?php echo_uri("leads/company_info_tab/" . $user_info->client_id); ?>" data-bs-target="#tab-company-info"> <?php echo ($lead_info->type == "person") ? app_lang('contact_info') : app_lang('company'); ?></a></li>
         <li><a data-bs-toggle="tab" role="presentation" href="<?php echo_uri("leads/contact_social_links_tab/" . $user_info->id); ?>" data-bs-target="#tab-social-links"> <?php echo app_lang('social_links'); ?></a></li>

@@ -44,7 +44,7 @@ if ($total_invoices) {
         </div>
 
         <div class="card-body rounded-bottom" id="invoice-overview-container">
-            <a href="<?php echo get_uri('invoices/index/custom#overdue'); ?>" data-filter="overdue" class="text-default">
+            <a href="<?php echo get_uri('invoices/index/custom/overdue/' . $invoice_currency); ?>" data-filter="overdue" class="text-default">
                 <div class="d-flex p-2">
                     <div class="w40p text-truncate">
                         <div style="background-color: #F5325C;" class="color-tag border-circle wh10"></div><?php echo app_lang("overdue"); ?>
@@ -58,7 +58,7 @@ if ($total_invoices) {
                     <div class="w25p text-end"><?php echo to_currency($invoices_info->overdue, $currency_symbol); ?></div>
                 </div>
             </a>
-            <a href="<?php echo get_uri('invoices/index/custom#not_paid'); ?>" data-filter="not_paid" class="text-default">
+            <a href="<?php echo get_uri('invoices/index/custom/not_paid/' . $invoice_currency); ?>" data-filter="not_paid" class="text-default">
                 <div class="d-flex p-2">
                     <div class="w40p text-truncate">
                         <div style="background-color: #FAC108;" class="color-tag border-circle wh10"></div><?php echo app_lang("not_paid"); ?>
@@ -72,7 +72,7 @@ if ($total_invoices) {
                     <div class="w25p text-end"><?php echo to_currency($invoices_info->not_paid, $currency_symbol); ?></div>
                 </div>
             </a>
-            <a href="<?php echo get_uri('invoices/index/custom#partially_paid'); ?>" data-filter="partially_paid" class="text-default">
+            <a href="<?php echo get_uri('invoices/index/custom/partially_paid/' . $invoice_currency); ?>" data-filter="partially_paid" class="text-default">
                 <div class="d-flex p-2">
                     <div class="w40p text-truncate">
                         <div style="background-color: #6690F4;" class="color-tag border-circle wh10"></div><?php echo app_lang("partially_paid"); ?>
@@ -86,7 +86,7 @@ if ($total_invoices) {
                     <div class="w25p text-end"><?php echo to_currency($invoices_info->partially_paid_total, $currency_symbol); ?></div>
                 </div>
             </a>
-            <a href="<?php echo get_uri('invoices/index/custom#fully_paid'); ?>" data-filter="fully_paid" class="text-default">
+            <a href="<?php echo get_uri('invoices/index/custom/fully_paid/' . $invoice_currency); ?>" data-filter="fully_paid" class="text-default">
                 <div class="d-flex p-2">
                     <div class="w40p text-truncate">
                         <div style="background-color: #485BBD;" class="color-tag border-circle wh10"></div><?php echo app_lang("fully_paid"); ?>
@@ -100,7 +100,7 @@ if ($total_invoices) {
                     <div class="w25p text-end"><?php echo to_currency($invoices_info->fully_paid_total, $currency_symbol); ?></div>
                 </div>
             </a>
-            <a href="<?php echo get_uri('invoices/index/custom#draft'); ?>" data-filter="draft" class="text-default">
+            <a href="<?php echo get_uri('invoices/index/custom/draft/' . $invoice_currency); ?>" data-filter="draft" class="text-default">
                 <div class="d-flex p-2">
                     <div class="w40p text-truncate">
                         <div style="background-color: #6C757D;" class="color-tag border-circle wh10"></div><?php echo app_lang("draft"); ?>
@@ -141,7 +141,7 @@ if ($total_invoices) {
 <script>
     $(document).ready(function () {
         initScrollbar('#invoice-overview-container', {
-            setHeight: 327
+            setHeight: 330
         });
 
         var invoicePaymentChart = document.getElementById("invoice-overview-chart");
@@ -203,8 +203,12 @@ if ($total_invoices) {
             var currencySymbol = $(this).attr("data-currency-symbol");
 
             $.ajax({
-                url: "<?php echo get_uri('invoices/load_invoice_overview_statistics_of_selected_currency') ?>" + "/" + currencyValue + "/" + currencySymbol,
+                url: "<?php echo get_uri('invoices/load_invoice_overview_statistics_of_selected_currency') ?>",
                 type: 'POST',
+                data: {
+                    "currency": currencyValue, 
+                    "currency_symbol": currencySymbol
+                },
                 dataType: 'json',
                 success: function (result) {
                     if (result.success) {

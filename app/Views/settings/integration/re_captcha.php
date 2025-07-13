@@ -14,6 +14,27 @@
 
         <div class="form-group">
             <div class="row">
+                <label for="re_captcha_protocol" class=" col-md-2">reCAPTCHA <?php echo app_lang('protocol'); ?></label>
+                <div class=" col-md-10">
+                    <?php
+                    $re_captcha_protocols = array(
+                        "v2" => "v2 Checkbox",
+                        "v3" => "v3",
+                    );
+
+                    echo form_dropdown(
+                        "re_captcha_protocol",
+                        $re_captcha_protocols,
+                        get_setting('re_captcha_protocol'),
+                        "class='select2 mini'"
+                    );
+                    ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="row">
                 <label for="re_captcha_site_key" class=" col-md-2"><?php echo app_lang('re_captcha_site_key'); ?></label>
                 <div class=" col-md-10">
                     <?php
@@ -65,13 +86,16 @@
 
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#re-captcha-form").appForm({
             isModal: false,
-            onSuccess: function (result) {
-                appAlert.success(result.message, {duration: 10000});
+            onSuccess: function(result) {
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
             }
         });
 
+        $("#re-captcha-form .select2").select2();
     });
 </script>

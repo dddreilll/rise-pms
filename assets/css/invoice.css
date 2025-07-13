@@ -13,6 +13,7 @@
 .invoice-preview *:not(.badge) {
   line-height: 20px !important;
 }
+
 .ribbon {
   position: absolute;
   left: -25px;
@@ -37,6 +38,7 @@
   top: 35px;
   left: -28px;
   padding: 0 !important;
+  border-radius: 0;
 }
 .ribbon span:before {
   content: "";
@@ -60,9 +62,11 @@
   border-bottom: 3px solid transparent;
   border-top: 3px solid #aaa;
 }
+
 .invoice-meta {
   font-size: 100% !important;
 }
+
 .print-invoice .invoice-preview-container {
   border: 1px solid #dadada;
 }
@@ -87,6 +91,7 @@
 .print-invoice td.invoice-header-style-two .invoice-info-title {
   margin-left: -5px !important;
 }
+
 .public-invoice-preview form {
   margin-bottom: 0 !important;
 }

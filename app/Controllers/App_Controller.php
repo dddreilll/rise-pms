@@ -85,6 +85,8 @@ class App_Controller extends Controller {
     public $Subscription_items_model;
     public $Event_tracker_model;
     public $Proposal_comments_model;
+    public $Reminder_settings_model;
+    public $Reminder_logs_model;
 
     public function __construct() {
         //main template to make frame of this app
@@ -118,10 +120,17 @@ class App_Controller extends Controller {
         $this->parser = \Config\Services::parser();
 
         $landing_page = get_setting("landing_page");
-        $request = request();
-        if ($landing_page && $request->getUri() == base_url()) {
+        if ($landing_page && $this->_is_current_url_same_as_base_url()) {
             app_redirect($landing_page);
         }
+    }
+
+    private function _is_current_url_same_as_base_url() {
+        // the base_url() will always give the ..site.com/
+        // but the current_url() will give ..site.com/index.php if there has config in App.php -> $indexPage = 'index.php' and ..site.com/ if nothing in $indexPage
+        // so remove index.php/ from the current url and compare with base url
+        $clean_current_url = str_replace('index.php/', '', current_url());
+        return $clean_current_url == base_url();
     }
 
     public function initController(\CodeIgniter\HTTP\RequestInterface $request, \CodeIgniter\HTTP\ResponseInterface $response, \Psr\Log\LoggerInterface $logger) {
@@ -196,12 +205,14 @@ class App_Controller extends Controller {
             'Subscriptions_model',
             'Subscription_items_model',
             'Proposal_comments_model',
-            'Event_tracker_model'
+            'Event_tracker_model',
+            'Reminder_settings_model',
+            'Reminder_logs_model'
         );
     }
 
     //validate submitted data
-    protected function validate_submitted_data($fields = array(), $return_errors = false) {
+    protected function validate_submitted_data($fields = array(), $return_errors = false, $json_response = true) {
         $final_fields = array();
 
         foreach ($fields as $field => $validate) {
@@ -234,8 +245,11 @@ class App_Controller extends Controller {
             if ($return_errors) {
                 return $message;
             }
-
-            echo json_encode(array("success" => false, 'message' => json_encode($message)));
+            if ($json_response) {
+                echo json_encode(array("success" => false, 'message' => json_encode($message)));
+            } else {
+                echo view("errors/html/error_general", array("heading" => "404 Bad Request", "message" => app_lang("re_captcha_error-bad-request")));
+            }
             exit();
         }
     }
@@ -250,18 +264,27 @@ class App_Controller extends Controller {
     protected function download_app_files($directory_path, $serialized_file_data) {
         $file_exists = false;
         if ($serialized_file_data) {
-            require_once(APPPATH . "ThirdParty/nelexa-php-zip/vendor/autoload.php");
-            $zip = new \PhpZip\ZipFile();
-
             $files = unserialize($serialized_file_data);
             $total_files = count($files);
 
             //for only one file we'll download the file without archiving
             if ($total_files === 1) {
                 helper('download');
+            } else {
+                // Check if ZipArchive is available when multiple files are being downloaded
+                if (!class_exists('ZipArchive')) {
+                    echo json_encode(array("success" => false, 'message' => "Please install the ZipArchive package in your server."));
+                    exit();
+                }
             }
 
             $file_path = getcwd() . '/' . $directory_path;
+            $zipName = tempnam(sys_get_temp_dir(), 'zip_') . '.zip'; // Temporary zip file
+            $zip = new \ZipArchive();
+
+            if ($total_files > 1 && $zip->open($zipName, \ZipArchive::CREATE) !== TRUE) {
+                die(app_lang("failed_to_create_zip_file"));
+            }
 
             foreach ($files as $file) {
                 $file_name = get_array_value($file, 'file_name');
@@ -313,13 +336,24 @@ class App_Controller extends Controller {
                     }
                 }
             }
-        }
 
-        if ($file_exists) {
-            $zip->outputAsAttachment(app_lang('download_zip_name') . '.zip');
-            $zip->close();
-        } else {
-            die(app_lang("no_such_file_or_directory_found"));
+            if ($total_files > 1) {
+                $zip->close();
+
+                if ($file_exists) {
+                    // Serve as a downloadable attachment
+                    header('Content-Type: application/zip');
+                    header('Content-Disposition: attachment; filename="' . app_lang('download_zip_name') . '.zip"');
+                    header('Content-Length: ' . filesize($zipName));
+                    readfile($zipName);
+
+                    // Clean up the temporary zip file
+                    unlink($zipName);
+                } else {
+                    unlink($zipName); // Clean up empty zip file
+                    die(app_lang("no_such_file_or_directory_found"));
+                }
+            }
         }
     }
 
@@ -331,5 +365,4 @@ class App_Controller extends Controller {
         }
         return $currency;
     }
-
 }

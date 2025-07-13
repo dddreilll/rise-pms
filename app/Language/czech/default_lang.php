@@ -419,7 +419,7 @@ $lang["accepted_file_format"] = "Povolené formáty souborů";
 $lang["comma_separated"] = "Oddělené čárkou";
 $lang["project_file"] = "Soubor";
 $lang["download"] = "Stáhnout";
-$lang["download_files"] = "Soubory ke stažení: %s"; //Ex. Download 4 files";
+$lang["download_files"] = "Soubory ke stažení: %s"; //Ex. Download 4 files;
 $lang["file_preview_is_not_available"] = "Náhled souboru není k dispozici.";
 
 /* tasks */
@@ -546,7 +546,6 @@ $lang["avilable_variables"] = "Dostupné proměnné";
 $lang["restore_to_default"] = "Obnovit výchozí";
 $lang["template_restored"] = "Šablona byla obnovena na výchozí.";
 $lang["login_info"] = "Přihlašovací údaje";
-$lang["reset_password"] = "Reset hesla";
 $lang["team_member_invitation"] = "Pozvánka člena týmu";
 $lang["client_contact_invitation"] = "Pozvánka klienta";
 $lang["send_invoice"] = "Odeslat fakturu";
@@ -603,7 +602,7 @@ $lang["minimum_payment_amount"] = "Minimální částka platby";
 $lang["minimum_payment_amount_help_text"] = "Klienti nebudou moci zaplatit fakturu pomocí této platební metody, pokud hodnota faktury bude nižší než tato hodnota.";
 $lang["pay_invoice"] = "Zaplatit fakturu";
 $lang["pay_button_text"] = "Text tlačítka Zaplatit";
-$lang["minimum_payment_validation_message"] = "Částka platby nesmí být nižší než: "; //ex. The payment amount can't be less then: USD 100.00";
+$lang["minimum_payment_validation_message"] = "Částka platby nesmí být nižší než: "; //ex. The payment amount can't be less then: USD 100.00;
 $lang["invoice_settings"] = "Nastavení faktury";
 $lang["allow_partial_invoice_payment_from_clients"] = "Povolit klientům částečnou platbu";
 $lang["invoice_color"] = "Barva faktury";
@@ -699,14 +698,14 @@ $lang["notification_project_created"] = "Projekt vytvořen.";
 $lang["notification_project_deleted"] = "Projekt odstraněn.";
 $lang["notification_project_task_created"] = "Úkol vytvořen.";
 $lang["notification_project_task_updated"] = "Úkol aktualizován.";
-$lang["notification_project_task_assigned"] = "Úkol přiřazen uživateli %s"; //Assigned a task to Mr. X";
+$lang["notification_project_task_assigned"] = "Úkol přiřazen uživateli %s"; //Assigned a task to Mr. X;
 $lang["notification_project_task_started"] = "Úkol zahájen.";
 $lang["notification_project_task_finished"] = "Úkol dokončen.";
 $lang["notification_project_task_reopened"] = "Úkol znovu otevřen.";
 $lang["notification_project_task_deleted"] = "Úkol odstraněn.";
 $lang["notification_project_task_commented"] = "Úkol okomentován.";
-$lang["notification_project_member_added"] = "Uživatel %s přidán k projektu."; //Added Mr. X in a project.";
-$lang["notification_project_member_deleted"] = "Uživatel %s odstraněn z projektu."; //Deleted Mr. X from a project.";
+$lang["notification_project_member_added"] = "Uživatel %s přidán k projektu."; //Added Mr. X in a project.;
+$lang["notification_project_member_deleted"] = "Uživatel %s odstraněn z projektu."; //Deleted Mr. X from a project.;
 $lang["notification_project_file_added"] = "Soubor byl přidán k projektu.";
 $lang["notification_project_file_deleted"] = "Soubor byl z projektu odstraněn.";
 $lang["notification_project_file_commented"] = "Soubor okomentován.";
@@ -714,12 +713,12 @@ $lang["notification_project_comment_added"] = "Projekt okomentován.";
 $lang["notification_project_comment_replied"] = "Odpověď k projektu odeslána.";
 $lang["notification_project_customer_feedback_added"] = "Projekt okomentován.";
 $lang["notification_project_customer_feedback_replied"] = "Odpověď ke komentáři odeslána.";
-$lang["notification_client_signup"] = "Přihlášen jako nový klient."; //Mr. X signed up as a new client.";
+$lang["notification_client_signup"] = "Přihlášen jako nový klient."; //Mr. X signed up as a new client.;
 $lang["notification_invoice_online_payment_received"] = "Odeslána on-line platba.";
 $lang["notification_leave_application_submitted"] = "Odeslána žádost o dovolenou.";
-$lang["notification_leave_approved"] = "Dovolená byla schválena uživateli %s."; //Approve a leave of Mr. X";
-$lang["notification_leave_assigned"] = "Dovolená byla přidělena uživateli %s."; //Assigned a leave to Mr. X";
-$lang["notification_leave_rejected"] = "Dovolená byla zamítnuta uživateli %s."; //Approve a leave of Mr. X";
+$lang["notification_leave_approved"] = "Dovolená byla schválena uživateli %s."; //Approved a leave of Mr. X;
+$lang["notification_leave_assigned"] = "Dovolená byla přidělena uživateli %s."; //Assigned a leave to Mr. X;
+$lang["notification_leave_rejected"] = "Dovolená byla zamítnuta uživateli %s."; //Approve a leave of Mr. X;
 $lang["notification_leave_canceled"] = "Žádost o dovolenou stornována.";
 $lang["notification_ticket_created"] = "Vytvořen nový požadavek.";
 $lang["notification_ticket_commented"] = "Byl přidán komentář k požadavku.";
@@ -734,7 +733,7 @@ $lang["disable_online_payment_description"] = "Skrýt možnost on-line platby ve
 $lang["client_can_view_project_files"] = "Může klient vidět soubory projektu?";
 $lang["client_can_add_project_files"] = "Může klient přidat soubory k projektu?";
 $lang["client_can_comment_on_files"] = "Může klient přidávat komentáře k souborům?";
-$lang["mark_invoice_as_not_paid"] = "Označit jako nezaplacené"; //Change invoice status to Not Paid";
+$lang["mark_invoice_as_not_paid"] = "Označit jako nezaplacené"; //Change invoice status to Not Paid;
 
 $lang["set_team_members_permission"] = "Nastavit povolení členům týmu";
 $lang["can_view_team_members_contact_info"] = "Může vidět kontakty členů týmu?";
@@ -749,7 +748,7 @@ $lang["modules"] = "Moduly";
 $lang["manage_modules"] = "Spravovat moduly";
 $lang["module_settings_instructions"] = "Vyberte moduly, které chcete použít.";
 
-$lang["task_point_help_text"] = "Body k úkolu jsou brány jako obtížnost úkolu. Můžete nastavit 5 bodů pro velmi náročné úkoly a 1 bod pro ty lehké."; //meaning of task point";
+$lang["task_point_help_text"] = "Body k úkolu jsou brány jako obtížnost úkolu. Můžete nastavit 5 bodů pro velmi náročné úkoly a 1 bod pro ty lehké."; //meaning of task point;
 
 $lang["mark_as_open"] = "Označit jako otevřené";
 $lang["mark_as_closed"] = "Označit jako uzavřené";
@@ -1021,7 +1020,6 @@ $lang["re_captcha_error-bad-request"] = "Požadavek je neplatný nebo nesprávn�
 $lang["re_captcha_expired"] = "Platnost reCAPTCHA vypršela. Znovu načtěte stránku.";
 
 $lang["yes_all_tickets"] = "Ano, všechny vstupenky";
-$lang["choose_ticket_types"] = "Výběr typů vstupenek";
 
 $lang["can_manage_all_projects"] = "Může spravovat všechny projekty";
 $lang["show_most_recent_ticket_comments_at_the_top"] = "Zobrazit poslední komentáře o lístku nahoře";
@@ -1537,7 +1535,6 @@ $lang["link_to_new_client"] = "Odkaz na nového klienta";
 
 $lang["client_can_view_files"] = "Klient může prohlížet soubory?";
 $lang["client_can_add_files"] = "Klient může přidávat soubory?";
-$lang["client_can_view_activity"] = "Klient může zobrazit aktivitu projektu?";
 $lang["client_can_edit_projects"] = "Klient může upravovat projekty?";
 
 $lang["view_pdf"] = "Zobrazit PDF";
@@ -1843,10 +1840,6 @@ $lang["reports"] = "Zprávy";
 $lang["yes_all_estimates"] = "Ano, všechny odhady";
 $lang["yes_only_own_estimates"] = "Ano, pouze vlastní odhady";
 
-$lang["add_category"] = "Přidat kategorii";
-$lang["edit_category"] = "Upravit kategorii";
-$lang["delete_category"] = "Smazat kategorii";
-
 $lang["proposal"] = "Navrh";
 $lang["proposals"] = "Návrhy";
 $lang["can_access_proposals"] = "Můžete přistupovat k návrhům?";
@@ -1944,7 +1937,6 @@ $lang["save_as_note"] = "Uložit jako poznámku";
 $lang["client_will_not_see_any_notes"] = "Klient neuvidí žádné poznámky.";
 
 $lang["prospects"] = "Vyhlídky";
-$lang["estimate_forms"] = "Formuláře odhadu";
 
 $lang["proposal_editor"] = "Editor návrhu";
 $lang["proposal_templates"] = "Šablony nabídek";
@@ -2663,5 +2655,148 @@ $lang["primary_contact_will_get_full_permission_message"] = "Poznámka: Primárn
 $lang["permission_is_required"] = "Je vyžadováno povolení.";
 $lang["make_primary_contact_help_message"] = "Stávající primární kontakt bude mít stále plný přístup. Oprávnění můžete kdykoli změnit.";
 $lang["primary_contact_can_manage_the_permission_of_other_contacts"] = "Primární kontakt může spravovat oprávnění ostatních kontaktů";
+
+/* Version 3.7 */
+
+$lang["dynamic"] = "Dynamický";
+$lang["select_range"] = "Vyberte rozsah";
+
+$lang["proposal_preview_opened"] = "Náhled návrhu byl otevřen";
+$lang["notification_proposal_preview_opened"] = "Otevřen náhled návrhu.";
+$lang["proposal_email_opened"] = "E-mail s nabídkou byl otevřen";
+$lang["notification_proposal_email_opened"] = "Otevřen e-mail s nabídkou.";
+
+$lang["create_contract"] = "Vytvořit smlouvu";
+
+$lang["create_as_a_non_subtask"] = "Vytvořit jako dílčí úkol";
+$lang["install_this_app"] = "Nainstalovat tuto aplikaci.";
+$lang["app_color"] = "Barva aplikace";
+
+$lang["skip"] = "Přeskočit";
+
+$lang["self_improvements"] = "Sebe zlepšení";
+$lang["business_growth"] = "Obchodní růst";
+$lang["sales_management"] = "Řízení prodeje";
+$lang["customer_support"] = "Zákaznická podpora";
+$lang["team_management"] = "Vedení týmu";
+$lang["collaboration"] = "Spolupráce";
+
+$lang["send_first_reminder_before"] = "Poslat první připomenutí dříve";
+$lang["send_second_reminder_before"] = "Poslat 2. připomenutí dříve";
+$lang["subscription_renewal_reminder"] = "Připomenutí obnovení předplatného";
+$lang["notification_subscription_renewal_reminder"] = "Připomenutí obnovení předplatného";
+
+$lang["enable_tinymce"] = "Povolit TinyMCE";
+$lang["tinymce_api_key"] = "TinyMCE API klíč";
+
+$lang["protocol"] = "Protokol";
+$lang["re_captcha_suspicious_activity"] = "ReCAPTCHA detekovala podezřelou aktivitu.";
+
+$lang["all_contacts_of_the_client"] = "Všechny kontakty klienta";
+$lang["specific_contacts_of_the_client"] = "Konkrétní kontakty klienta";
+
+$lang["please_do_not_use_duplicate_variables"] = "Nepoužívejte duplicitní proměnné.";
+$lang["please_do_not_use_invalid_special_character"] = "Nepoužívejte prosím neplatný speciální znak.";
+$lang["please_use_any_serial"] = "Použijte prosím jakýkoli seriál.";
+
+$lang["add_automation"] = "Přidat automatizaci";
+$lang["edit_automation"] = "Upravit automatizaci";
+
+$lang["automations"] = "Automatizace";
+
+$lang["match_any"] = "Odpovídají libovolné";
+$lang["match_all"] = "Shodovat vše";
+$lang["email_address"] = "E-mailová adresa";
+$lang["email_subject"] = "Předmět e-mailu";
+$lang["email_content"] = "Obsah e-mailu";
+
+$lang["imap_email_received"] = "Přijat e-mail IMAP";
+$lang["new_ticket_created_by_imap_email"] = "Nový tiket vytvořen e-mailem IMAP";
+
+$lang["conditions"] = "Podmínky";
+$lang["block_ticket_creation"] = "Zablokovat vytvoření lístku";
+$lang["if"] = "Pokud";
+
+$lang["small_letter_field"] = "______ pole";
+$lang["small_letter_condition_is_equal"] = "je rovno";
+$lang["small_letter_condition_is_not_equal"] = "není rovno";
+$lang["small_letter_condition_is_in_list"] = "je v seznamu";
+$lang["small_letter_condition_is_not_in_list"] = "není v seznamu";
+
+$lang["small_letter_condition_is_contains"] = "je obsahuje";
+$lang["small_letter_condition_is_not_contains"] = "neobsahuje";
+$lang["small_letter_condition_is_contains_in_list"] = "je obsažen v seznamu";
+$lang["small_letter_condition_is_not_contains_in_list"] = "není obsažen v seznamu";
+$lang["small_letter_something"] = "něco";
+$lang["small_letter_is_something"] = "je něco";
+$lang["small_letter_and"] = "a";
+$lang["small_letter_or"] = "nebo";
+
+$lang["select_placeholder"] = "Vybrat...";
+$lang["select_placeholder_type_and_press_enter"] = "Zadejte a stiskněte Enter";
+
+$lang["do_something"] = "Udělejte něco...";
+$lang["do_not_create_ticket"] = "Nevytvářet tiket";
+$lang["set_field_"] = "Nastavit";
+$lang["please_input_all_required_fields"] = "Zadejte prosím všechna povinná pole.";
+$lang["grid"] = "Mřížka";
+
+$lang["disable_pdf_for_clients"] = "Zakázat PDF pro klienty";
+
+$lang["select_specific"] = "Vybrat konkrétní";
+$lang["clear_selection"] = "Vymazat výběr";
+$lang["download_selected_items"] = "Stáhnout vybrané položky";
+$lang["delete_selected_items"] = "Smazat vybrané položky";
+$lang["year_or_month_based_on"] = "Rok/měsíc podle";
+
+$lang["none"] = "Žádné";
+$lang["trigger_manually"] = "Spustit ručně";
+
+/* Version 3.8 */
+
+$lang["field_type_multiple_choice"] = "Více možností";
+$lang["field_type_checkboxes"] = "Zaškrtávací políčka";
+
+$lang["insert_into_editor"] = "Vložit do editoru";
+$lang["just_now"] = "Před chvílí";
+$lang["minute_ago"] = "minuta zpět";
+$lang["minutes_ago"] = "minuty zpět";
+$lang["hour_ago"] = "hodina zpět";
+$lang["hours_ago"] = "hodiny zpět";
+$lang["day_ago"] = "den zpět";
+$lang["days_ago"] = "dny zpět";
+$lang["month_ago"] = "měsíc zpět";
+$lang["months_ago"] = "měsíce zpět";
+$lang["year_ago"] = "rok zpět";
+$lang["years_ago"] = "roky zpět";
+
+$lang["support_info"] = "Informace o podpoře";
+$lang["in_messages"] = "Příchozí zprávy";
+$lang["out_messages"] = "Odchozí zprávy";
+
+$lang["ticket_tasks"] = "Úkoly lístku";
+$lang["has_number_of_tickets_tickets"] = "Má %s lístků";
+
+$lang["signup_and_login"] = "Registrace a přihlášení";
+$lang["ui"] = "UI";
+$lang["projects_and_tasks"] = "Projekty a úkoly";
+$lang["others"] = "Ostatní";
+
+$lang["show_the_status_checkbox_in_tasks_list"] = "Zobrazit checkbox stavu v seznamu úkolů";
+
+$lang["pwa_install_message_for_iphone"] = "Klikněte na ikonu %s, 'Přidat na plochu' z menu prohlížeče a přidejte tuto aplikaci na plochu pro snadný přístup.";
+$lang["got_it"] = "Rozumím!";
+
+$lang["empty_comment_cannot_be_saved"] = "Prazdný komentář nemůže být uložen.";
+
+$lang["short_ticket_templates"] = "Šablony";
+
+/* Version 3.8.2 */
+
+$lang["sortable"] = "Tříditelné";
+$lang["total_hours"] = "Celkový počet hodin";
+$lang["support_only_project_related_tasks_globally_label"] = "Vytvářejte pouze úkoly související s projektem z modu vytváření globálních úkolů";
+
+$lang["name_and_company_name_error_message"] = "Jméno, příjmení a název společnosti nelze skrýt najednou.";
 
 return $lang;

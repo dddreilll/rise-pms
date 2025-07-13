@@ -10,22 +10,26 @@
 
             <div class="card no-border clearfix ">
 
-                <ul id="integration-tab" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
-                    <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("integration"); ?></h4></li>
-                    <li><a role="presentation" data-bs-toggle="tab"  href="<?php echo_uri("settings/re_captcha/"); ?>" data-bs-target="#integration-re-captcha">reCAPTCHA</a></li>
-                    <li><a id="google_drive" role="presentation" data-bs-toggle="tab" href="<?php echo_uri("settings/google_drive/"); ?>" data-bs-target="#integration-google-drive">Google Drive</a></li>
+                <ul id="integration-tab" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title scrollable-tabs" role="tablist">
+                    <li class="title-tab">
+                        <h4 class="pl15 pt10 pr15"><?php echo app_lang("integration"); ?></h4>
+                    </li>
+                    <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("settings/re_captcha/"); ?>" data-bs-target="#integration-re-captcha">reCAPTCHA</a></li>
+                    <li><a role="presentation" data-bs-toggle="tab" id="google_drive" href="<?php echo_uri("settings/google_drive/"); ?>" data-bs-target="#integration-google-drive">Google Drive</a></li>
                     <li><a role="presentation" data-bs-toggle="tab" class="" href="<?php echo_uri("settings/push_notification/"); ?>" data-bs-target="#integration-push-notification"><?php echo app_lang("pusher"); ?></a></li>
                     <li><a role="presentation" data-bs-toggle="tab" class="" href="<?php echo_uri("settings/slack/"); ?>" data-bs-target="#integration-slack">Slack</a></li>
                     <li><a role="presentation" data-bs-toggle="tab" class="" href="<?php echo_uri("settings/bitbucket/"); ?>" data-bs-target="#integration-bitbucket">Bitbucket</a></li>
                     <li><a role="presentation" data-bs-toggle="tab" class="" href="<?php echo_uri("settings/github/"); ?>" data-bs-target="#integration-github">GitHub</a></li>
+                    <li><a role="presentation" data-bs-toggle="tab" class="" href="<?php echo_uri("settings/tinymce/"); ?>" data-bs-target="#integration-tinymce">TinyMCE</a></li>
+
                     <?php
                     $hook_tabs = array();
                     $hook_tabs = app_hooks()->apply_filters('app_filter_integration_settings_tab', $hook_tabs);
                     $hook_tabs = is_array($hook_tabs) ? $hook_tabs : array();
                     foreach ($hook_tabs as $hook_tab) {
-                        ?>
+                    ?>
                         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo get_array_value($hook_tab, 'url') ?>" data-bs-target="#<?php echo get_array_value($hook_tab, 'target') ?>"><?php echo get_array_value($hook_tab, 'title') ?></a></li>
-                        <?php
+                    <?php
                     }
                     ?>
                 </ul>
@@ -37,11 +41,12 @@
                     <div role="tabpanel" class="tab-pane fade" id="integration-slack"></div>
                     <div role="tabpanel" class="tab-pane fade" id="integration-bitbucket"></div>
                     <div role="tabpanel" class="tab-pane fade" id="integration-github"></div>
+                    <div role="tabpanel" class="tab-pane fade" id="integration-tinymce"></div>
                     <?php
                     foreach ($hook_tabs as $hook_tab) {
-                        ?>
+                    ?>
                         <div role="tabpanel" class="tab-pane fade" id="<?php echo get_array_value($hook_tab, 'target') ?>"></div>
-                        <?php
+                    <?php
                     }
                     ?>
                 </div>
@@ -51,8 +56,8 @@
 </div>
 
 <script type="text/javascript">
-    $(document).ready(function () {
-        setTimeout(function () {
+    $(document).ready(function() {
+        setTimeout(function() {
             var tab = "<?php echo $tab; ?>";
             if (tab === "google_drive") {
                 $("[data-bs-target='#integration-google-drive']").trigger("click");
@@ -64,8 +69,9 @@
                 $("[data-bs-target='#integration-bitbucket']").trigger("click");
             } else if (tab === "github") {
                 $("[data-bs-target='#integration-github']").trigger("click");
+            } else if (tab === "tinymce") {
+                $("[data-bs-target='#integration-tinymce']").trigger("click");
             }
         }, 210);
     });
-
 </script>

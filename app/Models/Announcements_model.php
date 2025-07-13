@@ -13,6 +13,9 @@ class Announcements_model extends Crud_model {
 
     function get_unread_announcements($user_id, $user_type, $client_group_ids = "") {
         $announcements_table = $this->db->prefixTable('announcements');
+        $user_id = $this->_get_clean_value($user_id);
+        $user_type = $this->_get_clean_value($user_type);
+        $client_group_ids = $this->_get_clean_value($client_group_ids);
 
         $now = get_my_local_time("Y-m-d");
         $where = $this->prepare_share_with_query($announcements_table, $user_type, $client_group_ids);
@@ -28,7 +31,7 @@ class Announcements_model extends Crud_model {
         if ($user_type) { //if no user type found, we'll assume the user has permission to access all
             if ($user_type === "staff") {
                 $where = " AND FIND_IN_SET('all_members',$announcements_table.share_with)";
-            } else {
+            } else if($client_group_ids){
                 $client_groups_where = "";
 
                 $client_group_ids = explode(',', $client_group_ids);
@@ -65,7 +68,9 @@ class Announcements_model extends Crud_model {
     }
 
     function mark_as_read($id, $user_id) {
-        $id = $id ? $this->db->escapeString($id) : $id;
+        $id = $this->_get_clean_value(array("id"=>$id), "id");
+        $user_id = $this->_get_clean_value(array("user_id"=>$user_id), "user_id");
+
         $announcements_table = $this->db->prefixTable('announcements');
         $sql = "UPDATE $announcements_table SET $announcements_table.read_by = CONCAT($announcements_table.read_by,',',$user_id)
         WHERE $announcements_table.id=$id AND FIND_IN_SET($user_id,$announcements_table.read_by) = 0";

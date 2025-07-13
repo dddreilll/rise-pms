@@ -1,9 +1,3 @@
-<?php
-load_js(array(
-    "assets/js/awesomplete/awesomplete.min.js"
-));
-?>
-
 <div class="input-group d-block search-box">
     <?php
     echo form_input(array(

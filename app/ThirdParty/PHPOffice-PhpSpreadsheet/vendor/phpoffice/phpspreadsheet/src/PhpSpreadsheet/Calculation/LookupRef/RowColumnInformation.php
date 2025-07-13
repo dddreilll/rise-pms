@@ -22,7 +22,7 @@ class RowColumnInformation
 
     private static function cellColumn(?Cell $cell): int
     {
-        return ($cell !== null) ? (int) Coordinate::columnIndexFromString($cell->getColumn()) : 1;
+        return ($cell !== null) ? Coordinate::columnIndexFromString($cell->getColumn()) : 1;
     }
 
     /**
@@ -42,7 +42,7 @@ class RowColumnInformation
      *
      * @return int|int[]
      */
-    public static function COLUMN($cellAddress = null, ?Cell $cell = null)
+    public static function COLUMN($cellAddress = null, ?Cell $cell = null): int|array
     {
         if (self::cellAddressNullOrWhitespace($cellAddress)) {
             return self::cellColumn($cell);
@@ -50,9 +50,9 @@ class RowColumnInformation
 
         if (is_array($cellAddress)) {
             foreach ($cellAddress as $columnKey => $value) {
-                $columnKey = preg_replace('/[^a-z]/i', '', $columnKey);
+                $columnKey = (string) preg_replace('/[^a-z]/i', '', $columnKey);
 
-                return (int) Coordinate::columnIndexFromString($columnKey);
+                return Coordinate::columnIndexFromString($columnKey);
             }
 
             return self::cellColumn($cell);
@@ -64,20 +64,22 @@ class RowColumnInformation
             [,, $cellAddress] = Helpers::extractCellAddresses($cellAddress, true, $cell->getWorksheet(), $sheetName);
         }
         [, $cellAddress] = Worksheet::extractSheetTitle($cellAddress, true);
-        if (strpos($cellAddress, ':') !== false) {
+        $cellAddress ??= '';
+
+        if (str_contains($cellAddress, ':')) {
             [$startAddress, $endAddress] = explode(':', $cellAddress);
-            $startAddress = preg_replace('/[^a-z]/i', '', $startAddress);
-            $endAddress = preg_replace('/[^a-z]/i', '', $endAddress);
+            $startAddress = (string) preg_replace('/[^a-z]/i', '', $startAddress);
+            $endAddress = (string) preg_replace('/[^a-z]/i', '', $endAddress);
 
             return range(
-                (int) Coordinate::columnIndexFromString($startAddress),
-                (int) Coordinate::columnIndexFromString($endAddress)
+                Coordinate::columnIndexFromString($startAddress),
+                Coordinate::columnIndexFromString($endAddress)
             );
         }
 
-        $cellAddress = preg_replace('/[^a-z]/i', '', $cellAddress);
+        $cellAddress = (string) preg_replace('/[^a-z]/i', '', $cellAddress);
 
-        return (int) Coordinate::columnIndexFromString($cellAddress);
+        return Coordinate::columnIndexFromString($cellAddress);
     }
 
     /**
@@ -133,9 +135,9 @@ class RowColumnInformation
      *
      * @param null|array|string $cellAddress A reference to a range of cells for which you want the row numbers
      *
-     * @return int|mixed[]|string
+     * @return int|mixed[]
      */
-    public static function ROW($cellAddress = null, ?Cell $cell = null)
+    public static function ROW($cellAddress = null, ?Cell $cell = null): int|array
     {
         if (self::cellAddressNullOrWhitespace($cellAddress)) {
             return self::cellRow($cell);
@@ -157,16 +159,14 @@ class RowColumnInformation
             [,, $cellAddress] = Helpers::extractCellAddresses($cellAddress, true, $cell->getWorksheet(), $sheetName);
         }
         [, $cellAddress] = Worksheet::extractSheetTitle($cellAddress, true);
-        if (strpos($cellAddress, ':') !== false) {
+        $cellAddress ??= '';
+        if (str_contains($cellAddress, ':')) {
             [$startAddress, $endAddress] = explode(':', $cellAddress);
-            $startAddress = preg_replace('/\D/', '', $startAddress);
-            $endAddress = preg_replace('/\D/', '', $endAddress);
+            $startAddress = (int) (string) preg_replace('/\D/', '', $startAddress);
+            $endAddress = (int) (string) preg_replace('/\D/', '', $endAddress);
 
             return array_map(
-                function ($value) {
-                    return [$value];
-                },
-                // @phpstan-ignore-next-line
+                fn ($value): array => [$value],
                 range($startAddress, $endAddress)
             );
         }

@@ -25,7 +25,7 @@
     <?php echo form_close(); ?>
 
     <div class="table-responsive" id="todo-list-widget-table">
-        <table id="todo-table" class="display" cellspacing="0" width="100%">            
+        <table id="todo-table" class="display" cellspacing="0" width="100%">
         </table>
     </div>
 </div>
@@ -33,10 +33,12 @@
 <?php echo view("todo/helper_js"); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
-        initScrollbar('#todo-list-widget-table', {
-            setHeight: 653
-        });
+    $(document).ready(function() {
+        if (!isMobile()) {
+            initScrollbar('#todo-list-widget-table', {
+                setHeight: 653
+            });
+        }
 
         $("#todo-table").appTable({
             source: '<?php echo_uri("todo/list_data") ?>',

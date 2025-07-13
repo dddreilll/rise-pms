@@ -5,7 +5,7 @@ if ($view_type) {
 }
 ?>
 
-<div id="page-content" class="<?php echo $page_wrapper; ?> clearfix">
+<div class="<?php echo $page_wrapper; ?> clearfix">
     <div class="box">
         <?php if ($show_left_menu) { ?>
             <div class="box-content content-sidebar pr15" id="file-manager-sidebar">
@@ -26,7 +26,7 @@ if ($view_type) {
                 </ul>
                 <ul class="list-group ">
                     <?php
-                    if ($client_id) {
+                    if ($client_id || $project_id) {
                     ?>
                         <a href="javascript:;" class="list-group-item explore-favourite-folder" data-folder_id=""><i data-feather="home" class="icon-16 mr10"></i><?php echo app_lang('root_folder') ?></a>
                     <?php
@@ -103,6 +103,8 @@ if ($view_type) {
         $("#file-manager-right-panel").html(fileManagerRightPanel);
         //$("#new_folder_button").attr("data-post-parent_id", folder_id);
 
+        var viewFrom = "<?php echo $view_from; ?>";
+
         appLoader.show({
             container: "#file-manager-container",
             zIndex: 1,
@@ -113,11 +115,12 @@ if ($view_type) {
             var browserState = {};
 
             // Set the URL based on the value of $view_from variable for access file manager from different pages
-            if ("<?php echo $view_from; ?>" == "client_view") {
+            if (viewFrom == "client_view") {
                 browserState = {
                     Url: window.location.href.replace(/(\/page_view)?\/([^\/]+)\/?$/, '/page_view/' + folder_id)
                 };
-            } else if ("<?php echo $view_from; ?>" == "client_details_view") {
+
+            } else if (viewFrom == "client_details_view" || viewFrom == "project_view") {
                 browserState = {
                     Url: window.location.href.replace(/\/?([^\/]*)$/, '/' + folder_id)
                 };
@@ -132,10 +135,11 @@ if ($view_type) {
         }
 
         var clientId = "<?php echo $client_id ? $client_id : 0; ?>";
+        var projectId = "<?php echo $project_id ? $project_id : 0; ?>";
         var folderId = folder_id ? folder_id : 0;
 
         $.ajax({
-            url: "<?php echo get_uri($controller_slag . '/get_folder_items/'); ?>" + folderId + "/" + clientId,
+            url: "<?php echo get_uri($controller_slag . '/get_folder_items/'); ?>" + folderId + "/" + clientId + "/" + projectId + "/" + viewFrom,
             dataType: "json",
             success: function(result) {
                 if (result.success) {
@@ -175,10 +179,20 @@ if ($view_type) {
             css: "top:50%; right:48%;"
         });
 
-        var clientId = "<?php echo $client_id ? $client_id : 0; ?>";
+        var viewFrom = "<?php echo $view_from; ?>";
+        if (viewFrom == "client_view" || viewFrom == "client_details_view") {
+            context = "client";
+            contextId = "<?php echo $client_id ? $client_id : 0; ?>";
+        } else if (viewFrom == "project_view") {
+            context = "project";
+            contextId = "<?php echo $project_id ? $project_id : 0; ?>";
+        } else {
+            context = "file_manager";
+            contextId = 0;
+        }
 
         $.ajax({
-            url: "<?php echo get_uri($controller_slag . '/get_favourite_folders/'); ?>" + clientId,
+            url: "<?php echo get_uri($controller_slag . '/get_favourite_folders/'); ?>" + context + "/" + contextId,
             dataType: "json",
             success: function(result) {
                 if (result.success) {
@@ -199,20 +213,26 @@ if ($view_type) {
         }
 
         if ("<?php echo $view_type; ?>") {
-            left = left - 25;
-            top = top - 25;
+            left = left;
+            top = top;
         }
 
         var viewFrom = "<?php echo $view_from; ?>";
-        if (viewFrom == "client_details_view") {
-            top = top - 300;
+        if (viewFrom == "client_details_view" || viewFrom == "project_view") {
+            top = top;
+            left = left;
         }
 
         var scrollTop = $(".main-scrollable-page").scrollTop();
         var clientId = "<?php echo $client_id ? $client_id : 0; ?>";
         var context = "file_manager";
+        var contextId = 0;
         if (viewFrom == "client_view" || viewFrom == "client_details_view") {
             context = "client";
+            contextId = "<?php echo $client_id ? $client_id : 0; ?>";
+        } else if (viewFrom == "project_view") {
+            context = "project";
+            contextId = "<?php echo $project_id ? $project_id : 0; ?>";
         }
 
         $('#folder-context-menu').removeClass('hide');
@@ -222,7 +242,6 @@ if ($view_type) {
 
         if (type === "folder-context-menu" || type === "file-context-menu") {
             window.clickedOnFolderItem = true;
-            console.log("Folder item", window.clickedOnFolderItem);
 
             var parentFolderItem = it.closest('.folder-item');
             var dataId = parentFolderItem.data("id");
@@ -262,7 +281,7 @@ if ($view_type) {
                     var infoMenu = '<div class="dropdown-item clickable item-info-button" data-type="folder" data-id=""><i data-feather="info" class="icon-16 mr10"></i><?php echo app_lang('info'); ?></div>';
                 }
 
-                $('#folder-context-menu').html('').append(exploreMenu).append($(addFavourite).attr('data-action-url', addFavouriteUrl)).append($(removeFavourite).attr('data-action-url', removeFavouriteUrl)).append($(renameMenu).attr('data-post-id', dataId).attr('data-title', '<?php echo app_lang('rename_folder'); ?>' + ': ' + folderName)).append($(moveMenu).attr('data-post-folder_id', dataId).attr('data-title', '<?php echo app_lang('move_folder'); ?>' + ': ' + folderName).attr('data-post-client_id', clientId)).append($(deleteMenu).attr('data-id', dataId)).append($(infoMenu).attr('data-id', dataId));
+                $('#folder-context-menu').html('').append(exploreMenu).append($(addFavourite).attr('data-action-url', addFavouriteUrl)).append($(removeFavourite).attr('data-action-url', removeFavouriteUrl)).append($(renameMenu).attr('data-post-id', dataId).attr('data-title', '<?php echo app_lang('rename_folder'); ?>' + ': ' + folderName)).append($(moveMenu).attr('data-post-folder_id', dataId).attr('data-title', '<?php echo app_lang('move_folder'); ?>' + ': ' + folderName).attr('data-post-context', context).attr('data-post-context_id', contextId)).append($(deleteMenu).attr('data-id', dataId)).append($(infoMenu).attr('data-id', dataId));
 
                 //Change delete confirmation modal content for folder delation
                 var folderDetails = "<div class='mt15'><div class='d-flex'><div class='flex-shrink-0 me-3 icon-wrapper'><i data-feather='folder' class='icon-40 bold-folder-icon'></i></div><div class='w-100'><div>" + folderName + "</div><small class='text-off'>" + folderInfo + "</small></div></div></div>";
@@ -276,23 +295,20 @@ if ($view_type) {
                 var moveMenu = '',
                     deleteMenu = '';
 
-                if (hasWritePermission) {
-                    var moveMenu = '<?php echo modal_anchor(get_uri($controller_slag . '/move_folder_or_file_modal_form'), '<i data-feather="corner-down-right" class="icon-16 mr10"></i>' . app_lang('move'), array('title' => app_lang('move_file'), 'class' => 'dropdown-item', 'data-post-file_id' => '')); ?>';
-                }
-
                 if (hasWritePermission && "<?php echo $login_user->user_type ?>" == "staff") {
-                    var deleteMenu = '<?php echo js_anchor('<i data-feather="trash" class="icon-16 mr10"></i>' . app_lang('delete'), array('title' => app_lang('delete'), 'class' => 'dropdown-item', 'data-id' => '', 'data-action-url' => get_uri($controller_slag . '/delete_file'), 'data-action' => 'delete-confirmation', 'data-reload-on-success' => true)); ?>';
+                    moveMenu = '<?php echo modal_anchor(get_uri($controller_slag . '/move_folder_or_file_modal_form'), '<i data-feather="corner-down-right" class="icon-16 mr10"></i>' . app_lang('move'), array('title' => app_lang('move_file'), 'class' => 'dropdown-item', 'data-post-file_id' => '')); ?>';
+                    deleteMenu = '<?php echo js_anchor('<i data-feather="trash" class="icon-16 mr10"></i>' . app_lang('delete'), array('title' => app_lang('delete'), 'class' => 'dropdown-item', 'data-id' => '', 'data-action-url' => get_uri($controller_slag . '/delete_folder_file'), 'data-action' => 'delete-confirmation', 'data-reload-on-success' => true)); ?>';
                 }
 
-                var downloadUrl = '<?php echo get_uri($controller_slag . '/download_file/'); ?>' + dataId + '/' + clientId;
-                var downloadMenu = '<?php echo anchor(get_uri($controller_slag . '/download_file/'), '<i data-feather="download-cloud" class="icon-16 mr10"></i><span>' . app_lang('download') . '</span>', array("title" => app_lang("download"), 'class' => 'dropdown-item', 'id' => 'downloadMenu')); ?>';
+                var downloadUrl = '<?php echo get_uri($controller_slag . '/download_folder_file/'); ?>' + dataId ;
+                var downloadMenu = '<?php echo anchor("#", '<i data-feather="download-cloud" class="icon-16 mr10"></i><span>' . app_lang('download') . '</span>', array("title" => app_lang("download"), 'class' => 'dropdown-item', 'id' => 'downloadMenu')); ?>';
 
                 // Update the 'href' attribute with the dynamically generated URL
                 downloadMenu = $(downloadMenu).attr('href', downloadUrl);
 
                 var infoMenu = '<div class="dropdown-item clickable item-info-button" data-type="file" data-id=""><i data-feather="info" class="icon-16 mr10"></i><?php echo app_lang('info'); ?></div>';
 
-                $('#folder-context-menu').html('').append(viewFileMenu).append($(moveMenu).attr('data-post-file_id', dataId).attr('data-post-client_id', clientId).attr('data-post-parent_folder_id', parentId)).append($(deleteMenu).attr('data-id', dataId)).append(downloadMenu).append($(infoMenu).attr('data-id', dataId));
+                $('#folder-context-menu').html('').append(viewFileMenu).append($(moveMenu).attr('data-post-file_id', dataId).attr('data-post-context', context).attr('data-post-context_id', contextId).attr('data-post-parent_folder_id', parentId)).append($(deleteMenu).attr('data-id', dataId)).append(downloadMenu).append($(infoMenu).attr('data-id', dataId));
 
                 //Change delete confirmation modal content for file delation
                 var fileDetails = "<div class='mt15'><div class='d-flex'><div class='flex-shrink-0 me-3 icon-wrapper'><i data-feather='file' class='icon-40 bold-file-icon'></i></div><div class='w-100'><div class='text-break'>" + fileName + "</div><small class='text-off'>" + fileSize + "</small></div></div></div>";
@@ -319,8 +335,6 @@ if ($view_type) {
         if (type === "window-context-menu") {
             setTimeout(function() {
                 if (!window.clickedOnFolderItem) {
-                    console.log("Window", window.clickedOnFolderItem);
-
                     $('#folder-context-menu').html('');
 
                     var parentId = $("#new_folder_button").data('post-parent_id');
@@ -338,7 +352,7 @@ if ($view_type) {
                     }
 
                     if (hasWritePermission || hasUploadPermission) {
-                        $('#folder-context-menu').html('').append($(addNewFolderMenu).attr('data-post-parent_id', parentId).attr('data-post-context', 'folder').attr('data-post-context_id', clientId).attr('data-post-context', context)).append($(uploadFilesMenu).attr('class', 'dropdown-item').attr('data-post-folder_id', parentId).attr('data-post-client_id', clientId));
+                        $('#folder-context-menu').html('').append($(addNewFolderMenu).attr('data-post-parent_id', parentId).attr('data-post-context', 'folder').attr('data-post-context_id', contextId).attr('data-post-context', context)).append($(uploadFilesMenu).attr('class', 'dropdown-item').attr('data-post-folder_id', parentId).attr('data-post-client_id', clientId));
                     } else {
                         $('#folder-context-menu').addClass("hide");
                     }
@@ -374,7 +388,7 @@ if ($view_type) {
                 if (type === "folder") {
                     url = url + "get_folder_info";
                 } else if (type === "file") {
-                    url = url + "get_file_info";
+                    url = url + "get_folder_file_info";
                 }
 
                 if (!url) {
@@ -382,6 +396,7 @@ if ($view_type) {
                 }
 
                 var clientId = "<?php echo $client_id ? $client_id : 0; ?>";
+                var projectId = "<?php echo $project_id ? $project_id : 0; ?>";
 
                 var fileDetailsContainer = "#file-manager-right-panel";
                 $(fileDetailsContainer).html("");
@@ -395,7 +410,8 @@ if ($view_type) {
                     url: url,
                     data: {
                         id: id,
-                        client_id: clientId
+                        client_id: clientId,
+                        project_id: projectId
                     },
                     type: "POST",
                     dataType: "json",

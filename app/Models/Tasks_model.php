@@ -271,19 +271,20 @@ class Tasks_model extends Crud_model {
 
         $where .= $this->make_context_query($context_options, $tasks_table, $clients_table, $ticket_table, $projects_table, $project_members_table);
 
+        $for_events = $this->_get_clean_value($options, "for_events");
+
         $start_date = $this->_get_clean_value($options, "start_date");
         $deadline = $this->_get_clean_value($options, "deadline");
         if ($start_date && $deadline) {
-            $for_events = $this->_get_clean_value($options, "for_events");
             if ($for_events) {
                 $deadline_for_events = $this->_get_clean_value($options, "deadline_for_events");
                 $start_date_for_events = $this->_get_clean_value($options, "start_date_for_events");
 
                 if ($start_date_for_events && $deadline_for_events) {
                     $where .= " AND ("
-                            . "($tasks_table.deadline IS NOT NULL AND $tasks_table.deadline BETWEEN '$start_date' AND '$deadline')"
-                            . " OR ($milestones_table.due_date BETWEEN '$start_date' AND '$deadline')"
-                            . " OR ($tasks_table.start_date IS NOT NULL AND $tasks_table.start_date BETWEEN '$start_date' AND '$deadline'))";
+                        . "($tasks_table.deadline IS NOT NULL AND $tasks_table.deadline BETWEEN '$start_date' AND '$deadline')"
+                        . " OR ($milestones_table.due_date BETWEEN '$start_date' AND '$deadline')"
+                        . " OR ($tasks_table.start_date IS NOT NULL AND $tasks_table.start_date BETWEEN '$start_date' AND '$deadline'))";
                 } else if ($start_date_for_events) {
                     $where .= " AND ($tasks_table.start_date IS NOT NULL AND $tasks_table.start_date BETWEEN '$start_date' AND '$deadline')";
                 } else if ($deadline_for_events) {
@@ -325,7 +326,7 @@ class Tasks_model extends Crud_model {
         if ($project_member_id) {
             $where .= " AND $project_members_table.user_id=$project_member_id";
         } else if (isset($context_options["project"]) && is_array($context_options["project"]) && array_key_exists("project_member_id", $context_options["project"])) {
-            $project_member_id = $context_options["project"]["project_member_id"];
+            $project_member_id = $this->_get_clean_value($context_options["project"]["project_member_id"]);
         }
 
         if ($project_member_id) {
@@ -371,7 +372,7 @@ class Tasks_model extends Crud_model {
             $order = " ORDER BY $order_by $order_dir ";
         }
 
-        $search_by = get_array_value($options, "search_by");
+        $search_by = get_array_value($options, "search_by"); //clean later since we need to check the #
         if ($search_by) {
             $search_by = $this->db->escapeLikeString($search_by);
             $labels_table = $this->db->prefixTable("labels");
@@ -379,8 +380,13 @@ class Tasks_model extends Crud_model {
             if (strpos($search_by, '#') !== false) {
                 //get sub tasks of this task
                 $search_by = substr($search_by, 1);
+
+                $search_by = $this->_get_clean_value($search_by);
+
                 $where .= " AND ($tasks_table.id='$search_by' OR $tasks_table.parent_task_id='$search_by')";
             } else {
+                $search_by = $this->_get_clean_value($search_by);
+
                 $where .= " AND (";
                 $where .= " $tasks_table.id LIKE '%$search_by%' ESCAPE '!' ";
                 $where .= " OR $tasks_table.title LIKE '%$search_by%' ESCAPE '!' ";
@@ -400,7 +406,9 @@ class Tasks_model extends Crud_model {
         //prepare custom fild binding query
         $custom_fields = get_array_value($options, "custom_fields");
         $custom_field_filter = get_array_value($options, "custom_field_filter");
+
         $custom_field_query_info = $this->prepare_custom_field_query_string("tasks", $custom_fields, $tasks_table, $custom_field_filter);
+
         $select_custom_fieds = get_array_value($custom_field_query_info, "select_string");
         $join_custom_fieds = get_array_value($custom_field_query_info, "join_string");
         $custom_fields_where = get_array_value($custom_field_query_info, "where_string");
@@ -470,6 +478,8 @@ class Tasks_model extends Crud_model {
                 if (!$permission_value) {
                     continue;
                 }
+
+                $permission_value =  $this->_get_clean_value($permission_value);
 
                 if ($context_permission === "project_status") {
                     $project_where .= " AND $projects_table.status_id = '$permission_value' ";
@@ -678,12 +688,13 @@ class Tasks_model extends Crud_model {
         if ($search) {
             if (strpos($search, '#') !== false) {
                 //get sub tasks of this task
-                $search = $this->db->escapeString($search);
                 $search = substr($search, 1);
+                $search = $this->_get_clean_value($search);
                 $where .= " AND ($tasks_table.id='$search' OR $tasks_table.parent_task_id='$search')";
             } else {
                 //normal search
                 $search = $this->db->escapeLikeString($search);
+                $search = $this->_get_clean_value($search);
                 $where .= " AND ($tasks_table.title LIKE '%$search%' ESCAPE '!' OR FIND_IN_SET((SELECT $labels_table.id FROM $labels_table WHERE $labels_table.deleted=0 AND $labels_table.context='task' AND $labels_table.title LIKE '%$search%' ESCAPE '!' LIMIT 1), $tasks_table.labels) OR $tasks_table.id='$search')";
             }
         }
@@ -701,7 +712,7 @@ class Tasks_model extends Crud_model {
         if ($project_member_id) {
             $where .= " AND $project_members_table.user_id=$project_member_id";
         } else if (isset($context_options["project"]) && is_array($context_options["project"]) && array_key_exists("project_member_id", $context_options["project"])) {
-            $project_member_id = $context_options["project"]["project_member_id"];
+            $project_member_id = $this->_get_clean_value($context_options["project"]["project_member_id"]);
         }
 
         if ($project_member_id) {
@@ -718,7 +729,7 @@ class Tasks_model extends Crud_model {
 
         $custom_field_filter = $this->_get_clean_value($options, "custom_field_filter");
         $custom_field_query_info = $this->prepare_custom_field_query_string("tasks", "", $tasks_table, $custom_field_filter);
-        $custom_fields_where = $this->_get_clean_value($custom_field_query_info, "where_string");
+        $custom_fields_where = get_array_value($custom_field_query_info, "where_string");
 
         $unread_status_user_id = $this->_get_clean_value($options, "unread_status_user_id");
         if (!$unread_status_user_id) {
@@ -738,7 +749,7 @@ class Tasks_model extends Crud_model {
             WHERE $tasks_table.deleted=0 $where $custom_fields_where 
             GROUP BY $tasks_table.status_id";
         } else {
-            $sql = "SELECT $tasks_table.id, $tasks_table.title, $tasks_table.start_date, $tasks_table.deadline, $tasks_table.sort, IF($tasks_table.sort!=0, $tasks_table.sort, $tasks_table.id) AS new_sort, $tasks_table.assigned_to, $tasks_table.labels, $tasks_table.status_id, $tasks_table.project_id, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS assigned_to_user, $tasks_table.priority_id, $projects_table.title AS project_title, (SELECT $clients_table.company_name FROM $clients_table WHERE id=(SELECT $projects_table.client_id FROM $projects_table WHERE $projects_table.id=$tasks_table.project_id)) AS client_name, $projects_table.project_type AS project_type,
+            $sql = "SELECT $tasks_table.id, $tasks_table.context, $tasks_table.created_by, $tasks_table.title, $tasks_table.start_date, $tasks_table.deadline, $tasks_table.sort, IF($tasks_table.sort!=0, $tasks_table.sort, $tasks_table.id) AS new_sort, $tasks_table.assigned_to, $tasks_table.labels, $tasks_table.status_id, $tasks_table.project_id, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS assigned_to_user, $tasks_table.priority_id, $projects_table.title AS project_title, (SELECT $clients_table.company_name FROM $clients_table WHERE id=(SELECT $projects_table.client_id FROM $projects_table WHERE $projects_table.id=$tasks_table.project_id)) AS client_name, $projects_table.project_type AS project_type,
                 $task_priority_table.title AS priority_title, $task_priority_table.icon AS priority_icon, $task_priority_table.color AS priority_color,
                 $users_table.image as assigned_to_avatar, $tasks_table.parent_task_id, sub_tasks_table.id AS has_sub_tasks, parent_tasks_table.title AS parent_task_title, $notifications_table.id AS unread, 
                 (SELECT COUNT($checklist_items_table.id) FROM $checklist_items_table WHERE $checklist_items_table.deleted=0 AND $checklist_items_table.task_id=$tasks_table.id) AS total_checklist,
@@ -780,6 +791,8 @@ class Tasks_model extends Crud_model {
         $tasks_table = $this->db->prefixTable('tasks');
         $projects_table = $this->db->prefixTable('projects');
 
+        $user_id =  $this->_get_clean_value($user_id);
+
         $sql = "SELECT COUNT($tasks_table.id) AS total
         FROM $tasks_table
         WHERE $tasks_table.deleted=0 AND (($tasks_table.assigned_to=$user_id OR FIND_IN_SET('$user_id', $tasks_table.collaborators)) AND $tasks_table.status_id !=3
@@ -792,6 +805,8 @@ class Tasks_model extends Crud_model {
     }
 
     function get_label_suggestions($project_id) {
+        $project_id = $this->_get_clean_value($project_id);
+
         $tasks_table = $this->db->prefixTable('tasks');
         $sql = "SELECT GROUP_CONCAT(labels) as label_groups
         FROM $tasks_table
@@ -803,11 +818,15 @@ class Tasks_model extends Crud_model {
         $project_members_table = $this->db->prefixTable('project_members');
         $projects_table = $this->db->prefixTable('projects');
 
-        $where = " AND $project_members_table.user_id=$user_id";
+        $where = "";
+        if ($user_id) {
+            $user_id = $this->_get_clean_value($user_id);
+            $where .= " AND $project_members_table.user_id=$user_id";
+        }
 
         $sql = "SELECT $project_members_table.project_id, $projects_table.title AS project_title
         FROM $project_members_table
-        LEFT JOIN $projects_table ON $projects_table.id= $project_members_table.project_id AND $projects_table.status_id=1
+        LEFT JOIN $projects_table ON $projects_table.id= $project_members_table.project_id
         WHERE $project_members_table.deleted=0 AND $projects_table.deleted=0 $where 
         GROUP BY $project_members_table.project_id";
         return $this->db->query($sql);
@@ -823,7 +842,6 @@ class Tasks_model extends Crud_model {
         try {
             $this->db->query("SET sql_mode = ''");
         } catch (\Exception $e) {
-            
         }
         $where = "";
 
@@ -884,6 +902,9 @@ class Tasks_model extends Crud_model {
     function set_task_comments_as_read($task_id, $user_id = 0) {
         $notifications_table = $this->db->prefixTable('notifications');
 
+        $task_id = $this->_get_clean_value($task_id);
+        $user_id = $this->_get_clean_value($user_id);
+
         $sql = "UPDATE $notifications_table SET $notifications_table.read_by = CONCAT($notifications_table.read_by,',',$user_id)
         WHERE $notifications_table.task_id=$task_id AND FIND_IN_SET($user_id, $notifications_table.read_by) = 0 AND $notifications_table.event='project_task_commented'";
         return $this->db->query($sql);
@@ -900,6 +921,8 @@ class Tasks_model extends Crud_model {
     function get_renewable_tasks($date) {
         $tasks_table = $this->db->prefixTable('tasks');
 
+        $date = $this->_get_clean_value($date);
+
         $sql = "SELECT * FROM $tasks_table
                         WHERE $tasks_table.deleted=0 AND $tasks_table.recurring=1
                         AND $tasks_table.next_recurring_date IS NOT NULL AND $tasks_table.next_recurring_date<='$date'
@@ -910,6 +933,8 @@ class Tasks_model extends Crud_model {
 
     function get_all_dependency_for_this_task($task_id, $type) {
         $tasks_table = $this->db->prefixTable('tasks');
+
+        $task_id = $this->_get_clean_value($task_id);
 
         $where = "";
         if ($type == "blocked_by") {
@@ -942,13 +967,15 @@ class Tasks_model extends Crud_model {
             $where .= " AND ($tasks_table.assigned_to=$show_assigned_tasks_only_user_id OR FIND_IN_SET('$show_assigned_tasks_only_user_id', $tasks_table.collaborators))";
         }
 
+        $search = $this->_get_clean_value($search);
         if ($search) {
             $search = $this->db->escapeLikeString($search);
+            $where .= " AND ($tasks_table.title LIKE '%$search%' ESCAPE '!' OR $tasks_table.id LIKE '%$search%' ESCAPE '!') ";
         }
 
         $sql = "SELECT $tasks_table.id, $tasks_table.title
         FROM $tasks_table  
-        WHERE $tasks_table.deleted=0 AND ($tasks_table.title LIKE '%$search%' ESCAPE '!' OR $tasks_table.id LIKE '%$search%' ESCAPE '!') $where
+        WHERE $tasks_table.deleted=0 $where
         ORDER BY $tasks_table.title ASC
         LIMIT 0, 10";
 
@@ -957,6 +984,8 @@ class Tasks_model extends Crud_model {
 
     function get_all_tasks_where_have_dependency($project_id) {
         $tasks_table = $this->db->prefixTable('tasks');
+
+        $project_id = $this->_get_clean_value($project_id);
 
         $sql = "SELECT $tasks_table.id, $tasks_table.blocked_by, $tasks_table.blocking
         FROM $tasks_table  
@@ -996,6 +1025,8 @@ class Tasks_model extends Crud_model {
         $project_comments_table = $this->db->prefixTable("project_comments");
         $checklist_items_table = $this->db->prefixTable("checklist_items");
 
+        $task_id = $this->_get_clean_value($task_id);
+
         //get task comment files info to delete the files from directory 
         $task_comment_files_sql = "SELECT * FROM $project_comments_table WHERE $project_comments_table.deleted=0 AND $project_comments_table.task_id=$task_id; ";
         $task_comments = $this->db->query($task_comment_files_sql)->getResult();
@@ -1030,10 +1061,18 @@ class Tasks_model extends Crud_model {
     function get_next_sort_value($project_id = 0, $status_id = 1) {
         $tasks_table = $this->db->prefixTable('tasks');
 
+        $project_id = $this->_get_clean_value($project_id);
+        $status_id = $this->_get_clean_value($status_id);
+
         $where = "";
 
         if ($project_id) {
             $where .= " AND $tasks_table.project_id = $project_id ";
+        }
+
+
+        if (!$status_id) {
+            return 1000;
         }
 
         $sql = "SELECT $tasks_table.sort
@@ -1049,5 +1088,4 @@ class Tasks_model extends Crud_model {
             return 1000; //could be any positive value
         }
     }
-
 }

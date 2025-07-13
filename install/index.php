@@ -84,13 +84,25 @@ foreach ($writeable_directories as $value) {
     }
 }
 
-$dashboard_url = $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'];
-$dashboard_url = preg_replace('/install.*/', '', $dashboard_url); //remove everything after index.php
+
+$domain = $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'];
+
+$domain = preg_replace('/install.*/', '', $domain);
+$domain = strtolower($domain);
 if (!empty($_SERVER['HTTPS'])) {
-    $dashboard_url = 'https://' . $dashboard_url;
+    $domain = 'https://' . $domain;
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $domain = 'https://' . $domain;
 } else {
-    $dashboard_url = 'http://' . $dashboard_url;
+    $domain = 'http://' . $domain;
 }
 
-include "view/index.php";
-?>
+
+$index_file_path = "../index.php";
+$index_file = file_get_contents($index_file_path);
+$already_installed = strpos($index_file, '$app_state = "installed"');
+if ($already_installed) {
+    echo ("<div style='text-align:center; padding-top:10%; font-family:Arial'><h1>Already installed.</h1>" . "<p>Please visit: <a href='$domain'>$domain</a></p></div>");
+} else {
+    include "view/index.php";
+}

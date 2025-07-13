@@ -13,7 +13,7 @@ class Paypal_ipn_model extends Crud_model {
     
     function get_one_payment_where($payment_verification_code) {
         $paypal_ipn_table = $this->db->prefixTable('paypal_ipn');
-        $payment_verification_code = $payment_verification_code ? $this->db->escapeString($payment_verification_code) : $payment_verification_code;
+        $payment_verification_code = $this->_get_clean_value($payment_verification_code);
 
         $sql = "SELECT $paypal_ipn_table.*
         FROM $paypal_ipn_table

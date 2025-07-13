@@ -23,8 +23,8 @@
             order: [[4, 'desc']],
             filterDropdown: [{name: "assigned_to", class: "w150", options: <?php echo $assigned_to_dropdown; ?>}, {name: "status", class: "w150", options: <?php echo $statuses_dropdown; ?>}],
             columns: [
-                {title: "<?php echo app_lang('id'); ?>"},
-                {title: "<?php echo app_lang('client'); ?>"},
+                {title: "<?php echo app_lang('id'); ?>", "class": "all"},
+                {title: "<?php echo app_lang('client'); ?>", "class": "all"},
                 {title: "<?php echo app_lang('title'); ?>"},
                 {title: "<?php echo app_lang('assigned_to'); ?>"},
                 {visible: false, searchable: false},

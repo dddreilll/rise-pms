@@ -1,4 +1,4 @@
-<div class="card rounded-0">
+<div class="card border-top-0 rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('projects'); ?></h4>
     </div>
@@ -17,13 +17,13 @@
                 {
                     name: "status_id",
                     text: "<?php echo app_lang('status'); ?>",
-                    options: <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses, "selected_status_key" => "open")); ?>
+                    options: <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses)); ?>
                 }
             ],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {title: '<?php echo app_lang("id") ?>', "class": "w50"},
-                {title: '<?php echo app_lang("title") ?>'},
+                {title: '<?php echo app_lang("title") ?>', "class": "all"},
                 {title: '<?php echo app_lang("client") ?>', "class": "w10p"},
                 {visible: true, title: '<?php echo app_lang("price") ?>', "class": "w10p"},
                 {visible: false, searchable: false},

@@ -12,7 +12,7 @@
 
                 <div class="mb20 ml15 mr15"><?php echo app_lang("process_order_info_message"); ?></div>
 
-                <div class="m15 pb15 mb30">
+                <div class="m15 pb15 mb30 m0-xs">
                     <div class="table-responsive">
                         <table id="order-item-table" class="display mt0" width="100%">            
                         </table>
@@ -21,7 +21,7 @@
                         <div class="float-start mt20">
                             <?php
                             if (isset($login_user->id)) {
-                                echo modal_anchor(get_uri("store/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item')));
+                                echo modal_anchor(get_uri("store/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white add-item-btn", "title" => app_lang('add_item')));
                             }
                             ?>
                         </div>
@@ -299,7 +299,7 @@
                     }
                     ?>
                     <button type="submit" class="btn btn-primary float-end ml10"><span data-feather="check-circle" class="icon-16"></span> <?php echo $submit_btn_text; ?></button>
-                    <?php echo anchor(get_uri("store"), "<i data-feather='search' class='icon-16'></i> " . app_lang('find_more_items'), array("class" => "btn btn-default float-end")); ?> 
+                    <?php echo anchor(get_uri("store"), "<i data-feather='search' class='icon-16'></i> " . app_lang('find_more_items'), array("class" => "btn btn-default float-end find-more-items-btn")); ?> 
                 </div>
             </div>
             <?php echo form_close(); ?>
@@ -338,10 +338,10 @@
                 displayLength: 100,
                 columns: [
                     {visible: false, searchable: false},
-                    {title: "<?php echo app_lang("item") ?> ", sortable: false},
+                    {title: "<?php echo app_lang("item") ?> ", sortable: false, "class": "all"},
                     {title: "<?php echo app_lang("quantity") ?>", "class": "text-right w15p", sortable: false},
                     {title: "<?php echo app_lang("rate") ?>", "class": "text-right w15p", sortable: false},
-                    {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p", sortable: false},
+                    {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p all", sortable: false},
                     {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100", sortable: false}
                 ],
 

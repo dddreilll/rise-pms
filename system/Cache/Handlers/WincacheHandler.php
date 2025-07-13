@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -22,6 +24,9 @@ use Exception;
  */
 class WincacheHandler extends BaseHandler
 {
+    /**
+     * Note: Use `CacheFactory::getHandler()` to instantiate.
+     */
     public function __construct(Cache $config)
     {
         $this->prefix = $config->prefix;
@@ -70,6 +75,8 @@ class WincacheHandler extends BaseHandler
 
     /**
      * {@inheritDoc}
+     *
+     * @return never
      */
     public function deleteMatching(string $pattern)
     {

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -44,8 +46,6 @@ class EncryptionException extends RuntimeException implements ExceptionInterface
 
     /**
      * Thrown when the handler requested is unknown.
-     *
-     * @param string $driver
      *
      * @return static
      */

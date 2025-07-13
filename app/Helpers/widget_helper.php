@@ -10,13 +10,13 @@ use App\Libraries\Template;
  */
 if (!function_exists('clock_widget')) {
 
-    function clock_widget() {
+    function clock_widget($remove_wrapper = 0) {
         $ci = new Security_Controller(false);
         $view_data["clock_status"] = $ci->Attendance_model->current_clock_in_record($ci->login_user->id);
+        $view_data["remove_wrapper"] = $remove_wrapper;
         $template = new Template();
         return $template->view("attendance/clock_widget", $view_data);
     }
-
 }
 
 /**
@@ -55,7 +55,6 @@ if (!function_exists('activity_logs_widget')) {
 
         echo $view_data["result_remaining"] = view("activity_logs/activity_logs_widget", $view_data);
     }
-
 }
 
 /**
@@ -108,7 +107,6 @@ if (!function_exists('timeline_widget')) {
             return $template->view("timeline/post_list", $view_data);
         }
     }
-
 }
 
 
@@ -132,7 +130,6 @@ if (!function_exists('announcements_alert_widget')) {
         $template = new Template();
         return $template->view("announcements/alert", $view_data);
     }
-
 }
 
 
@@ -149,7 +146,6 @@ if (!function_exists('my_open_tasks_widget')) {
         $template = new Template();
         return $template->view("tasks/open_tasks_widget", $view_data);
     }
-
 }
 
 
@@ -168,7 +164,6 @@ if (!function_exists('my_task_stataus_widget')) {
         $template = new Template();
         return $template->view("tasks/my_task_status_widget", $view_data);
     }
-
 }
 
 
@@ -195,7 +190,6 @@ if (!function_exists('events_today_widget')) {
         $template = new Template();
         return $template->view("events/events_today", $view_data);
     }
-
 }
 
 
@@ -226,7 +220,6 @@ if (!function_exists('new_posts_widget')) {
         $template = new Template();
         return $template->view("timeline/new_posts_widget", $view_data);
     }
-
 }
 
 
@@ -251,7 +244,6 @@ if (!function_exists('events_widget')) {
         $template = new Template();
         return $template->view("events/events_widget", $view_data);
     }
-
 }
 
 
@@ -273,7 +265,6 @@ if (!function_exists('get_event_icon')) {
         }
         return $icon;
     }
-
 }
 
 
@@ -289,7 +280,6 @@ if (!function_exists('has_my_open_timers')) {
         $timers = $ci->Timesheets_model->get_open_timers($ci->login_user->id);
         return $timers->resultID->num_rows;
     }
-
 }
 
 
@@ -316,7 +306,6 @@ if (!function_exists('income_vs_expenses_widget')) {
         $template = new Template();
         return $template->view("expenses/income_expenses_widget", $view_data);
     }
-
 }
 
 
@@ -356,7 +345,7 @@ if (!function_exists('ticket_status_widget')) {
 
         $ticket_result_array = array();
         foreach ($tickets_result as $ticket) {
-            $ticket_result_array [$ticket->date] = $ticket->total;
+            $ticket_result_array[$ticket->date] = $ticket->total;
         }
 
         $ticks = array();
@@ -396,7 +385,6 @@ if (!function_exists('ticket_status_widget')) {
         $template = new Template();
         return $template->view("tickets/ticket_status_widget", $view_data);
     }
-
 }
 
 
@@ -463,7 +451,6 @@ if (!function_exists('invoice_statistics_widget')) {
         $template = new Template();
         return $template->view("invoices/invoice_statistics_widget/index", $view_data);
     }
-
 }
 
 
@@ -532,7 +519,6 @@ if (!function_exists('project_timesheet_statistics_widget')) {
             return $template->view("projects/timesheets/all_timesheet_wedget", $view_data);
         }
     }
-
 }
 
 
@@ -579,7 +565,6 @@ if (!function_exists('timecard_statistics_widget')) {
         $template = new Template();
         return $template->view("attendance/timecard_statistics", $view_data);
     }
-
 }
 
 /**
@@ -609,7 +594,6 @@ if (!function_exists('count_project_status_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/project_status_widget", $view_data);
     }
-
 }
 
 
@@ -648,7 +632,6 @@ if (!function_exists('count_total_time_widget')) {
         $template = new Template();
         return $template->view("attendance/total_time_widget", $view_data);
     }
-
 }
 
 
@@ -671,7 +654,6 @@ if (!function_exists('count_total_time_widget_small')) {
         $template = new Template();
         return $template->view("attendance/total_time_widget_small", $view_data);
     }
-
 }
 
 
@@ -689,7 +671,6 @@ if (!function_exists('social_links_widget')) {
         $template = new Template();
         return $template->view("users/social_links_widget", $view_data);
     }
-
 }
 
 
@@ -703,7 +684,6 @@ if (!function_exists('count_unread_message')) {
         $ci = new Security_Controller(false);
         return $ci->Messages_model->count_unread_message($ci->login_user->id, $ci->get_allowed_user_ids());
     }
-
 }
 
 
@@ -718,7 +698,6 @@ if (!function_exists('count_new_tickets')) {
         $Tickets_model = model("App\Models\Tickets_model");
         return $Tickets_model->count_new_tickets($ticket_types, $show_assigned_tickets_only_user_id);
     }
-
 }
 
 
@@ -732,7 +711,13 @@ if (!function_exists('all_tasks_kanban_widget')) {
     function all_tasks_kanban_widget() {
         $ci = new Security_Controller(false);
 
-        $projects = $ci->Tasks_model->get_my_projects_dropdown_list($ci->login_user->id)->getResult();
+        //only admin/ the user has permission to manage all projects, can see all projects, other team mebers can see only their own projects.
+        $only_own_projects_user_id = 0;
+        if (!($ci->login_user->is_admin || get_array_value($ci->login_user->permissions, "can_manage_all_projects") == "1")) {
+            $only_own_projects_user_id = $ci->login_user->id;
+        }
+
+        $projects = $ci->Tasks_model->get_my_projects_dropdown_list($only_own_projects_user_id)->getResult();
         $projects_dropdown = array(array("id" => "", "text" => "- " . app_lang("project") . " -"));
         foreach ($projects as $project) {
             if ($project->project_id && $project->project_title) {
@@ -774,7 +759,6 @@ if (!function_exists('all_tasks_kanban_widget')) {
         $template = new Template();
         return $template->view("tasks/kanban/all_tasks_kanban_widget", $view_data);
     }
-
 }
 
 
@@ -789,7 +773,6 @@ if (!function_exists('todo_list_widget')) {
         $template = new Template();
         return $template->view("todo/todo_lists_widget");
     }
-
 }
 
 
@@ -804,7 +787,6 @@ if (!function_exists('invalid_access_widget')) {
         $template = new Template();
         return $template->view("dashboards/custom_dashboards/invalid_access_widget");
     }
-
 }
 
 
@@ -833,7 +815,6 @@ if (!function_exists('open_projects_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/open_projects_widget", $view_data);
     }
-
 }
 
 
@@ -862,7 +843,6 @@ if (!function_exists('completed_projects_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/completed_projects_widget", $view_data);
     }
-
 }
 
 /**
@@ -895,7 +875,6 @@ if (!function_exists('count_clock_in_out_widget_small')) {
             return $template->view("attendance/count_clock_out_widget", $view_data);
         }
     }
-
 }
 
 /**
@@ -924,7 +903,6 @@ if (!function_exists('my_open_projects_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/my_open_projects_widget", $view_data);
     }
-
 }
 
 
@@ -948,7 +926,6 @@ if (!function_exists('my_starred_projects_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/my_starred_projects_widget", $view_data);
     }
-
 }
 
 
@@ -964,7 +941,6 @@ if (!function_exists('sticky_note_widget')) {
         $template = new Template();
         return $template->view("dashboards/sticky_note_widget", array("custom_class" => $custom_class));
     }
-
 }
 
 
@@ -996,7 +972,6 @@ if (!function_exists('ticket_status_widget_small')) {
         $template = new Template();
         return $template->view("tickets/ticket_status_widget_small", $view_data);
     }
-
 }
 
 
@@ -1014,7 +989,6 @@ if (!function_exists('all_team_members_widget')) {
         $template = new Template();
         return $template->view("team_members/team_members_widget", $view_data);
     }
-
 }
 
 
@@ -1041,7 +1015,6 @@ if (!function_exists('clocked_in_team_members_widget')) {
         $template = new Template();
         return $template->view("team_members/clocked_in_team_members_widget", $view_data);
     }
-
 }
 
 
@@ -1066,7 +1039,6 @@ if (!function_exists('clocked_out_team_members_widget')) {
         $template = new Template();
         return $template->view("team_members/clocked_out_team_members_widget", $view_data);
     }
-
 }
 
 
@@ -1087,7 +1059,6 @@ if (!function_exists('active_members_and_clients_widget')) {
         $template = new Template();
         return $template->view("team_members/active_members_and_clients_widget", $view_data);
     }
-
 }
 
 
@@ -1119,7 +1090,6 @@ if (!function_exists('get_invoices_value_widget')) {
         $template = new Template();
         return $template->view("invoices/total_invoices_value_widget", $view_data);
     }
-
 }
 
 
@@ -1136,7 +1106,6 @@ if (!function_exists('my_tasks_list_widget')) {
         $template = new Template();
         return $template->view("tasks/my_tasks_list_widget", $view_data);
     }
-
 }
 
 /**
@@ -1160,7 +1129,6 @@ if (!function_exists('pending_leave_approval_widget')) {
         $template = new Template();
         return $template->view("leaves/pending_leave_approval_widget", $view_data);
     }
-
 }
 
 /**
@@ -1176,7 +1144,6 @@ if (!function_exists('total_clients_widget')) {
         $template = new Template();
         return $template->view("clients/total_clients_widget", $view_data);
     }
-
 }
 
 /**
@@ -1192,7 +1159,6 @@ if (!function_exists('total_contacts_widget')) {
         $template = new Template();
         return $template->view("clients/total_contacts_widget", $view_data);
     }
-
 }
 
 /**
@@ -1209,7 +1175,6 @@ if (!function_exists('active_members_on_projects_widget')) {
         $template = new Template();
         return $template->view("team_members/active_members_on_projects_widget", $view_data);
     }
-
 }
 
 /**
@@ -1231,7 +1196,6 @@ if (!function_exists('open_tickets_list_widget')) {
             return $template->view("tickets/open_tickets_list_widget");
         }
     }
-
 }
 
 /**
@@ -1248,7 +1212,6 @@ if (!function_exists('total_leads_widget')) {
         $template = new Template();
         return $template->view('leads/total_leads_widget', $view_data, $returen_as_data);
     }
-
 }
 
 /**
@@ -1277,7 +1240,6 @@ if (!function_exists('client_contacts_logged_in_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/client_contacts_logged_in_widget", $view_data, $return_as_data);
     }
-
 }
 
 /**
@@ -1299,7 +1261,6 @@ if (!function_exists('client_invoices_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/client_invoices_widget", $view_data, $return_as_data);
     }
-
 }
 
 /**
@@ -1320,7 +1281,6 @@ if (!function_exists('client_projects_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/projects_info_widget", $view_data, $return_as_data);
     }
-
 }
 
 /**
@@ -1341,7 +1301,6 @@ if (!function_exists('client_estimates_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/client_estimates_widget", $view_data, $return_as_data);
     }
-
 }
 
 /**
@@ -1361,7 +1320,6 @@ if (!function_exists('clients_has_open_tickets_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/clients_has_open_tickets_widget", $view_data);
     }
-
 }
 
 /**
@@ -1381,7 +1339,6 @@ if (!function_exists('clients_has_new_orders_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/clients_has_new_orders_widget", $view_data);
     }
-
 }
 
 /**
@@ -1401,7 +1358,6 @@ if (!function_exists('client_proposals_widget')) {
         $template = new Template();
         return $template->view("clients/widgets/client_proposals_widget", $view_data, $return_as_data);
     }
-
 }
 
 if (!function_exists('company_widget')) {
@@ -1428,7 +1384,6 @@ if (!function_exists('company_widget')) {
 
         return view("company/company_widget", $view_data);
     }
-
 }
 
 /**
@@ -1465,7 +1420,6 @@ if (!function_exists('projects_overview_widget')) {
         $template = new Template();
         return $template->view("projects/widgets/projects_overview_widget", $view_data);
     }
-
 }
 
 if (!function_exists('reminders_widget')) {
@@ -1476,12 +1430,12 @@ if (!function_exists('reminders_widget')) {
         $Events_model = model('App\Models\Events_model');
         $local_time = get_my_local_time("Y-m-d H:i") . ":00";
         $reminders = $Events_model->get_details(array(
-                    "user_id" => $ci->login_user->id,
-                    "type" => "all",
-                    "reminder_status" => "new",
-                    "reminder_start_date_time" => $local_time,
-                    "reminder_end_date_time" => add_period_to_date($local_time, "1", "days", "Y-m-d H:i:s") //get reminders of next 24 hours
-                ))->getResult();
+            "user_id" => $ci->login_user->id,
+            "type" => "all",
+            "reminder_status" => "new",
+            "reminder_start_date_time" => $local_time,
+            "reminder_end_date_time" => add_period_to_date($local_time, "1", "days", "Y-m-d H:i:s") //get reminders of next 24 hours
+        ))->getResult();
 
         if ($return_reminders_only) {
             return $reminders;
@@ -1491,7 +1445,6 @@ if (!function_exists('reminders_widget')) {
 
         echo view("reminders/reminders_widget", $view_data);
     }
-
 }
 
 
@@ -1533,7 +1486,6 @@ if (!function_exists('estimate_sent_statistics_widget')) {
         $template = new Template();
         return $template->view("estimates/estimate_sent_statistics_widget/index", $view_data);
     }
-
 }
 
 
@@ -1561,7 +1513,6 @@ if (!function_exists('last_announcement_widget')) {
         $template = new Template();
         return $template->view("announcements/last_announcement_widget", $view_data);
     }
-
 }
 
 
@@ -1598,7 +1549,6 @@ if (!function_exists('team_members_overview_widget')) {
         $template = new Template();
         return $template->view("team_members/team_members_overview_widget", $view_data);
     }
-
 }
 
 /**
@@ -1632,7 +1582,6 @@ if (!function_exists('tasks_overview_widget')) {
         $template = new Template();
         return $template->view("tasks/tasks_overview_widget", $view_data);
     }
-
 }
 
 /**
@@ -1647,7 +1596,7 @@ if (!function_exists('invoice_overview_widget')) {
         $ci = new Security_Controller(false);
 
         $today = get_my_local_time("Y-m-d");
-        $last_day_of_month = date('t');
+        $last_day_of_month = date('t', strtotime($today));
         $start_date = subtract_period_from_date(get_my_local_time("Y-m-01"), 11, "months");
         $end_date = get_my_local_time("Y-m-$last_day_of_month");
 
@@ -1703,11 +1652,11 @@ if (!function_exists('invoice_overview_widget')) {
         $view_data["draft_invoices"] = $invoice_info->draft_count;
 
         $view_data["invoices_info"] = $invoice_info;
+        $view_data["invoice_currency"] = $currency;
 
         $template = new Template();
         return $template->view("invoices/invoice_overview_widget", $view_data);
     }
-
 }
 
 /**
@@ -1729,20 +1678,19 @@ if (!function_exists('next_reminder_widget')) {
         );
 
         $reminders_of_today = $Events_model->get_details(array_merge($options, array(
-                    "reminder_end_date_time" => get_my_local_time("Y-m-d") . " 23:59:00" //get reminders of today means from now to 23:59:00
-                )))->getResult();
+            "reminder_end_date_time" => get_my_local_time("Y-m-d") . " 23:59:00" //get reminders of today means from now to 23:59:00
+        )))->getResult();
         $view_data["reminders_of_today"] = count($reminders_of_today);
 
         $next_reminder = $Events_model->get_details(array_merge($options, array(
-                    "limit" => 1, //get next reminder only
-                    "get_future_events_only" => true,
-                )))->getRow();
+            "limit" => 1, //get next reminder only
+            "get_future_events_only" => true,
+        )))->getRow();
         $view_data["next_reminder"] = $next_reminder;
 
         $template = new Template();
         return $template->view("reminders/next_reminder_widget", $view_data);
     }
-
 }
 
 /**
@@ -1770,7 +1718,6 @@ if (!function_exists('leads_overview_widget')) {
         $template = new Template();
         return $template->view("leads/leads_overview_widget", $view_data);
     }
-
 }
 
 /**
@@ -1791,5 +1738,4 @@ if (!function_exists('projects_widget')) {
         $template = new Template();
         return $template->view("clients/projects/index", $view_data);
     }
-
 }

@@ -248,7 +248,8 @@ class Messages extends Security_Controller {
 
         $this->validate_submitted_data(array(
             "reply_message" => "required",
-            "message_id" => "required|numeric"
+            "message_id" => "required|numeric",
+            "last_message_id" => "numeric",
         ));
 
         $message_info = $this->Messages_model->get_one($message_id);
@@ -544,6 +545,10 @@ class Messages extends Security_Controller {
     }
 
     function send_typing_indicator_to_pusher() {
+        $this->validate_submitted_data(array(
+            "user_id" => "numeric"
+        ));
+
         $message_id = $this->request->getPost("message_id");
         if (!$message_id) {
             show_404();
@@ -572,8 +577,7 @@ class Messages extends Security_Controller {
             show_404();
         }
     }
-
 }
 
-/* End of file messages.php */
-    /* Location: ./app/controllers/messages.php */    
+/* End of file Messages.php */
+/* Location: ./app/Controllers/Messages.php */

@@ -30,7 +30,7 @@
                 <?php } ?>
             </div>
         </div>
-        <div class="position-absolute" style="bottom: 15px;">
+        <div class="position-absolute d-flex justify-content-between" style="bottom: 15px;">
             <?php
             foreach ($task_priorities as $task_priority) {
                 ?>
@@ -103,7 +103,7 @@ foreach ($task_statuses as $task_status) {
 
     $(document).ready(function () {
         initScrollbar('#<?php echo $type; ?>-widget', {
-            setHeight: 327
+            setHeight: 330
         });
     });
 

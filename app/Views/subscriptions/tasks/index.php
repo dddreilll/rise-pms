@@ -18,15 +18,14 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        var showResponsiveOption = true,
-                idColumnClass = "w10p",
-                titleColumnClass = "",
-                optionColumnClass = "w100";
+        var showIdColumn = true;
         if (isMobile()) {
-            showResponsiveOption = false;
-            idColumnClass = "w20p";
-            titleColumnClass = "w60p";
-            optionColumnClass = "w20p";
+            showIdColumn = false;
+        }
+
+        var idColumnClass = "";
+        if ("<?php echo get_setting("show_the_status_checkbox_in_tasks_list"); ?>" === "1") {
+            idColumnClass = "w10p";
         }
 
         $("#task-table").appTable({
@@ -35,19 +34,23 @@
             serverSide: true,
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang('id') ?>", "class": idColumnClass, order_by: "id"},
-                {title: "<?php echo app_lang('title') ?>", "class": titleColumnClass, order_by: "title"},
+                {title: "<?php echo app_lang('id') ?>", "class": idColumnClass, visible: showIdColumn, order_by: "id"},
+                {title: "<?php echo app_lang('title') ?>", "class": "all", order_by: "title"},
+                {visible: false, searchable: false},
+                {visible: false, searchable: false},
+                {visible: false, searchable: false},
+                {visible: false, searchable: false},
                 {visible: false, searchable: false, order_by: "start_date"},
-                {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 3, visible: showResponsiveOption, order_by: "start_date"},
+                {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 7, order_by: "start_date"},
                 {visible: false, searchable: false, order_by: "deadline"},
-                {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 5, visible: showResponsiveOption, order_by: "deadline"},
+                {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 9, order_by: "deadline"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", visible: showResponsiveOption, order_by: "assigned_to"},
-                {title: "<?php echo app_lang('collaborators') ?>", visible: showResponsiveOption},
-                {title: "<?php echo app_lang('status') ?>", visible: showResponsiveOption, order_by: "status"}
+                {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", order_by: "assigned_to"},
+                {title: "<?php echo app_lang('collaborators') ?>"},
+                {title: "<?php echo app_lang('status') ?>", order_by: "status"}
 <?php echo $custom_field_headers_of_task; ?>,
-                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option " + optionColumnClass}
+                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ],
             rowCallback: tasksTableRowCallback //load this function from the task_table_common_script.php 
         });

@@ -1,4 +1,4 @@
-<?php echo form_open(get_uri("plugins/save_status_of_plugin/$plugin/installed"), array("id" => "plugin-form", "class" => "general-form", "role" => "form")); ?>
+<?php echo form_open(get_uri("plugins/save_status_of_plugin/$plugin/installed/1"), array("id" => "plugin-form", "class" => "general-form", "role" => "form")); ?>
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <div class=" form-group">

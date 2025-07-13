@@ -77,7 +77,7 @@
         }
 
         $item = $exising_items . "<span class='lead-kanban-item kanban-item' data-id='$lead->id' data-sort='$lead->new_sort' data-post-id='$lead->id'>
-                    <div><span class='avatar'><img src='" . get_avatar($lead->primary_contact_avatar) . "'></span>" . anchor(get_uri("leads/view/" . $lead->id), $lead->company_name) . $open_in_new_tab . $make_client . "</div><div class='clearfix'></div>" .
+                    <div class='selection-pe-none'><span class='avatar'><img src='" . get_avatar($lead->primary_contact_avatar) . "'></span>" . anchor(get_uri("leads/view/" . $lead->id), $lead->company_name) . $open_in_new_tab . $make_client . "</div><div class='clearfix'></div>" .
                 "<div class='mt15'>" . $source . $owner . "</div>" . $kanban_custom_fields_data . "<div class='clearfix'></div>" .
                 $leads_total_counts . $lead_labels . "</span>";
 

@@ -1,4 +1,4 @@
-<div class="card rounded-bottom">
+<div class="card rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('notes'); ?></h4>
         <div class="title-button-group">
@@ -20,7 +20,8 @@
             columns: [
                 {targets: [1], visible: false},
                 {title: '<?php echo app_lang("created_date"); ?>', "class": "w200"},
-                {title: '<?php echo app_lang("title"); ?>'},
+                {title: '<?php echo app_lang("title"); ?>', "class": "all"},
+                {visible: false, searchable: false},
                 {title: '<?php echo app_lang("files") ?>', "class": "w250"},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]

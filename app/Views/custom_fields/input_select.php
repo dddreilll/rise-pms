@@ -22,6 +22,6 @@
 </select>
 <script type="text/javascript">
     $(document).ready(function () {
-        $("select#custom_field_<?php echo $field_info->id . $uid; ?>").select2();
+        $("select#custom_field_<?php echo $field_info->id . $uid; ?>").appDropdown();
     });
 </script>

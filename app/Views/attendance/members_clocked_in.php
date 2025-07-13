@@ -15,9 +15,7 @@
             ],
             printColumns: [0, 2, 3],
             xlsColumns: [0, 2, 3],
-            tableRefreshButton: true,
-            columnShowHideOption: false
-
+            tableRefreshButton: true
         });
     });
 </script>

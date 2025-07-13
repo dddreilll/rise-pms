@@ -44,7 +44,7 @@ if (isset($folder_info) && $folder_info && $folder_details) {
         </div>
     </div>
 
-    <?php if ($can_manage_folder_access_permissions && $folder_info->context !== "client") { ?>
+    <?php if ($can_manage_folder_access_permissions && $folder_info->context !== "client" && $folder_info->context !== "project") { ?>
 
         <div class="b-t pb20 pt20">
             <h4><?php echo app_lang("who_has_access"); ?></h4>

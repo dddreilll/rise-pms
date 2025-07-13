@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -204,11 +206,13 @@ class GDHandler extends BaseHandler
      * Example:
      *    $image->resize(100, 200, true)
      *          ->save();
+     *
+     * @param non-empty-string|null $target
      */
     public function save(?string $target = null, int $quality = 90): bool
     {
         $original = $target;
-        $target   = empty($target) ? $this->image()->getPathname() : $target;
+        $target   = ($target === null || $target === '') ? $this->image()->getPathname() : $target;
 
         // If no new resource has been created, then we're
         // simply copy the existing one.
@@ -227,6 +231,7 @@ class GDHandler extends BaseHandler
 
         // for png and webp we can actually preserve transparency
         if (in_array($this->image()->imageType, $this->supportTransparency, true)) {
+            imagepalettetotruecolor($this->resource);
             imagealphablending($this->resource, false);
             imagesavealpha($this->resource, true);
         }
@@ -267,7 +272,7 @@ class GDHandler extends BaseHandler
                     throw ImageException::forInvalidImageCreate(lang('Images.webpNotSupported'));
                 }
 
-                if (! @imagewebp($this->resource, $target)) {
+                if (! @imagewebp($this->resource, $target, $quality)) {
                     throw ImageException::forSaveFailed();
                 }
                 break;
@@ -381,11 +386,11 @@ class GDHandler extends BaseHandler
         // offset flips itself automatically
 
         if ($options['vAlign'] === 'bottom') {
-            $options['vOffset'] = $options['vOffset'] * -1;
+            $options['vOffset'] *= -1;
         }
 
         if ($options['hAlign'] === 'right') {
-            $options['hOffset'] = $options['hOffset'] * -1;
+            $options['hOffset'] *= -1;
         }
 
         // Set font width and height
@@ -466,7 +471,7 @@ class GDHandler extends BaseHandler
 
         // shorthand hex, #f00
         if (strlen($color) === 3) {
-            $color = implode('', array_map('str_repeat', str_split($color), [2, 2, 2]));
+            $color = implode('', array_map(str_repeat(...), str_split($color), [2, 2, 2]));
         }
 
         $color = str_split(substr($color, 0, 6), 2);

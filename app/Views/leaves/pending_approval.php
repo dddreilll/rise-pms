@@ -8,7 +8,7 @@
         $("#pending-approval-table").appTable({
             source: '<?php echo_uri("leaves/pending_approval_list_data") ?>',
             columns: [
-                {title: '<?php echo app_lang("applicant") ?>', "class": "w20p"},
+                {title: '<?php echo app_lang("applicant") ?>', "class": "w20p all"},
                 {title: '<?php echo app_lang("leave_type") ?>'},
                 {title: '<?php echo app_lang("date") ?>', "class": "w20p"},
                 {title: '<?php echo app_lang("duration") ?>', "class": "w20p"},

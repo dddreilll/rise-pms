@@ -13,7 +13,10 @@
                         "id" => "template",
                         "name" => "template",
                         "value" => process_images_from_content($model_info->template, false),
-                        "class" => "form-control"
+                        "class" => "form-control",
+                        "data-toolbar" => "pdf_friendly_toolbar",
+                        "data-height" => 480,
+                        "data-encode_ajax_post_data" => "1"
                     ));
                     ?>
                 </div>
@@ -38,14 +41,6 @@
     $(document).ready(function () {
         $("#proposal-template-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                var template = encodeAjaxPostData(getWYSIWYGEditorHTML("#template"));
-                $.each(data, function (index, obj) {
-                    if (obj.name === "template") {
-                        data[index]["value"] = template;
-                    }
-                });
-            },
             onSuccess: function (result) {
                 if (result.success) {
                     appAlert.success(result.message, {duration: 10000});
@@ -55,20 +50,7 @@
             }
         });
 
-        initWYSIWYGEditor("#template", {
-            height: 480,
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'clear']],
-                ['fontname', ['fontname']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['hr', 'picture']],
-                ['view', ['fullscreen', 'codeview']]
-            ]
-        });
+        initWYSIWYGEditor("#template");
 
     });
 </script>    

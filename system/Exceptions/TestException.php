@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -18,6 +20,9 @@ class TestException extends CriticalError
 {
     use DebugTraceableTrait;
 
+    /**
+     * @return static
+     */
     public static function forInvalidMockClass(string $name)
     {
         return new static(lang('Test.invalidMockClass', [$name]));

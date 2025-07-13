@@ -47,7 +47,7 @@ class Notifications_model extends Crud_model {
 
         $where = "";
         $notify_to_terms = $notification_settings->notify_to_terms;
-        $options = $this->escape_array($options);
+        $options = $this->_get_clean_value($options);
         $project_id = get_array_value($options, "project_id");
         $task_id = get_array_value($options, "task_id");
         $leave_id = get_array_value($options, "leave_id");
@@ -70,7 +70,8 @@ class Notifications_model extends Crud_model {
         $announcement_id = get_array_value($options, "announcement_id");
         $exclude_ticket_creator = get_array_value($options, "exclude_ticket_creator");
         $notify_to_admins_only = get_array_value($options, "notify_to_admins_only");
-        $notification_multiple_tasks = get_array_value($options, "notification_multiple_tasks");
+        $multiple_tasks_notify_to_user_ids = get_array_value($options, "multiple_tasks_notify_to_user_ids");
+        $multiple_tasks_user_wise = get_array_value($options, "multiple_tasks_user_wise");
         $lead_id = get_array_value($options, "lead_id");
         $contract_id = get_array_value($options, "contract_id");
         $proposal_id = get_array_value($options, "proposal_id");
@@ -78,6 +79,7 @@ class Notifications_model extends Crud_model {
         $subscription_id = get_array_value($options, "subscription_id");
         $expense_id = get_array_value($options, "expense_id");
         $proposal_comment_id = get_array_value($options, "proposal_comment_id");
+        $reminder_log_id = get_array_value($options, "reminder_log_id");
 
         $extra_data = array();
 
@@ -294,50 +296,10 @@ class Notifications_model extends Crud_model {
             $event_info = $this->db->query("SELECT $events_table.* FROM $events_table WHERE $events_table.id=$event_id")->getRow();
 
             //we are saving the share with data like this:
-            //member:1,member:2,team:1
-            //all
-            //so, we've to retrive the users 
-
-
-            if ($event_info->share_with === "all") {
-                $where .= " OR $users_table.user_type = 'staff' "; //all team members
-            } else {
-
-
-                $share_with_array = explode(",", $event_info->share_with); // found an array like this array("member:1", "member:2", "team:1")
-
-                $event_users = array();
-                $event_team = array();
-                $event_contact = array();
-
-                foreach ($share_with_array as $share) {
-
-                    $share_data = explode(":", $share);
-
-                    if (get_array_value($share_data, '0') === "member") {
-                        $event_users[] = get_array_value($share_data, '1');
-                    } else if (get_array_value($share_data, '0') === "team") {
-                        $event_team[] = get_array_value($share_data, '1');
-                    } else if (get_array_value($share_data, '0') === "contact") {
-                        $event_contact[] = get_array_value($share_data, '1');
-                    }
-                }
-
-                //find team members
-                if (count($event_users)) {
-                    $where .= " OR FIND_IN_SET($users_table.id, '" . join(',', $event_users) . "') ";
-                }
-
-                //find team
-                if (count($event_team)) {
-                    $where .= " OR FIND_IN_SET($users_table.id, (SELECT GROUP_CONCAT($team_table.members) AS team_users FROM $team_table WHERE $team_table.deleted=0 AND FIND_IN_SET($team_table.id, '" . join(',', $event_team) . "'))) ";
-                }
-
-                //find client contacts
-                if (count($event_contact)) {
-                    $where .= " OR FIND_IN_SET($users_table.id, '" . join(',', $event_contact) . "') ";
-                }
-            }
+            //member:1,member:2,team:1,contact:1
+            //all,all_contacts
+            //so, we've to retrive the users
+            $where .= $this->get_share_with_users_of_event($event_info, true);
         }
 
 
@@ -391,15 +353,8 @@ class Notifications_model extends Crud_model {
             $extra_where .= "AND $users_table.is_admin=1";
         }
 
-        $notification_multiple_tasks_users = array();
-
-        if ($notification_multiple_tasks) {
-            $notification_multiple_tasks_users = get_notification_multiple_tasks_data($notification_multiple_tasks, $event, "user_ids");
-            $notification_multiple_tasks_user_ids = get_array_value($notification_multiple_tasks_users, "notify_to_user_ids");
-            if ($notification_multiple_tasks_user_ids) {
-                $notification_multiple_tasks_user_ids = implode(',', $notification_multiple_tasks_user_ids);
-                $extra_where .= " OR FIND_IN_SET( $users_table.id, '$notification_multiple_tasks_user_ids' )";
-            }
+        if ($multiple_tasks_notify_to_user_ids) {
+            $extra_where .= " OR FIND_IN_SET( $users_table.id, '$multiple_tasks_notify_to_user_ids' )";
         }
 
         $exclude_notification_creator = " AND $users_table.id!=$user_id ";
@@ -493,8 +448,9 @@ class Notifications_model extends Crud_model {
             //add creator's email
             //for ticket_commented notification, add creator's email if it's created by app users
             //for ticket_created notification, add creator's email if the option is enabled in notification settings
-            if ($ticket_info && !$ticket_info->client_id && $ticket_info->creator_email &&
-                    (($event == "ticket_commented" && !$exclude_ticket_creator) || ($event == "ticket_created" && in_array("ticket_creator", $notify_to_terms)))
+            if (
+                $ticket_info && !$ticket_info->client_id && $ticket_info->creator_email &&
+                (($event == "ticket_commented" && !$exclude_ticket_creator) || ($event == "ticket_created" && in_array("ticket_creator", $notify_to_terms)))
             ) {
                 $email_notify_to[] = $ticket_info->creator_email;
             }
@@ -537,8 +493,8 @@ class Notifications_model extends Crud_model {
                 //check if email sending to client
                 if ($user->user_type == "client") {
                     if ($announcement_id || $contract_id || $event_id || $proposal_id || $estimate_id || $invoice_id || $invoice_payment_id || $subscription_id || $project_id || $task_id || $order_id || $ticket_id) {
-                        $check_module = true; 
-                        
+                        $check_module = true;
+
                         if ($announcement_id) {
                             $context = "announcement";
                         } else if ($event_id) {
@@ -629,7 +585,8 @@ class Notifications_model extends Crud_model {
             "estimate_comment_id" => $estimate_comment_id ? $estimate_comment_id : "",
             "subscription_id" => $subscription_id ? $subscription_id : "",
             "expense_id" => $expense_id ? $expense_id : "",
-            "proposal_comment_id" => $proposal_comment_id ? $proposal_comment_id : ""
+            "proposal_comment_id" => $proposal_comment_id ? $proposal_comment_id : "",
+            "reminder_log_id" => $reminder_log_id ? $reminder_log_id : ""
         );
 
         //get data from plugin by persing 'plugin_'
@@ -643,8 +600,8 @@ class Notifications_model extends Crud_model {
 
         $extra_data["notify_to_terms"] = $notify_to_terms;
 
-        if ($notification_multiple_tasks_users) {
-            $extra_data["notification_multiple_tasks_user_wise"] = get_array_value($notification_multiple_tasks_users, "user_wise_tasks");
+        if ($multiple_tasks_user_wise) {
+            $extra_data["notification_multiple_tasks_user_wise"] = $multiple_tasks_user_wise;
         }
 
         //notification saved. send emails
@@ -918,6 +875,11 @@ class Notifications_model extends Crud_model {
     /* prepare notifications of new events */
 
     function get_notifications($user_id, $offset = 0, $limit = 20) {
+
+        $user_id = $this->_get_clean_value($user_id);
+        $offset = $this->_get_clean_value($offset);
+        $limit = $this->_get_clean_value($limit);
+
         $notifications_table = $this->db->prefixTable('notifications');
         $users_table = $this->db->prefixTable('users');
         $projects_table = $this->db->prefixTable('projects');
@@ -941,6 +903,7 @@ class Notifications_model extends Crud_model {
         $expenses_table = $this->db->prefixTable('expenses');
         $subscriptions_table = $this->db->prefixTable('subscriptions');
         $proposal_comments_table = $this->db->prefixTable('proposal_comments');
+        $reminder_logs_table = $this->db->prefixTable('reminder_logs');
 
         $sql = "SELECT SQL_CALC_FOUND_ROWS $notifications_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS user_name, $users_table.image AS user_image,
                  $projects_table.title AS project_title,
@@ -990,6 +953,7 @@ class Notifications_model extends Crud_model {
         LEFT JOIN $clients_table ON $clients_table.id=$notifications_table.client_id
         LEFT JOIN $expenses_table ON $expenses_table.id=$notifications_table.expense_id
         LEFT JOIN $proposal_comments_table ON $proposal_comments_table.id=$notifications_table.proposal_comment_id
+        LEFT JOIN $reminder_logs_table ON $reminder_logs_table.id=$notifications_table.reminder_log_id
         LEFT JOIN (SELECT $clients_table.id, $clients_table.company_name FROM $clients_table) AS lead_table ON lead_table.id=$notifications_table.lead_id
         LEFT JOIN (
             SELECT $invoices_table.id, $invoices_table.display_id
@@ -1006,6 +970,8 @@ class Notifications_model extends Crud_model {
     }
 
     function get_email_notification($notification_id) {
+        $notification_id = $this->_get_clean_value($notification_id);
+
         $notifications_table = $this->db->prefixTable('notifications');
         $users_table = $this->db->prefixTable('users');
         $projects_table = $this->db->prefixTable('projects');
@@ -1029,6 +995,7 @@ class Notifications_model extends Crud_model {
         $expenses_table = $this->db->prefixTable('expenses');
         $subscriptions_table = $this->db->prefixTable('subscriptions');
         $proposal_comments_table = $this->db->prefixTable('proposal_comments');
+        $reminder_logs_table = $this->db->prefixTable('reminder_logs');
 
         $sql = "SELECT $notifications_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS user_name,
                  $projects_table.title AS project_title,
@@ -1042,6 +1009,7 @@ class Notifications_model extends Crud_model {
                  $ticket_comments_table.description AS ticket_comment_description,
                  $posts_table.description AS posts_title,
                  $subscriptions_table.title AS subscription_title,
+                 $subscriptions_table.next_recurring_date AS subscription_next_renewal_date,
                  $announcement_table.title AS announcement_title, $announcement_table.description AS announcement_content,
                  $estimate_comments_table.description AS estimate_comment_description,
                  $activity_logs_table.changes AS activity_log_changes, $activity_logs_table.log_type AS activity_log_type,
@@ -1077,6 +1045,7 @@ class Notifications_model extends Crud_model {
         LEFT JOIN $clients_table ON $clients_table.id=$notifications_table.client_id
         LEFT JOIN $expenses_table ON $expenses_table.id=$notifications_table.expense_id
         LEFT JOIN $proposal_comments_table ON $proposal_comments_table.id=$notifications_table.proposal_comment_id
+        LEFT JOIN $reminder_logs_table ON $reminder_logs_table.id=$notifications_table.reminder_log_id
         LEFT JOIN (SELECT $clients_table.id, $clients_table.company_name FROM $clients_table) AS lead_table ON lead_table.id=$notifications_table.lead_id
         LEFT JOIN (
             SELECT $invoices_table.id, $invoices_table.display_id
@@ -1114,6 +1083,9 @@ class Notifications_model extends Crud_model {
     function set_notification_status_as_read($notification_id, $user_id = 0) {
         $notifications_table = $this->db->prefixTable('notifications');
 
+        $notification_id = $this->_get_clean_value($notification_id);
+        $user_id = $this->_get_clean_value($user_id);
+
         $where = "";
         if ($notification_id) {
             $where = " AND $notifications_table.id=$notification_id";
@@ -1128,11 +1100,12 @@ class Notifications_model extends Crud_model {
         $notifications_table = $this->db->prefixTable('notifications');
         $users_table = $this->db->prefixTable('users');
 
+        $notification_id = $this->_get_clean_value($notification_id);
+
         $sql = "SELECT (SELECT CONCAT($users_table.first_name, ' ', $users_table.last_name) FROM $users_table WHERE $users_table.id=$notifications_table.to_user_id) AS to_user_name
         FROM $notifications_table
         WHERE $notifications_table.id=$notification_id";
 
         return $this->db->query($sql)->getRow()->to_user_name;
     }
-
 }

@@ -1,7 +1,6 @@
-<div id="page-content" class="page-wrapper pb0 clearfix">
+<div id="page-content" class="page-wrapper pb0 clearfix ticket-templates-view">
 
     <ul class="nav nav-tabs bg-white title" role="tablist">
-        <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("tickets"); ?></h4></li>
 
         <?php echo view("tickets/index", array("active_tab" => "ticket_templates")); ?>
 
@@ -13,7 +12,7 @@
 
     </ul>
 
-    <div class="card no-border-top-radius">
+    <div class="card border-top-0 rounded-top-0">
         <div class="table-responsive">
             <table id="ticket-template-table" class="display" cellspacing="0" width="100%">            
             </table>
@@ -29,10 +28,10 @@
             order: [[0, 'desc']],
             columns: [
                 {title: '<?php echo app_lang("title"); ?>', "class": "w300 all"},
-                {title: '<?php echo app_lang("description") ?>', "class": "desktop"},
-                {title: '<?php echo app_lang("category") ?>', "class": "w150 desktop"},
-                {title: '<?php echo app_lang("private") ?>', "class": "w100 desktop"},
-                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100 desktop"}
+                {title: '<?php echo app_lang("description") ?>'},
+                {title: '<?php echo app_lang("category") ?>', "class": "w150"},
+                {title: '<?php echo app_lang("private") ?>', "class": "w100"},
+                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]
         });
     });

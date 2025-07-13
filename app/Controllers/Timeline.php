@@ -54,6 +54,7 @@ class Timeline extends Security_Controller {
     function save() {
         $this->check_timeline_user_permission();
         $this->validate_submitted_data(array(
+            "id" => "numeric",
             "description" => "required"
         ));
 
@@ -105,6 +106,8 @@ class Timeline extends Security_Controller {
         if (!$id) {
             exit();
         }
+
+        validate_numeric_value($id);
 
         $post_info = $this->Posts_model->get_one($id);
 

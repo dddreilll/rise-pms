@@ -28,7 +28,7 @@
             filterDropdown: [{name: "category", class: "w200", options: <?php echo $categories_dropdown; ?>}],
             columns: [
                 {visible: false},
-                {title: '<?php echo app_lang("event"); ?>', class: "w30p"},
+                {title: '<?php echo app_lang("event"); ?>', class: "w30p all"},
                 {title: '<?php echo app_lang("notify_to"); ?>'},
                 {title: '<?php echo app_lang("category"); ?>', class: "w10p"},
                 {title: '<?php echo app_lang("enable_email"); ?>', class: "w10p text-center"},

@@ -30,7 +30,10 @@
                         "id" => "custom_message",
                         "name" => "custom_message",
                         "value" => process_images_from_content(($model_info->custom_message ? $model_info->custom_message : $model_info->default_message), false),
-                        "class" => "form-control different_language_custom_message"
+                        "class" => "form-control different_language_custom_message",
+                        "data-toolbar" => "pdf_friendly_toolbar",
+                        "data-height" => 480,
+                        "data-encode_ajax_post_data" => "1"
                     ));
                     ?>
                 </div>
@@ -56,14 +59,6 @@
         var formId = "#email-template-form-<?php echo $model_info->id; ?>";
         $(formId).appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                var custom_message = encodeAjaxPostData(getWYSIWYGEditorHTML("#custom_message"));
-                $.each(data, function (index, obj) {
-                    if (obj.name === "custom_message") {
-                        data[index]["value"] = custom_message;
-                    }
-                });
-            },
             onSuccess: function (result) {
                 if (result.success) {
                     appAlert.success(result.message, {duration: 10000});
@@ -90,7 +85,7 @@
             }
         });
 
-        initWYSIWYGEditor("#custom_message", {height: 480});
+        initWYSIWYGEditor("#custom_message");
 
 
         $('#restore_to_default').click(function () {
@@ -107,7 +102,7 @@
                         data: {id: $instance.attr("data-id")},
                         success: function (result) {
                             if (result.success) {
-                                $('#custom_message').summernote('code', result.data);
+                                setWYSIWYGEditorHTML("#custom_message", result.data);
                                 appAlert.success(result.message, {duration: 10000});
                             } else {
                                 appAlert.error(result.message);

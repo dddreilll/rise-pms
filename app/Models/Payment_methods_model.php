@@ -18,6 +18,7 @@ class Payment_methods_model extends Crud_model {
                 array("name" => "pay_button_text", "text" => app_lang("pay_button_text"), "type" => "text", "default" => "Stripe"),
                 array("name" => "secret_key", "text" => "Secret Key", "type" => "text", "default" => ""),
                 array("name" => "publishable_key", "text" => "Publishable Key", "type" => "text", "default" => ""),
+                array("name" => "webhook_listener_link", "text" => app_lang("webhook_listener_link"), "type" => "regenerative_key_url", "initial_url" => get_uri("webhooks_listener/stripe_payment")),
             ),
             "paypal_payments_standard" => array(
                 array("name" => "pay_button_text", "text" => app_lang("pay_button_text"), "type" => "text", "default" => "PayPal Standard"),
@@ -103,7 +104,7 @@ class Payment_methods_model extends Crud_model {
 
     function delete($id = 0, $undo = false) {
 
-        $exists = $this->get_one_where($where = array("id" => $id));
+        $exists = $this->get_one_where(array("id" => $id));
         if ($exists->online_payable == 1) {
             //online payable types can't be deleted
             return false;

@@ -35,10 +35,8 @@ class Checklist_template_model extends Crud_model {
     function get_template_suggestion($keyword = "") {
         $checklist_template_table = $this->db->prefixTable('checklist_template');
 
-        if ($keyword) {
-            $keyword = $this->db->escapeString($keyword);
-        }
-
+        $keyword = $this->_get_clean_value(array("keyword" => $keyword), "keyword");
+        
         $where = "";
 
         $sql = "SELECT $checklist_template_table.title
@@ -49,6 +47,8 @@ class Checklist_template_model extends Crud_model {
     }
 
     function get_checklists($checklist_ids = "") {
+        $checklist_ids = $this->_get_clean_value($checklist_ids);
+        
         $checklist_template_table = $this->db->prefixTable('checklist_template');
 
         $sql = "SELECT $checklist_template_table.*

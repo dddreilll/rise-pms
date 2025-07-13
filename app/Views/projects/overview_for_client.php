@@ -1,6 +1,5 @@
-<div class="clearfix bg-white">
-
-    <div class="row project-overview-for-client">
+<div class="clearfix">
+    <div class="row">
         <div class="col-md-12">
             <div class="row">
                 <?php if ($show_overview) { ?>

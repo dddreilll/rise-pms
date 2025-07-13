@@ -72,7 +72,10 @@
                             "id" => "message",
                             "name" => "message",
                             "value" => process_images_from_content($message, false),
-                            "class" => "form-control"
+                            "class" => "form-control",
+                            "data-height" => 400,
+                            "data-toolbar" => "no_toolbar",
+                            "data-encode_ajax_post_data" => "1"
                         ));
                         ?>
                     </div>
@@ -100,14 +103,6 @@
 
         $('#send-invoice-form .select2').select2();
         $("#send-invoice-form").appForm({
-            beforeAjaxSubmit: function (data) {
-                var custom_message = encodeAjaxPostData(getWYSIWYGEditorHTML("#message"));
-                $.each(data, function (index, obj) {
-                    if (obj.name === "message") {
-                        data[index]["value"] = custom_message;
-                    }
-                });
-            },
             onSuccess: function (result) {
                 if (result.success) {
                     appAlert.success(result.message, {duration: 10000});
@@ -121,22 +116,20 @@
             }
         });
 
-        initWYSIWYGEditor("#message", {height: 400, toolbar: []});
+        initWYSIWYGEditor("#message");
 
         //load template view on changing of client contact
         $("#contact_id").select2().on("change", function () {
             var contact_id = $(this).val();
             if (contact_id) {
-                $("#message").summernote("destroy");
-                $("#message").val("");
                 appLoader.show();
                 $.ajax({
                     url: "<?php echo get_uri('invoices/get_send_invoice_template/' . $invoice_info->id) ?>" + "/" + contact_id + "/json",
                     dataType: "json",
                     success: function (result) {
                         if (result.success) {
-                            $("#message").val(result.message_view);
-                            initWYSIWYGEditor("#message", {height: 400, toolbar: []});
+                            setWYSIWYGEditorHTML("#message", result.message_view);
+
                             $("#user_language").val(result.user_language);
                             $("#attachment-url").attr("href", "<?php echo get_uri('invoices/download_pdf/' . $invoice_info->id . '/download/'); ?>" + result.user_language);
 

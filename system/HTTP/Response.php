@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -13,10 +15,9 @@ namespace CodeIgniter\HTTP;
 
 use CodeIgniter\Cookie\Cookie;
 use CodeIgniter\Cookie\CookieStore;
-use CodeIgniter\Cookie\Exceptions\CookieException;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use Config\App;
-use Config\Services;
+use Config\Cookie as CookieConfig;
 
 /**
  * Representation of an outgoing, server-side response.
@@ -28,6 +29,8 @@ use Config\Services;
  * - Status code and reason phrase
  * - Headers
  * - Message body
+ *
+ * @see \CodeIgniter\HTTP\ResponseTest
  */
 class Response extends Message implements ResponseInterface
 {
@@ -144,43 +147,23 @@ class Response extends Message implements ResponseInterface
      * @param App $config
      *
      * @todo Recommend removing reliance on config injection
+     *
+     * @deprecated 4.5.0 The param $config is no longer used.
      */
-    public function __construct($config)
+    public function __construct($config) // @phpstan-ignore-line
     {
         // Default to a non-caching page.
         // Also ensures that a Cache-control header exists.
         $this->noCache();
 
         // We need CSP object even if not enabled to avoid calls to non existing methods
-        $this->CSP = Services::csp();
-
-        $this->CSPEnabled = $config->CSPEnabled;
-
-        // DEPRECATED COOKIE MANAGEMENT
-
-        $this->cookiePrefix   = $config->cookiePrefix;
-        $this->cookieDomain   = $config->cookieDomain;
-        $this->cookiePath     = $config->cookiePath;
-        $this->cookieSecure   = $config->cookieSecure;
-        $this->cookieHTTPOnly = $config->cookieHTTPOnly;
-        $this->cookieSameSite = $config->cookieSameSite ?? Cookie::SAMESITE_LAX;
-
-        $config->cookieSameSite ??= Cookie::SAMESITE_LAX;
-
-        if (! in_array(strtolower($config->cookieSameSite ?: Cookie::SAMESITE_LAX), Cookie::ALLOWED_SAMESITE_VALUES, true)) {
-            throw CookieException::forInvalidSameSite($config->cookieSameSite);
-        }
+        $this->CSP = service('csp');
 
         $this->cookieStore = new CookieStore([]);
-        Cookie::setDefaults(config('Cookie') ?? [
-            // @todo Remove this fallback when deprecated `App` members are removed
-            'prefix'   => $config->cookiePrefix,
-            'path'     => $config->cookiePath,
-            'domain'   => $config->cookieDomain,
-            'secure'   => $config->cookieSecure,
-            'httponly' => $config->cookieHTTPOnly,
-            'samesite' => $config->cookieSameSite ?? Cookie::SAMESITE_LAX,
-        ]);
+
+        $cookie = config(CookieConfig::class);
+
+        Cookie::setDefaults($cookie);
 
         // Default to an HTML Content-Type. Devs can override if needed.
         $this->setContentType('text/html');
@@ -194,6 +177,7 @@ class Response extends Message implements ResponseInterface
      *
      * @return $this
      *
+     * @internal For testing purposes only.
      * @testTag only available to test code
      */
     public function pretend(bool $pretend = true)

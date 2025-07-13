@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -14,12 +16,13 @@ namespace CodeIgniter\Commands\Utilities;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 use Config\Autoload;
-use Config\Services;
 
 /**
  * Lists namespaces set in Config\Autoload with their
  * full server path. Helps you to verify that you have
  * the namespaces setup correctly.
+ *
+ * @see \CodeIgniter\Commands\Utilities\NamespacesTest
  */
 class Namespaces extends BaseCommand
 {
@@ -55,14 +58,14 @@ class Namespaces extends BaseCommand
     /**
      * the Command's Arguments
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $arguments = [];
 
     /**
      * the Command's Options
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $options = [
         '-c' => 'Show only CodeIgniter config namespaces.',
@@ -92,7 +95,7 @@ class Namespaces extends BaseCommand
     {
         $maxLength = $params['m'];
 
-        $autoloader = Services::autoloader();
+        $autoloader = service('autoloader');
 
         $tbody = [];
 
@@ -135,13 +138,13 @@ class Namespaces extends BaseCommand
         $tbody = [];
 
         foreach ($config->psr4 as $ns => $paths) {
-            if (array_key_exists('r', $params)) {
-                $pathOutput = $this->truncate($paths, $maxLength);
-            } else {
-                $pathOutput = $this->truncate(clean_path($paths), $maxLength);
-            }
-
             foreach ((array) $paths as $path) {
+                if (array_key_exists('r', $params)) {
+                    $pathOutput = $this->truncate($path, $maxLength);
+                } else {
+                    $pathOutput = $this->truncate(clean_path($path), $maxLength);
+                }
+
                 $path = realpath($path) ?: $path;
 
                 $tbody[] = [

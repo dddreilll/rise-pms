@@ -53,12 +53,13 @@
 
         $("#project-timesheet-table").appTable({
             source: '<?php echo_uri("projects/timesheet_list_data") ?>',
+            serverSide: true,
             filterParams: {project_id: "<?php echo $project_id; ?>"},
             order: [[3, "desc"]],
             filterDropdown: filterDropdown,
-            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, showClearButton: true, label: "<?php echo app_lang('date'); ?>", ranges: ['this_month', 'last_month', 'this_year', 'last_year', 'last_30_days', 'last_7_days']}],
+            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, showClearButton: true, label: "<?php echo app_lang('date'); ?>", ranges: ['today', 'yesterday', 'last_7_days', 'last_30_days', 'this_month', 'last_month', 'this_year', 'last_year' ]}],
             columns: [
-                {title: "<?php echo app_lang('member') ?>", order_by: "member_name"},
+                {title: "<?php echo app_lang('member') ?>", "class": "all", order_by: "member_name"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang('task') ?>", order_by: "task_title"},
@@ -66,7 +67,7 @@
                 {title: "<?php echo get_setting("users_can_input_only_total_hours_instead_of_period") ? app_lang("date") : app_lang('start_time') ?>", "iDataSort": 4, order_by: "start_time"},
                 {visible: false, searchable: false, order_by: "end_time"},
                 {title: "<?php echo app_lang('end_time') ?>", "iDataSort": 6, visible: endTimeVisibility, order_by: "end_time"},
-                {title: "<?php echo app_lang('total') ?>", "class": "text-right"},
+                {title: "<?php echo app_lang('total') ?>", "class": "text-right all"},
                 {visible: false, title: "<?php echo app_lang('hours') ?>", "class": "text-right"},
                 {visible: false, title: "<?php echo app_lang('hours') ?>", "class": "text-right"}, //follow the decimal seperator setting. Only for print. 
                 {title: '<?php echo app_lang('note'); ?>', "class": "w200"}
@@ -75,7 +76,7 @@
             ],
             printColumns: combineCustomFieldsColumns([0, 3, 5, 7, 8, 10, 11], '<?php echo $custom_field_headers; ?>'),
             xlsColumns: combineCustomFieldsColumns([0, 3, 5, 7, 8, 9, 11], '<?php echo $custom_field_headers; ?>'),
-            summation: [{column: 8, dataType: 'time'}]
+            summation: [{column: 8, fieldName: "total_timesheet_value", dataType: 'time'}]
         });
     }
     );

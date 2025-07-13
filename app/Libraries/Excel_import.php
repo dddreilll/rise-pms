@@ -300,6 +300,10 @@ trait Excel_import {
     }
 
     private function _get_existing_custom_field_id($title = "") {
+        if (!$title) {
+            $title = "";
+        }
+
         $_title = trim($title, " ");
 
         if (!$_title) {

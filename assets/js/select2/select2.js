@@ -2302,7 +2302,11 @@ the specific language governing permissions and limitations under the Apache Lic
             this.initContainerWidth();
             this.opts.element.hide();
             this.setPlaceholder();
-
+            
+            var thisInstance = this;
+            this.container.append("<span class='hide' id='triggerSelect2Open-" + this.containerId + "'></span>").on("click", function(){
+                thisInstance.open();
+            });
         },
 
         // single
@@ -2887,8 +2891,13 @@ the specific language governing permissions and limitations under the Apache Lic
 
             // set the placeholder if necessary
             this.clearSearch();
+            
+            var thisInstance = this;
+            this.container.append("<span class='hide' id='triggerSelect2Open-" + this.containerId + "'></span>").on("click", function(){
+                thisInstance.open();
+            });
         },
-
+        
         // multi
         enableInterface: function() {
             if (this.parent.enableInterface.apply(this, arguments)) {
@@ -3558,5 +3567,5 @@ the specific language governing permissions and limitations under the Apache Lic
             "multi": MultiSelect2
         }
     };
-
+    
 }(jQuery));

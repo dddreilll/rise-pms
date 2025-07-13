@@ -37,6 +37,8 @@ class Checklist_items_model extends Crud_model {
     }
 
     function get_all_checklist_of_project($project_id) {
+        $project_id = $this->_get_clean_value($project_id); 
+        
         $checklist_items_table = $this->db->prefixTable('checklist_items');
         $tasks_table = $this->db->prefixTable('tasks');
 

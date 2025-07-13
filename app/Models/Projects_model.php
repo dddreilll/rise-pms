@@ -101,7 +101,50 @@ class Projects_model extends Crud_model {
 
         $this->db->query('SET SQL_BIG_SELECTS=1');
 
-        $sql = "SELECT $projects_table.*, $clients_table.company_name, $clients_table.currency_symbol,  total_points_table.total_points, completed_points_table.completed_points, $project_status_table.key_name AS status_key_name, $project_status_table.title_language_key, $project_status_table.title AS status_title,  $project_status_table.icon AS status_icon, $select_labels_data_query $select_custom_fieds
+        $limit_offset = "";
+        $limit = $this->_get_clean_value($options, "limit");
+        if ($limit) {
+            $skip = $this->_get_clean_value($options, "skip");
+            $offset = $skip ? $skip : 0;
+            $limit_offset = " LIMIT $limit OFFSET $offset ";
+        }
+
+
+        $available_order_by_list = array(
+            "id" => $projects_table . ".id",
+            "title" => $projects_table . ".title",
+            "company_name" => $clients_table . ".company_name",
+            "price" => $projects_table . ".price",
+            "start_date" => $projects_table . ".start_date",
+            "deadline" => $projects_table . ".deadline",
+            "status" => "status_title"
+        );
+
+        $order_by = get_array_value($available_order_by_list, $this->_get_clean_value($options, "order_by"));
+
+        $order = "ORDER BY $projects_table.start_date DESC";
+
+        if ($order_by) {
+            $order_dir = $this->_get_clean_value($options, "order_dir");
+            $order = " ORDER BY $order_by $order_dir ";
+        }
+
+        $search_by = get_array_value($options, "search_by"); 
+        if ($search_by) {
+            $search_by = $this->db->escapeLikeString($search_by);
+            $labels_table = $this->db->prefixTable("labels");
+            $search_by = $this->_get_clean_value($search_by);
+
+            $where .= " AND (";
+            $where .= " $projects_table.id LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR $projects_table.title LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR $clients_table.company_name LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR (SELECT GROUP_CONCAT($labels_table.title, ', ') FROM $labels_table WHERE FIND_IN_SET($labels_table.id, $projects_table.labels)) LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= $this->get_custom_field_search_query($projects_table, "projects", $search_by);
+            $where .= " )";
+        }
+
+        $sql = "SELECT SQL_CALC_FOUND_ROWS $projects_table.*, $clients_table.company_name, $clients_table.currency_symbol,  total_points_table.total_points, completed_points_table.completed_points, $project_status_table.key_name AS status_key_name, $project_status_table.title_language_key, $project_status_table.title AS status_title,  $project_status_table.icon AS status_icon, $select_labels_data_query $select_custom_fieds
         FROM $projects_table
         LEFT JOIN $clients_table ON $clients_table.id= $projects_table.client_id
         LEFT JOIN (SELECT project_id, SUM(points) AS total_points FROM $tasks_table WHERE deleted=0 GROUP BY project_id) AS  total_points_table ON total_points_table.project_id= $projects_table.id
@@ -110,8 +153,20 @@ class Projects_model extends Crud_model {
         $extra_join   
         $join_custom_fieds    
         WHERE $projects_table.deleted=0 $where $extra_where $custom_fields_where
-        ORDER BY $projects_table.start_date DESC";
-        return $this->db->query($sql);
+        $order $limit_offset";
+        $raw_query = $this->db->query($sql);
+
+        $total_rows = $this->db->query("SELECT FOUND_ROWS() as found_rows")->getRow();
+
+        if ($limit) {
+            return array(
+                "data" => $raw_query->getResult(),
+                "recordsTotal" => $total_rows->found_rows,
+                "recordsFiltered" => $total_rows->found_rows,
+            );
+        } else {
+            return $raw_query;
+        }
     }
 
     function get_label_suggestions() {
@@ -215,22 +270,36 @@ class Projects_model extends Crud_model {
             $where .= " AND ($tasks_table.assigned_to=$show_assigned_tasks_only_user_id OR FIND_IN_SET('$show_assigned_tasks_only_user_id', $tasks_table.collaborators))";
         }
 
+        //prepare custom field binding query
+        $custom_fields = get_array_value($options, "custom_fields");
+        $custom_field_filter = get_array_value($options, "custom_field_filter");
+
+        $custom_field_query_info = $this->prepare_custom_field_query_string("tasks", $custom_fields, $tasks_table, $custom_field_filter);
+
+        $select_custom_fieds = get_array_value($custom_field_query_info, "select_string");
+        $join_custom_fieds = get_array_value($custom_field_query_info, "join_string");
+        $custom_fields_where = get_array_value($custom_field_query_info, "where_string");
+
         $sql = "SELECT $tasks_table.id AS task_id, $tasks_table.title AS task_title, $tasks_table.status_id, $tasks_table.start_date, $tasks_table.deadline AS end_date, $tasks_table.parent_task_id,
              $milestones_table.id AS milestone_id, $milestones_table.title AS milestone_title, $milestones_table.due_date AS milestone_due_date, $tasks_table.assigned_to, CONCAT($users_table.first_name, ' ', $users_table.last_name ) AS assigned_to_name, $tasks_table.project_id, CONCAT($projects_table.title) AS project_name,
-             $task_status_table.title AS status_title, $task_status_table.color AS status_color, $tasks_table.blocked_by, $tasks_table.blocking
+             $task_status_table.title AS status_title, $task_status_table.color AS status_color, $tasks_table.blocked_by, $tasks_table.blocking $select_custom_fieds
                 FROM $tasks_table
                 LEFT JOIN $milestones_table ON $milestones_table.id= $tasks_table.milestone_id
                 LEFT JOIN $users_table ON $users_table.id= $tasks_table.assigned_to
                 LEFT JOIN $task_status_table ON $task_status_table.id =  $tasks_table.status_id
                 LEFT JOIN $projects_table ON $projects_table.id= $tasks_table.project_id
                 $extra_join
-        WHERE $tasks_table.deleted=0 $where $extra_where
+                $join_custom_fieds
+        WHERE $tasks_table.deleted=0 $where $extra_where $custom_fields_where
         ORDER BY $tasks_table.parent_task_id ASC, $tasks_table.start_date ASC";
         return $this->db->query($sql)->getResult();
     }
 
     function add_remove_star($project_id, $user_id, $type = "add") {
         $projects_table = $this->db->prefixTable('projects');
+
+        $project_id = $this->_get_clean_value($project_id);
+        $user_id = $this->_get_clean_value($user_id);
 
         $action = " CONCAT($projects_table.starred_by,',',':$user_id:') ";
         $where = " AND FIND_IN_SET(':$user_id:',$projects_table.starred_by) = 0"; //don't add duplicate
@@ -249,6 +318,8 @@ class Projects_model extends Crud_model {
         $projects_table = $this->db->prefixTable('projects');
         $project_status_table = $this->db->prefixTable('project_status');
 
+        $user_id = $this->_get_clean_value($user_id);
+
         $sql = "SELECT $projects_table.*, $project_status_table.icon
         FROM $projects_table
         LEFT JOIN $project_status_table ON $project_status_table.id = $projects_table.status_id
@@ -265,6 +336,8 @@ class Projects_model extends Crud_model {
         $project_comments_table = $this->db->prefixTable('project_comments');
         $activity_logs_table = $this->db->prefixTable('activity_logs');
         $notifications_table = $this->db->prefixTable('notifications');
+
+        $project_id = $this->_get_clean_value($project_id);
 
         //get project files info to delete the files from directory 
         $project_files_sql = "SELECT * FROM $project_files_table WHERE $project_files_table.deleted=0 AND $project_files_table.project_id=$project_id; ";
@@ -331,14 +404,16 @@ class Projects_model extends Crud_model {
             $where = " AND project_members_table.user_id=$user_id";
         }
 
+        $search = $this->_get_clean_value($search);
         if ($search) {
             $search = $this->db->escapeLikeString($search);
+            $where .= " AND $projects_table.title LIKE '%$search%' ESCAPE '!' ";
         }
 
         $sql = "SELECT $projects_table.id, $projects_table.title
         FROM $projects_table  
         $extra_join
-        WHERE $projects_table.deleted=0 AND $projects_table.title LIKE '%$search%' ESCAPE '!' $where
+        WHERE $projects_table.deleted=0 $where
         ORDER BY $projects_table.title ASC
         LIMIT 0, 10";
 
@@ -385,7 +460,6 @@ class Projects_model extends Crud_model {
         try {
             $this->db->query("SET sql_mode = ''");
         } catch (\Exception $e) {
-            
         }
 
         $projects_where = "";
@@ -434,7 +508,6 @@ class Projects_model extends Crud_model {
         try {
             $this->db->query("SET sql_mode = ''");
         } catch (\Exception $e) {
-            
         }
 
         $projects_where = "";
@@ -476,5 +549,4 @@ class Projects_model extends Crud_model {
         WHERE $projects_table.deleted=0 AND $projects_table.status_id=1";
         return $this->db->query($sql);
     }
-
 }

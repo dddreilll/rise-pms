@@ -6,14 +6,14 @@ $social_link_icons = array(
     "twitter" => "twitter",
     "linkedin" => "linkedin",
     "whatsapp" => "phone",
+    "youtube" => "youtube",
+    "instagram" => "instagram",
+    "github" => "github",
 );
 
 $social_link_svg_icons = array(
     "digg" => "digg",
-    "youtube" => "youtube",
     "pinterest" => "pinterest",
-    "instagram" => "instagram",
-    "github" => "github",
     "tumblr" => "tumblr",
     "vine" => "vine",
 );

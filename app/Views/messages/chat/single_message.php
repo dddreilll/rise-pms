@@ -9,7 +9,7 @@ if ($total_files) {
         $download_lang = sprintf(app_lang('download_files'), $total_files);
     }
 
-    $download_caption = anchor(get_uri("messages/download_message_files/" . $reply_info->id), "<i data-feather='paperclip' class='icon-16'></i>" . $download_lang, array("class" => "", "title" => $download_lang));
+    $download_caption = anchor(get_uri("messages/download_message_files/" . $reply_info->id), "<i data-feather='paperclip' class='icon-16 me-1'></i>" . $download_lang, array("class" => "", "title" => $download_lang));
 }
 
 $message_class = "m-row-" . $reply_info->id;
@@ -19,7 +19,7 @@ if ($reply_info->from_user_id === $login_user->id) {
         <div class="row">
             <div class="col-md-12">
                 <div class="chat-msg js-chat-msg"  data-message_id="<?php echo $reply_info->id; ?>"><?php
-                    echo nl2br(link_it(process_images_from_content($reply_info->message)));
+                    echo custom_nl2br(link_it(process_images_from_content($reply_info->message)));
                     if ($download_caption) {
                         echo view("includes/timeline_preview", array("files" => $files, "is_message_row" => true));
                         echo $download_caption;
@@ -46,7 +46,7 @@ if ($reply_info->from_user_id === $login_user->id) {
                 </div>
                 <div class="chat-msg js-chat-msg"  data-message_id="<?php echo $reply_info->id ?>">
                     <?php
-                    echo nl2br(link_it(process_images_from_content($reply_info->message)));
+                    echo custom_nl2br(link_it(process_images_from_content($reply_info->message)));
                     if ($download_caption) {
                         echo view("includes/timeline_preview", array("files" => $files, "is_message_row" => true));
                         echo $download_caption;

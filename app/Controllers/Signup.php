@@ -2,20 +2,19 @@
 
 namespace App\Controllers;
 
-class Signup extends App_Controller
-{
+use App\Libraries\ReCAPTCHA;
+
+class Signup extends App_Controller {
 
     public $Verification_model;
 
-    function __construct()
-    {
+    function __construct() {
         parent::__construct();
         helper('email');
         $this->Verification_model = model('App\Models\Verification_model');
     }
 
-    function index()
-    {
+    function index() {
         //by default only client can signup directly
         //if client login/signup is disabled then show 404 page
         if (get_setting("disable_client_signup")) {
@@ -35,8 +34,7 @@ class Signup extends App_Controller
     }
 
     //redirected from email
-    function accept_invitation($signup_key = "")
-    {
+    function accept_invitation($signup_key = "") {
         $valid_key = $this->is_valid_invitation_key($signup_key);
         if ($valid_key) {
             $email = get_array_value($valid_key, "email");
@@ -68,28 +66,7 @@ class Signup extends App_Controller
         }
     }
 
-    private function is_valid_recaptcha($recaptcha_post_data)
-    {
-        //load recaptcha lib
-        require_once(APPPATH . "ThirdParty/recaptcha/autoload.php");
-        $recaptcha = new \ReCaptcha\ReCaptcha(get_setting("re_captcha_secret_key"));
-        $resp = $recaptcha->verify($recaptcha_post_data, $_SERVER['REMOTE_ADDR']);
-
-        if ($resp->isSuccess()) {
-            return true;
-        } else {
-
-            $error = "";
-            foreach ($resp->getErrorCodes() as $code) {
-                $error = $code;
-            }
-
-            return $error;
-        }
-    }
-
-    function create_account()
-    {
+    function create_account() {
 
         $signup_key = $this->request->getPost("signup_key");
         $verify_email_key = $this->request->getPost("verify_email_key");
@@ -102,25 +79,13 @@ class Signup extends App_Controller
 
         //check if there reCaptcha is enabled
         //if reCaptcha is enabled, check the validation
-        //reCaptcha isn't necessary for a verified user
-        if (get_setting("re_captcha_secret_key") && !$verify_email_key) {
-
-            $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-            if ($response !== true) {
-
-                if ($response) {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                } else {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                }
-
-                return false;
-            }
-        }
+        $ReCAPTCHA = new ReCAPTCHA();
+        $ReCAPTCHA->validate_recaptcha();
 
         $first_name = $this->request->getPost("first_name");
         $last_name = $this->request->getPost("last_name");
+        $password = $this->request->getPost("password");
+        $password = clean_data($password);
 
         $user_data = array(
             "first_name" => $first_name,
@@ -132,7 +97,7 @@ class Signup extends App_Controller
         $user_data = clean_data($user_data);
 
         // don't clean password since there might be special characters 
-        $user_data["password"] = password_hash($this->request->getPost("password"), PASSWORD_DEFAULT);
+        $user_data["password"] = password_hash($password, PASSWORD_DEFAULT);
 
         if ($signup_key) {
             //it is an invitation, validate the invitation key
@@ -290,16 +255,16 @@ class Signup extends App_Controller
                 $email_template = $this->Email_templates_model->get_final_template("new_client_greetings"); //use default template since creating new client
 
                 $parser_data["SIGNATURE"] = $email_template->signature;
-                $parser_data["CONTACT_FIRST_NAME"] = $first_name;
-                $parser_data["CONTACT_LAST_NAME"] = $last_name;
+                $parser_data["CONTACT_FIRST_NAME"] = get_array_value($user_data, "first_name");
+                $parser_data["CONTACT_LAST_NAME"] = get_array_value($user_data, "last_name");
 
                 $Company_model = model('App\Models\Company_model');
                 $company_info = $Company_model->get_one_where(array("is_default" => true));
                 $parser_data["COMPANY_NAME"] = $company_info->name;
 
                 $parser_data["DASHBOARD_URL"] = base_url();
-                $parser_data["CONTACT_LOGIN_EMAIL"] = $email;
-                $parser_data["CONTACT_LOGIN_PASSWORD"] = $this->request->getPost("password");
+                $parser_data["CONTACT_LOGIN_EMAIL"] = get_array_value($user_data, "email");
+                $parser_data["CONTACT_LOGIN_PASSWORD"] = $password;
                 $parser_data["LOGO_URL"] = get_logo_url();
 
                 $message = $this->parser->setData($parser_data)->renderString($email_template->message);
@@ -321,28 +286,15 @@ class Signup extends App_Controller
     }
 
     //send an email to verify the identity
-    function send_verification_mail()
-    {
+    function send_verification_mail() {
         $this->validate_submitted_data(array(
             "email" => "required|valid_email"
         ));
 
         //check if there reCaptcha is enabled
         //if reCaptcha is enabled, check the validation
-        if (get_setting("re_captcha_secret_key")) {
-            $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-            if ($response !== true) {
-
-                if ($response) {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                } else {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                }
-
-                return false;
-            }
-        }
+        $ReCAPTCHA = new ReCAPTCHA();
+        $ReCAPTCHA->validate_recaptcha();
 
         $email = $this->request->getPost("email");
 
@@ -356,21 +308,20 @@ class Signup extends App_Controller
         $parser_data["SIGNATURE"] = $email_template->signature;
         $parser_data["LOGO_URL"] = get_logo_url();
         $parser_data["SITE_URL"] = get_uri();
+        $code = make_random_string();
 
         $verification_data = array(
             "type" => "verify_email",
-            "code" => make_random_string(),
+            "code" => $code,
             "params" => serialize(array(
                 "email" => $email,
                 "expire_time" => time() + (24 * 60 * 60)
             ))
         );
 
-        $save_id = $this->Verification_model->ci_save($verification_data);
+        $this->Verification_model->ci_save($verification_data);
 
-        $verification_info = $this->Verification_model->get_one($save_id);
-
-        $parser_data['VERIFY_EMAIL_URL'] = get_uri("signup/continue_signup/" . $verification_info->code);
+        $parser_data['VERIFY_EMAIL_URL'] = get_uri("signup/continue_signup/" . $code);
 
         $message = $this->parser->setData($parser_data)->renderString($email_template->message);
         $subject = $this->parser->setData($parser_data)->renderString($email_template->subject);
@@ -383,8 +334,7 @@ class Signup extends App_Controller
     }
 
     //continue sign up process
-    function continue_signup($key = "")
-    {
+    function continue_signup($key = "") {
         if ($key && !get_setting("disable_client_signup")) {
             $valid_key = $this->is_valid_email_verification_key($key);
 
@@ -404,10 +354,13 @@ class Signup extends App_Controller
     }
 
     //check valid key
-    private function is_valid_email_verification_key($verification_code = "")
-    {
+    private function is_valid_email_verification_key($verification_code = "") {
 
         if ($verification_code) {
+            if (strlen($verification_code) !== 10) {
+                return false;
+            }
+
             $options = array("code" => $verification_code, "type" => "verify_email");
             $verification_info = $this->Verification_model->get_details($options)->getRow();
 
@@ -425,9 +378,12 @@ class Signup extends App_Controller
     }
 
     //check valid key
-    private function is_valid_invitation_key($verification_code = "")
-    {
+    private function is_valid_invitation_key($verification_code = "") {
         if ($verification_code) {
+            if (strlen($verification_code) !== 10) {
+                return false;
+            }
+
             $options = array("code" => $verification_code, "type" => "invitation");
             $verification_info = $this->Verification_model->get_details($options)->getRow();
 

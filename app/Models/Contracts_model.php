@@ -34,11 +34,38 @@ class Contracts_model extends Crud_model {
         if ($start_date && $end_date) {
             $where .= " AND ($contracts_table.contract_date BETWEEN '$start_date' AND '$end_date') ";
         }
-        
+
         $project_id = $this->_get_clean_value($options, "project_id");
         if ($project_id) {
             $where .= " AND $contracts_table.project_id=$project_id";
         }
+
+        $limit_offset = "";
+        $limit = $this->_get_clean_value($options, "limit");
+        if ($limit) {
+            $skip = $this->_get_clean_value($options, "skip");
+            $offset = $skip ? $skip : 0;
+            $limit_offset = " LIMIT $limit OFFSET $offset ";
+        }
+
+
+        $available_order_by_list = array(
+            "id" => $contracts_table . ".id",
+            "title" => $contracts_table . ".title",
+            "contract_date" => $contracts_table . ".contract_date",
+            "valid_until" => $contracts_table . ".valid_until",
+            "company_name" => $clients_table . ".company_name"
+        );
+
+        $order_by = get_array_value($available_order_by_list, $this->_get_clean_value($options, "order_by"));
+
+        $order = "";
+
+        if ($order_by) {
+            $order_dir = $this->_get_clean_value($options, "order_dir");
+            $order = " ORDER BY $order_by $order_dir ";
+        }
+
 
         $after_tax_1 = "(IFNULL(tax_table.percentage,0)/100*IFNULL(items_table.contract_value,0))";
         $after_tax_2 = "(IFNULL(tax_table2.percentage,0)/100*IFNULL(items_table.contract_value,0))";
@@ -66,6 +93,21 @@ class Contracts_model extends Crud_model {
             $where .= " AND $contracts_table.status!='draft' ";
         }
 
+        $search_by = $this->_get_clean_value($options, "search_by");
+        if ($search_by) {
+            $search_by = $this->db->escapeLikeString($search_by);
+
+            $where .= " AND (";
+            $where .= " $contracts_table.id LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR $contracts_table.title LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR $clients_table.company_name LIKE '%$search_by%' ESCAPE '!' ";
+            $where .= " OR $projects_table.title LIKE '%$search_by%' ESCAPE '!' ";
+
+            $where .= $this->get_custom_field_search_query($contracts_table, "contracts", $search_by);
+
+            $where .= " ) ";
+        }
+
 
         //prepare custom fild binding query
         $custom_fields = get_array_value($options, "custom_fields");
@@ -74,7 +116,6 @@ class Contracts_model extends Crud_model {
         $select_custom_fieds = get_array_value($custom_field_query_info, "select_string");
         $join_custom_fieds = get_array_value($custom_field_query_info, "join_string");
         $custom_fields_where = get_array_value($custom_field_query_info, "where_string");
-
 
 
         $sql = "SELECT $contracts_table.*, $clients_table.currency, $clients_table.currency_symbol, $clients_table.company_name, $clients_table.is_lead, $projects_table.title AS project_title, 
@@ -89,8 +130,37 @@ class Contracts_model extends Crud_model {
         LEFT JOIN (SELECT $taxes_table.* FROM $taxes_table) AS tax_table2 ON tax_table2.id = $contracts_table.tax_id2 
         LEFT JOIN (SELECT contract_id, SUM(total) AS contract_value FROM $contract_items_table WHERE deleted=0 GROUP BY contract_id) AS items_table ON items_table.contract_id = $contracts_table.id 
         $join_custom_fieds
+        WHERE $contracts_table.deleted=0 $where $custom_fields_where
+        $order $limit_offset";
+
+        $raw_query = $this->db->query($sql);
+
+
+        $summation_sql = "SELECT COUNT($contracts_table.id) as found_rows, SUM($contract_value_calculation) AS total_contract_value
+        FROM $contracts_table
+        LEFT JOIN $clients_table ON $clients_table.id= $contracts_table.client_id
+        LEFT JOIN $users_table ON $users_table.id= $contracts_table.accepted_by
+        LEFT JOIN $projects_table ON $projects_table.id= $contracts_table.project_id
+        LEFT JOIN (SELECT $taxes_table.* FROM $taxes_table) AS tax_table ON tax_table.id = $contracts_table.tax_id
+        LEFT JOIN (SELECT $taxes_table.* FROM $taxes_table) AS tax_table2 ON tax_table2.id = $contracts_table.tax_id2 
+        LEFT JOIN (SELECT contract_id, SUM(total) AS contract_value FROM $contract_items_table WHERE deleted=0 GROUP BY contract_id) AS items_table ON items_table.contract_id = $contracts_table.id 
+        $join_custom_fieds
         WHERE $contracts_table.deleted=0 $where $custom_fields_where";
-        return $this->db->query($sql);
+
+        $summation_query = $this->db->query($summation_sql)->getRow();
+
+        if ($limit) {
+            return array(
+                "data" => $raw_query->getResult(),
+                "recordsTotal" => $summation_query->found_rows,
+                "recordsFiltered" => $summation_query->found_rows,
+                "summation" => array(
+                    "total_contract_value" => $summation_query->total_contract_value
+                )
+            );
+        } else {
+            return $raw_query;
+        }
     }
 
     function get_contract_total_summary($contract_id = 0) {
@@ -99,6 +169,7 @@ class Contracts_model extends Crud_model {
         $clients_table = $this->db->prefixTable('clients');
         $taxes_table = $this->db->prefixTable('taxes');
 
+        $contract_id = $this->_get_clean_value($contract_id);
         $item_sql = "SELECT SUM($contract_items_table.total) AS contract_subtotal
         FROM $contract_items_table
         LEFT JOIN $contracts_table ON $contracts_table.id= $contract_items_table.contract_id    
@@ -171,10 +242,9 @@ class Contracts_model extends Crud_model {
     //save initial number of contract
     function save_initial_number_of_contract($value) {
         $contracts_table = $this->db->prefixTable('contracts');
-
+        $value = $this->_get_clean_value($value);
         $sql = "ALTER TABLE $contracts_table AUTO_INCREMENT=$value;";
 
         return $this->db->query($sql);
     }
-
 }

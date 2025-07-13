@@ -64,7 +64,7 @@ class Team_members extends Security_Controller {
     //only admin/permitted users can change other user's info
     //other users can only change his/her own info
     private function can_access_user_settings($user_id) {
-        if ($user_id && ($this->login_user->is_admin || $this->login_user->id === $user_id || get_array_value($this->login_user->permissions, "can_manage_user_role_and_permissions"))) {
+        if ($user_id && ($this->login_user->is_admin || $this->login_user->id === $user_id || get_array_value($this->login_user->permissions, "can_manage_user_role_and_permissions") || get_array_value($this->login_user->permissions, "can_activate_deactivate_team_members"))) {
             return true;
         } else {
             app_redirect("forbidden");
@@ -137,12 +137,6 @@ class Team_members extends Security_Controller {
     function add_team_member() {
         $this->access_only_admin_or_member_creator();
 
-        //check duplicate email address, if found then show an error message
-        if ($this->Users_model->is_email_exists($this->request->getPost('email'))) {
-            echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
-            exit();
-        }
-
         $this->validate_submitted_data(array(
             "email" => "required|valid_email",
             "first_name" => "required",
@@ -151,7 +145,14 @@ class Team_members extends Security_Controller {
             "role" => "required"
         ));
 
+        //check duplicate email address, if found then show an error message
+        if ($this->Users_model->is_email_exists($this->request->getPost('email'))) {
+            echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
+            exit();
+        }
+
         $password = $this->request->getPost("password");
+        $password = clean_data($password);
 
         $user_data = array(
             "email" => $this->request->getPost('email'),
@@ -168,10 +169,6 @@ class Team_members extends Security_Controller {
             "created_at" => get_current_utc_time()
         );
 
-        if ($password) {
-            $user_data["password"] = password_hash($password, PASSWORD_DEFAULT);
-        }
-
         //make role id or admin permission 
         $role = $this->request->getPost('role');
         $role_id = $role;
@@ -184,6 +181,11 @@ class Team_members extends Security_Controller {
             $user_data["role_id"] = $role_id;
         }
 
+        if ($password) {
+            $user_data["password"] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        $user_data = clean_data($user_data);
 
         //add a new team member
         $user_id = $this->Users_model->ci_save($user_data);
@@ -209,7 +211,7 @@ class Team_members extends Security_Controller {
                 $parser_data["USER_FIRST_NAME"] = $user_data["first_name"];
                 $parser_data["USER_LAST_NAME"] = $user_data["last_name"];
                 $parser_data["USER_LOGIN_EMAIL"] = $user_data["email"];
-                $parser_data["USER_LOGIN_PASSWORD"] = $this->request->getPost('password');
+                $parser_data["USER_LOGIN_PASSWORD"] = $password;
                 $parser_data["DASHBOARD_URL"] = base_url();
                 $parser_data["LOGO_URL"] = get_logo_url();
                 $parser_data["RECIPIENTS_EMAIL_ADDRESS"] = $user_data["email"];
@@ -269,11 +271,12 @@ class Team_members extends Security_Controller {
         $send_email = array();
 
         $role_id = $this->request->getPost('role');
+        $code = make_random_string();
 
         foreach ($email_array as $email) {
             $verification_data = array(
                 "type" => "invitation",
-                "code" => make_random_string(),
+                "code" => $code,
                 "params" => serialize(array(
                     "email" => $email,
                     "type" => "staff",
@@ -282,10 +285,9 @@ class Team_members extends Security_Controller {
                 ))
             );
 
-            $save_id = $this->Verification_model->ci_save($verification_data);
-            $verification_info = $this->Verification_model->get_one($save_id);
+            $this->Verification_model->ci_save($verification_data);
 
-            $parser_data['INVITATION_URL'] = get_uri("signup/accept_invitation/" . $verification_info->code);
+            $parser_data['INVITATION_URL'] = get_uri("signup/accept_invitation/" . $code);
 
             //send invitation email
             $message = $this->parser->setData($parser_data)->renderString($email_template->message);
@@ -433,8 +435,7 @@ class Team_members extends Security_Controller {
 
                 //admin can access all members attendance and leave
                 //none admin users can only access to his/her own information 
-
-                if ($this->login_user->is_admin || $user_info->id === $this->login_user->id || get_array_value($this->login_user->permissions, "can_manage_user_role_and_permissions")) {
+                if ($this->login_user->is_admin || $user_info->id === $this->login_user->id || get_array_value($this->login_user->permissions, "can_manage_user_role_and_permissions") || get_array_value($this->login_user->permissions, "can_activate_deactivate_team_members")) {
                     $show_attendance = true;
                     $show_leave = true;
                     $view_data['show_account_settings'] = true;
@@ -494,6 +495,12 @@ class Team_members extends Security_Controller {
                 $view_data["show_notes"] = false;
                 if ($this->can_access_team_members_note($user_info->id)) {
                     $view_data["show_notes"] = true;
+                }
+
+                $view_data["show_timesheets"] = false;
+                $access_timesheets = $this->get_access_info("timesheet_manage_permission");
+                if (get_setting("module_project_timesheet") == "1" && ($this->login_user->is_admin || ($this->login_user->id === $user_info->id) || ($access_timesheets->access_type && !$this->has_all_projects_restricted_role()))) {
+                    $view_data["show_timesheets"] = true;
                 }
 
                 return $this->template->rander("team_members/view", $view_data);
@@ -700,6 +707,8 @@ class Team_members extends Security_Controller {
                 $value = "";
             }
 
+            $value = clean_data($value);
+
             $this->Settings_model->save_setting("user_" . $this->login_user->id . "_" . $setting, $value, "user");
         }
 
@@ -743,14 +752,21 @@ class Team_members extends Security_Controller {
         validate_numeric_value($user_id);
         $this->can_access_user_settings($user_id);
 
-        if ($this->Users_model->is_email_exists($this->request->getPost('email'), $user_id)) {
-            echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
-            exit();
-        }
+        $account_data = array();
 
-        $account_data = array(
-            "email" => $this->request->getPost('email')
-        );
+        //Don't update email if user doesn't entered any email
+        if ($this->request->getPost('email') && ($this->login_user->is_admin || $this->is_own_id($user_id))) {
+            $this->validate_submitted_data(array(
+                "email" => "valid_email"
+            ));
+
+            if ($this->Users_model->is_email_exists($this->request->getPost('email'), $user_id)) {
+                echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
+                exit();
+            }
+
+            $account_data['email'] = $this->request->getPost('email');
+        }
 
         $role = $this->request->getPost('role');
         $user_info = $this->Users_model->get_one($user_id);
@@ -768,16 +784,23 @@ class Team_members extends Security_Controller {
                 $account_data["is_admin"] = 0;
                 $account_data["role_id"] = $role_id;
             }
-
-            if ($this->_can_activate_deactivate_team_member($user_info)) {
-                $account_data['disable_login'] = $this->request->getPost('disable_login');
-                $account_data['status'] = $this->request->getPost('status') === "inactive" ? "inactive" : "active";
-            }
         }
+
+        if ($this->_can_activate_deactivate_team_member($user_info)) {
+            $account_data['disable_login'] = $this->request->getPost('disable_login');
+            $account_data['status'] = $this->request->getPost('status') === "inactive" ? "inactive" : "active";
+        }
+
+        $account_data = clean_data($account_data);
 
         //don't reset password if user doesn't entered any password
         if ($this->request->getPost('password') && ($this->login_user->is_admin || $this->is_own_id($user_id))) {
             $account_data['password'] = password_hash($this->request->getPost("password"), PASSWORD_DEFAULT);
+        }
+
+        if (!count($account_data)) {
+            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+            exit();
         }
 
         if ($this->Users_model->ci_save($account_data, $user_id)) {
@@ -822,7 +845,7 @@ class Team_members extends Security_Controller {
                 $profile_image = serialize(move_temp_file("avatar.png", get_setting("profile_image_path"), "", $image_file_name, "", "", false, $image_file_size));
 
                 //delete old file
-                if($user_info->image){
+                if ($user_info->image) {
                     delete_app_files(get_setting("profile_image_path"), array(@unserialize($user_info->image)));
                 }
 
@@ -908,6 +931,10 @@ class Team_members extends Security_Controller {
     /* file upload modal */
 
     function file_modal_form() {
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
+
         $view_data['model_info'] = $this->General_files_model->get_one($this->request->getPost('id'));
         $user_id = $this->request->getPost('user_id') ? $this->request->getPost('user_id') : $view_data['model_info']->user_id;
 
@@ -992,10 +1019,10 @@ class Team_members extends Security_Controller {
         $uploaded_by = get_team_member_profile_link($data->uploaded_by, $uploaded_by);
 
         $description = "<div class='float-start'>" .
-                js_anchor(remove_file_prefix($data->file_name), array('title' => "", "data-toggle" => "app-modal", "data-sidebar" => "0", "data-url" => get_uri("team_members/view_file/" . $data->id)));
+            js_anchor(remove_file_prefix($data->file_name), array('title' => "", "data-toggle" => "app-modal", "data-sidebar" => "0", "data-url" => get_uri("team_members/view_file/" . $data->id), "class" => "text-break-space"));
 
         if ($data->description) {
-            $description .= "<br /><span>" . $data->description . "</span></div>";
+            $description .= "<div>" . $data->description . "</div></div>";
         } else {
             $description .= "</div>";
         }
@@ -1006,7 +1033,8 @@ class Team_members extends Security_Controller {
             $options .= js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_file'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("team_members/delete_file"), "data-action" => "delete-confirmation"));
         }
 
-        return array($data->id,
+        return array(
+            $data->id,
             "<div data-feather='$file_icon' class='mr10 float-start'></div>" . $description,
             convert_file_size($data->file_size),
             $uploaded_by,
@@ -1048,7 +1076,7 @@ class Team_members extends Security_Controller {
     /* download a file */
 
     function download_file($id) {
-
+        validate_numeric_value($id);
         $file_info = $this->General_files_model->get_one($id);
 
         if (!$file_info->user_id) {
@@ -1065,6 +1093,9 @@ class Team_members extends Security_Controller {
     /* delete a file */
 
     function delete_file() {
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
 
         $id = $this->request->getPost('id');
         $info = $this->General_files_model->get_one($id);
@@ -1116,6 +1147,7 @@ class Team_members extends Security_Controller {
 
     function save_recently_meaning() {
         $recently_meaning = $this->request->getPost("recently_meaning");
+        $recently_meaning = clean_data($recently_meaning);
         $this->Settings_model->save_setting("user_" . $this->login_user->id . "_recently_meaning", $recently_meaning, "user");
         echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
     }
@@ -1153,11 +1185,11 @@ class Team_members extends Security_Controller {
             array("name" => "gender"),
             array("name" => "job_title", "required" => true, "required_message" => app_lang("import_team_member_error_job_title_field_required")),
             array("name" => "email", "required" => true, "required_message" => app_lang("import_team_member_error_email_field_required"), "custom_validation" => function ($value, $row_data) {
-                    //checking duplicate email
-                    if ($this->Users_model->is_email_exists($value)) {
-                        return array("error" => app_lang("duplicate_email"));
-                    }
-                }),
+                //checking duplicate email
+                if ($this->Users_model->is_email_exists($value)) {
+                    return array("error" => app_lang("duplicate_email"));
+                }
+            }),
             array("name" => "role", "custom_validation" => function ($value, $row_data) {
                 //checking duplicate email
                 if ($value === strtolower("admin") && !$this->login_user->is_admin) {
@@ -1245,8 +1277,7 @@ class Team_members extends Security_Controller {
             "custom_field_values_array" => $custom_field_values_array
         );
     }
-
 }
 
-/* End of file team_member.php */
-/* Location: ./app/controllers/team_member.php */
+/* End of file Team_members.php */
+/* Location: ./app/Controllers/Team_members.php */

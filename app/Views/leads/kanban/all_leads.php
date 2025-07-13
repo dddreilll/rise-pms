@@ -1,9 +1,11 @@
 <div id="page-content" class="page-wrapper pb0 clearfix">
 
     <ul class="nav nav-tabs bg-white title" role="tablist">
-        <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("leads"); ?></h4></li>
+        <li class="title-tab">
+            <h4 class="pl15 pt10 pr15"><?php echo app_lang("leads"); ?></h4>
+        </li>
 
-        <?php echo view("leads/tabs", array("active_tab" => "leads_kanban")); ?>      
+        <?php echo view("leads/tabs", array("active_tab" => "leads_kanban")); ?>
 
         <div class="tab-title clearfix no-border">
             <div class="title-button-group">
@@ -12,15 +14,19 @@
             </div>
         </div>
     </ul>
-    <div class="bg-white">
-        <div id="kanban-filters"></div>
-    </div>
+    <div class="leads-kanban-view">
+        <div class="card border-top-0 rounded-top-0">
+            <div class="bg-white">
+                <div id="kanban-filters"></div>
+            </div>
 
-    <div id="load-kanban"></div>
+            <div id="load-kanban"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         window.scrollToKanbanContent = true;
     });
 </script>

@@ -4,16 +4,26 @@ namespace PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Comment;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx\Namespaces;
 use PhpOffice\PhpSpreadsheet\Shared\XMLWriter;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class Comments extends WriterPart
 {
+    private const VALID_HORIZONTAL_ALIGNMENT = [
+        Alignment::HORIZONTAL_CENTER,
+        Alignment::HORIZONTAL_DISTRIBUTED,
+        Alignment::HORIZONTAL_JUSTIFY,
+        Alignment::HORIZONTAL_LEFT,
+        Alignment::HORIZONTAL_RIGHT,
+    ];
+
     /**
      * Write comments to XML format.
      *
      * @return string XML Output
      */
-    public function writeComments(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet)
+    public function writeComments(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet): string
     {
         // Create XML writer
         $objWriter = null;
@@ -40,7 +50,7 @@ class Comments extends WriterPart
 
         // comments
         $objWriter->startElement('comments');
-        $objWriter->writeAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $objWriter->writeAttribute('xmlns', Namespaces::MAIN);
 
         // Loop through authors
         $objWriter->startElement('authors');
@@ -69,7 +79,7 @@ class Comments extends WriterPart
      * @param Comment $comment Comment
      * @param array $authors Array of authors
      */
-    private function writeComment(XMLWriter $objWriter, $cellReference, Comment $comment, array $authors): void
+    private function writeComment(XMLWriter $objWriter, string $cellReference, Comment $comment, array $authors): void
     {
         // comment
         $objWriter->startElement('comment');
@@ -89,7 +99,7 @@ class Comments extends WriterPart
      *
      * @return string XML Output
      */
-    public function writeVMLComments(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet)
+    public function writeVMLComments(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $worksheet): string
     {
         // Create XML writer
         $objWriter = null;
@@ -107,9 +117,9 @@ class Comments extends WriterPart
 
         // xml
         $objWriter->startElement('xml');
-        $objWriter->writeAttribute('xmlns:v', 'urn:schemas-microsoft-com:vml');
-        $objWriter->writeAttribute('xmlns:o', 'urn:schemas-microsoft-com:office:office');
-        $objWriter->writeAttribute('xmlns:x', 'urn:schemas-microsoft-com:office:excel');
+        $objWriter->writeAttribute('xmlns:v', Namespaces::URN_VML);
+        $objWriter->writeAttribute('xmlns:o', Namespaces::URN_MSOFFICE);
+        $objWriter->writeAttribute('xmlns:x', Namespaces::URN_EXCEL);
 
         // o:shapelayout
         $objWriter->startElement('o:shapelayout');
@@ -160,12 +170,12 @@ class Comments extends WriterPart
      * @param string $cellReference Cell reference, eg: 'A1'
      * @param Comment $comment Comment
      */
-    private function writeVMLComment(XMLWriter $objWriter, $cellReference, Comment $comment): void
+    private function writeVMLComment(XMLWriter $objWriter, string $cellReference, Comment $comment): void
     {
         // Metadata
         [$column, $row] = Coordinate::indexesFromString($cellReference);
         $id = 1024 + $column + $row;
-        $id = substr($id, 0, 4);
+        $id = substr("$id", 0, 4);
 
         // v:shape
         $objWriter->startElement('v:shape');
@@ -199,12 +209,14 @@ class Comments extends WriterPart
         $objWriter->endElement();
 
         // v:textbox
+        $textBoxArray = [Comment::TEXTBOX_DIRECTION_RTL => 'rtl', Comment::TEXTBOX_DIRECTION_LTR => 'ltr'];
+        $textboxRtl = $textBoxArray[strtolower($comment->getTextBoxDirection())] ?? 'auto';
         $objWriter->startElement('v:textbox');
-        $objWriter->writeAttribute('style', 'mso-direction-alt:auto');
+        $objWriter->writeAttribute('style', "mso-direction-alt:$textboxRtl");
 
         // div
         $objWriter->startElement('div');
-        $objWriter->writeAttribute('style', 'text-align:left');
+        $objWriter->writeAttribute('style', ($textboxRtl === 'rtl' ? 'text-align:right;direction:rtl' : 'text-align:left'));
         $objWriter->endElement();
 
         $objWriter->endElement();
@@ -222,11 +234,17 @@ class Comments extends WriterPart
         // x:AutoFill
         $objWriter->writeElement('x:AutoFill', 'False');
 
+        // x:TextHAlign horizontal alignment of text
+        $alignment = strtolower($comment->getAlignment());
+        if (in_array($alignment, self::VALID_HORIZONTAL_ALIGNMENT, true)) {
+            $objWriter->writeElement('x:TextHAlign', ucfirst($alignment));
+        }
+
         // x:Row
-        $objWriter->writeElement('x:Row', ($row - 1));
+        $objWriter->writeElement('x:Row', (string) ($row - 1));
 
         // x:Column
-        $objWriter->writeElement('x:Column', ($column - 1));
+        $objWriter->writeElement('x:Column', (string) ($column - 1));
 
         $objWriter->endElement();
 

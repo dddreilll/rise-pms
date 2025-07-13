@@ -9,7 +9,7 @@ use stdClass;
 class Crud_model extends Model {
 
     protected $table;
-    protected $table_without_prefix;    
+    protected $table_without_prefix;
     protected $db;
     protected $db_builder = null;
     private $log_activity = false;
@@ -21,7 +21,7 @@ class Crud_model extends Model {
     private $log_for_key2 = "";
     protected $allowedFields = array();
     private $Activity_logs_model;
-    
+
     function __construct($table = null, $db = null) {
         $this->Activity_logs_model = model("App\Models\Activity_logs_model");
         $this->db = $db ? $db : db_connect('default');
@@ -57,7 +57,7 @@ class Crud_model extends Model {
     }
 
     function get_one_where($where = array()) {
-        $where = $this->escape_array($where);
+        $where = $this->_get_clean_value($where);
         $result = $this->db_builder->getWhere($where, 1);
 
         if ($result->getRow()) {
@@ -81,18 +81,18 @@ class Crud_model extends Model {
         return $this->get_all_where($where);
     }
 
-    function escape_array($values = array()) {
-        if ($values && is_array($values)) {
-            foreach ($values as $key => $value) {
-                $values[$key] = ($value && !is_array($value)) ? $this->db->escapeString($value) : $value;
-            }
-        }
-
-        return $values;
+    function escape_array($values = array()) { //use _get_clean_value instead. It'll be removed.
+        return $this->_get_clean_value($values);
     }
 
-    function get_all_where($where = array(), $limit = 1000000, $offset = 0, $sort_by_field = null) {
-        $where = $this->escape_array($where);
+    function get_all_where($where = array(), $limit = 1000000, $offset = 0, $sort_by_field = null, $select_field_names = null) {
+
+        $where = $this->_get_clean_value($where);
+
+        if ($select_field_names) {
+            $this->db_builder->select($select_field_names);
+        }
+
         $where_in = get_array_value($where, "where_in");
         if ($where_in) {
             foreach ($where_in as $key => $value) {
@@ -125,7 +125,10 @@ class Crud_model extends Model {
         }
 
         if ($id) {
-            $id = $this->db->escapeString($id);
+            $id = $this->_get_clean_value($id);
+            if (!$id) {
+                return false; //invalid id
+            }
 
             //update
             $where = array("id" => $id);
@@ -205,6 +208,25 @@ class Crud_model extends Model {
             return $success;
         } else {
             //insert
+
+            try {
+                $data_from_hook = app_hooks()->apply_filters("app_filter_data_before_insert", array(
+                    "table" => $this->table,
+                    "table_without_prefix" => $this->table_without_prefix,
+                    "data" => $data
+                ));
+
+                // if there is no hook is triggering, we'll get the same sent data
+                $data = get_array_value($data_from_hook, "data");
+
+                // the data could be modified from the hook or if it's undefined we have to assume that this data shouldn't be saved
+                if (!$data) {
+                    return false;
+                }
+            } catch (\Exception $ex) {
+                log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            }
+
             if ($this->db_builder->insert($data)) {
                 $insert_id = $this->db->insertID();
                 if ($this->log_activity) {
@@ -259,6 +281,8 @@ class Crud_model extends Model {
 
     function update_where($data = array(), $where = array()) {
         if (count($where)) {
+            $where = $this->_get_clean_value($where);
+
             if ($this->db_builder->update($data, $where)) {
                 $id = get_array_value($where, "id");
                 if ($id) {
@@ -320,15 +344,60 @@ class Crud_model extends Model {
     }
 
     function get_dropdown_list($option_fields = array(), $key = "id", $where = array()) {
+        return $this->_get_dropdown_list($option_fields, $key, $where);
+    }
+
+    function get_dropdown_list_with_blank_option($option_fields = array(), $blank_option_text = "-", $where = array(), $key = "id") {
+        return $this->_get_dropdown_list($option_fields, $key, $where, false, $blank_option_text);
+    }
+
+    function get_id_and_text_dropdown($option_fields = array(), $where = array(), $blank_option_text = "",  $key = "id") {
+        return $this->_get_dropdown_list($option_fields, $key, $where, true, $blank_option_text);
+    }
+
+    private function _get_dropdown_list($option_fields = array(), $key = "id", $where = array(), $prepare_as_id_and_text = false, $blank_option_text = "") {
+        $option_fields = $this->_get_clean_value($option_fields);
+        $key = $this->_get_clean_value($key);
+
+        $first_field_name = get_array_value($option_fields, 0);
+        if (!$first_field_name) {
+            die("Option field is required to get dropdown list");
+        }
+
+        $select_multiple_fields = count($option_fields) > 1;
+        $select_field_names = $key . ", " . implode(", ", $option_fields);
+
         $where["deleted"] = 0;
-        $list_data = $this->get_all_where($where, 0, 0, $option_fields[0])->getResult();
+
+        $list_data = $this->get_all_where($where, 0, 0, $first_field_name, $select_field_names)->getResult();
+
         $result = array();
-        foreach ($list_data as $data) {
-            $text = "";
-            foreach ($option_fields as $option) {
-                $text .= $data->$option . " ";
+
+        if ($blank_option_text) {
+            if ($prepare_as_id_and_text) {
+                $result[] =  array("id" => "", "text" => $blank_option_text);
+            } else {
+                $result[""] = $blank_option_text;
             }
-            $result[$data->$key] = $text;
+        }
+
+        foreach ($list_data as $data) {
+            $id = $data->$key;
+            $text = "";
+
+            if ($select_multiple_fields) {
+                foreach ($option_fields as $option) {
+                    $text .= $data->$option . " "; //Combine all fields
+                }
+            } else {
+                $text = $data->$first_field_name;
+            }
+
+            if ($prepare_as_id_and_text) {
+                $result[] =  array("id" => $id, "text" => $text);
+            } else {
+                $result[$id] = $text;
+            }
         }
         return $result;
     }
@@ -341,7 +410,8 @@ class Crud_model extends Model {
         $custom_field_values_table = $this->db->prefixTable('custom_field_values');
         $field_type_array = array();
         if ($related_to && $custom_fields) {
-            $related_to = $this->db->escapeString($related_to);
+            $related_to = $this->_get_clean_value($related_to);
+
             foreach ($custom_fields as $cf) {
                 $cf_id = $cf->id;
                 $field_type_array[$cf_id] = $cf->field_type;
@@ -357,6 +427,8 @@ class Crud_model extends Model {
             $custom_field_filter = array();
         }
         foreach ($custom_field_filter as $cf_id => $cf_filter) {
+
+            $cf_filter = $this->_get_clean_value($cf_filter);
 
             $field_type = get_array_value($field_type_array, $cf_id);
             $_where = " $custom_field_values_table.value= '$cf_filter'";
@@ -374,7 +446,8 @@ class Crud_model extends Model {
     protected function _get_clients_of_currency_query($currency, $invoices_table, $clients_table) {
         $default_currency = get_setting("default_currency");
         $currency = $currency ? $currency : $default_currency;
-        $currency = $currency ? $this->db->escapeString($currency) : $currency;
+
+        $currency = $this->_get_clean_value(array("currency" => $currency), "currency");
 
         $client_where = ($currency == $default_currency) ? " AND ($clients_table.currency='$default_currency' OR $clients_table.currency='' OR $clients_table.currency IS NULL)" : " AND $clients_table.currency='$currency'";
 
@@ -391,14 +464,27 @@ class Crud_model extends Model {
         if ($id) {
             validate_numeric_value($id);
             $this->db_builder->where('id', $id);
-            $this->db_builder->delete();
+            $result = $this->db_builder->delete();
+
+            if ($result) {
+                try {
+                    app_hooks()->do_action("app_hook_data_delete", array(
+                        "id" => $id,
+                        "table" => $this->table,
+                        "table_without_prefix" => $this->table_without_prefix,
+                    ));
+                } catch (\Exception $ex) {
+                    log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+                }
+                return true;
+            }
         }
     }
 
-    protected function prepare_allowed_client_groups_query($clients_table, $client_groups = "") {
+    protected function prepare_allowed_client_groups_query($clients_table, $client_groups = array()) {
         $where = "";
 
-        if ($client_groups && count($client_groups)) {
+        if (is_array($client_groups) && count($client_groups) > 0) {
             $client_groups_where = "";
             foreach ($client_groups as $client_group) {
                 if ($client_groups_where) {
@@ -416,14 +502,93 @@ class Crud_model extends Model {
         return $where;
     }
 
-    protected function _get_clean_value($options, $key) {
+    protected function _get_clean_value($options_or_value, $key = "") {
+        $value = $options_or_value;
 
-        $value = get_array_value($options, $key);
-        if ($value) {
-            return $this->db->escapeString($value);
-        } else {
-            return $value; //false, 0, null
+        if (is_array($options_or_value) && $key) {
+            $value = get_array_value($options_or_value, $key);
         }
+
+        if (is_string($value)) {
+
+            $length = strlen($value);
+
+            // if ($length > 255) {
+            //     $backtrace = $this->get_backtrace();
+            //     log_message('error', 'Input is too long detected by _get_clean_value where the key: ' . $key . $backtrace);
+            //     exit();
+            // }
+
+            //check for valid date YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+            if (($length === 10 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value))
+                || ($length === 19 && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value))
+            ) {
+
+                $date_format = (strlen($value) === 10) ? 'Y-m-d' : 'Y-m-d H:i:s';
+                $d = \DateTime::createFromFormat($date_format, $value);
+                if (!$d || $d->format($date_format) !== $value) {
+
+                    $backtrace = $this->get_backtrace();
+
+                    log_message('error', 'Invalid date detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                    exit();
+                }
+                return $value; // It's a valid date or date-time string, return as-is
+            }
+
+            // Block harmful SQL functions like ASCII, SUBSTRING, etc.
+            if (preg_match('/\b(ASCII|SUBSTRING|MID|LENGTH|DATABASE|SCHEMA|BENCHMARK|SLEEP|VERSION|CHAR|CONCAT)\b/i', $value)) {
+                $backtrace = $this->get_backtrace();
+
+                log_message('error', 'SQL function injection detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                exit();
+            }
+
+            // Protect against common SQL keywords, harmful characters, and patterns
+            if (
+                preg_match('/(?<!\w)\b(TABLE|UNION(?:\s+ALL)?|INSERT|DELETE|UPDATE|EXEC|DROP|ALTER|TRUNCATE|REPLACE|LOAD_FILE|OUTFILE|INTO|GROUP\s+BY|ORDER\s+BY|HAVING|CASE|LIKE|--|#|\/\*)\b(?!\w)/i', $value)
+                || preg_match('/["]/', $value)  // Dangerous characters (excluding semicolons)
+                || preg_match('/0x[0-9a-f]+/i', $value)  // Hexadecimal pattern
+                || preg_match('/\/\*.*\*\//', $value)  // SQL comments
+                || preg_match('/\b\d+\s*[!=<>]\s*\d+\b(?!,)/', $value)  // Detect numeric comparisons (e.g., 1=1)
+                || preg_match('/%[0-9a-f]{2}/i', $value)  // URL encoding like %27 for '
+                || preg_match('/(?<!\w)-\d+\s+(DELETE|UPDATE|INSERT|DROP|ALTER|UNION)\b/i', $value)
+            ) {
+                $backtrace = $this->get_backtrace();
+
+                log_message('error', 'Harmful injection detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                exit();
+            }
+
+            return $this->db->escapeString($value);
+        } else if (is_int($value) || is_numeric($value)) {
+            return intval($value);
+        } else if (is_bool($value)) {
+            return $value;
+        } else if (is_array($value)) {
+            foreach ($value as $array_key => $new_value) {
+                $value[$array_key] = $this->_get_clean_value($new_value);
+            }
+            return $value;
+        } else {
+            return null;
+        }
+    }
+
+    private function get_backtrace() {
+        $backtrace_path = "\n";
+        $limited_backtrace = array_slice(debug_backtrace(), 1, 5);
+        foreach ($limited_backtrace as $trace) {
+            $backtrace_path .= "Function: " . $trace['function'] . " ";
+            if (isset($trace['file'])) {
+                $backtrace_path .= "File: " . $trace['file'] . " ";
+            }
+            if (isset($trace['line'])) {
+                $backtrace_path .= "Line: " . $trace['line'] . " ";
+            }
+            $backtrace_path .= "\n";
+        }
+        return $backtrace_path;
     }
 
     protected function get_custom_field_search_query($table, $related_to_type, $search_by) {
@@ -522,8 +687,77 @@ class Crud_model extends Model {
         $info->tax = number_format($tax1, 2, ".", "") * 1;
         $info->tax2 = number_format($tax2, 2, ".", "") * 1;
         $info->tax3 = number_format($tax3, 2, ".", "") * 1;
-        
+
         $info->discount_type = $invoice_info->discount_type;
         return $info;
+    }
+
+    function get_share_with_users_of_event($event_info = null, $query_for_notification = false) {
+        if (!($event_info && $event_info->share_with)) {
+            return "";
+        }
+
+        $users_table = $this->db->prefixTable('users');
+        $team_table = $this->db->prefixTable('team');
+
+        $where = "";
+
+        $created_by = $this->_get_clean_value($event_info->created_by);
+        $share_with_value = $this->_get_clean_value($event_info->share_with);
+        $share_with_array = explode(",", $share_with_value); // found an array like this array("member:1", "member:2", "team:1")
+        $or_query_array = array();
+
+        if (in_array("all", $share_with_array)) { // has 'all' access
+            $or_query_array[] = " $users_table.user_type='staff' ";
+        }
+
+        if (in_array("all_contacts", $share_with_array)) { // has 'all_contacts' access
+            $client_id = $this->_get_clean_value($event_info->client_id);
+            $or_query_array[] = " $users_table.client_id=$client_id ";
+        }
+
+        // has member/team/contact access
+        $event_users = array();
+        $event_team = array();
+        $event_contact = array();
+
+        foreach ($share_with_array as $share) {
+            $share_context_explode = explode(":", $share);
+            if (count($share_context_explode) != 2) continue;
+
+            list($context, $context_id) = $share_context_explode;
+            if ($context === "member") $event_users[] = $context_id;
+            if ($context === "team") $event_team[] = $context_id;
+            if ($context === "contact") $event_contact[] = $context_id;
+        }
+
+        //find team members
+        if (count($event_users)) {
+            $or_query_array[] = " FIND_IN_SET($users_table.id, '" . join(',', $event_users) . "') ";
+        }
+
+        //find team
+        if (count($event_team)) {
+            $or_query_array[] = " FIND_IN_SET($users_table.id, (SELECT GROUP_CONCAT($team_table.members) AS team_users FROM $team_table WHERE $team_table.deleted=0 AND FIND_IN_SET($team_table.id, '" . join(',', $event_team) . "'))) ";
+        }
+
+        //find client contacts
+        if (count($event_contact)) {
+            $or_query_array[] = " FIND_IN_SET($users_table.id, '" . join(',', $event_contact) . "') ";
+        }
+
+        $where = " (" . join(" OR ", $or_query_array) . ") ";
+
+        if ($query_for_notification) {
+            $where = " OR " . $where;
+            return $where;
+        } else {
+            $where = " AND " . $where;
+        }
+
+        $sql = "SELECT $users_table.id, $users_table.email FROM $users_table
+                WHERE $users_table.deleted=0 AND $users_table.status='active' AND $users_table.id!=$created_by $where";
+
+        return $this->db->query($sql);
     }
 }

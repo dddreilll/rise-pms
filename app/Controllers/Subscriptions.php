@@ -158,6 +158,8 @@ class Subscriptions extends Security_Controller {
             "labels" => $this->request->getPost('labels')
         );
 
+        $subscription_data = clean_data($subscription_data);
+
         if ($id) {
             $subscription_info = $this->Subscriptions_model->get_one($id);
             $timeline_file_path = get_setting("timeline_file_path");
@@ -384,8 +386,10 @@ class Subscriptions extends Security_Controller {
 
         if ($this->login_user->user_type == "staff") {
             $subscription_url = anchor(get_uri("subscriptions/view/" . $data->id), get_subscription_id($data->id));
+            $subscription_title = anchor(get_uri("subscriptions/view/" . $data->id), $data->title);
         } else {
             $subscription_url = anchor(get_uri("subscriptions/preview/" . $data->id), get_subscription_id($data->id));
+            $subscription_title = anchor(get_uri("subscriptions/preview/" . $data->id), $data->title);
         }
 
         $cycles = $data->no_of_cycles_completed . "/" . $data->no_of_cycles;
@@ -406,14 +410,14 @@ class Subscriptions extends Security_Controller {
         }
 
         if ($data->no_of_cycles_completed > 0 && $data->no_of_cycles_completed == $data->no_of_cycles) {
-            $subscription_status = "<span class='badge bg-danger large'>" . app_lang("stopped") . "</span>";
+            $subscription_status = "<span class='badge bg-danger'>" . app_lang("stopped") . "</span>";
             $cycle_class = "text-danger";
         }
 
         $row_data = array(
             $data->id,
             $subscription_url,
-            $data->title,
+            $subscription_title,
             $subscription_type,
             anchor(get_uri("clients/view/" . $data->client_id), $data->company_name),
             $data->bill_date,
@@ -591,7 +595,7 @@ class Subscriptions extends Security_Controller {
     private function _make_item_row($data) {
         $item = "<div class='item-row strong mb5' data-id='$data->id'>$data->title</div>";
         if ($data->description) {
-            $item .= "<div class='text-wrap'>" . nl2br($data->description) . "</div>";
+            $item .= "<div class='text-wrap'>" . custom_nl2br($data->description) . "</div>";
         }
         $type = $data->unit_type ? $data->unit_type : "";
 
@@ -877,9 +881,9 @@ class Subscriptions extends Security_Controller {
             show_404();
         }
 
+        validate_numeric_value($subscription_id);
         $this->validate_subscription_access($subscription_id);
 
-        validate_numeric_value($subscription_id);
         $view_data["subscription_id"] = $subscription_id;
 
         return $this->template->view('subscriptions/activate_as_internal_subscription_modal_form', $view_data);
@@ -903,10 +907,10 @@ class Subscriptions extends Security_Controller {
             //starting local subscription
             //create invoice if the first billing date is today or past
             if (!$subscription_info->bill_date || $subscription_info->bill_date <= get_today_date()) {
-                create_invoice_from_subscription($subscription_id);
+                $invoice_id = create_invoice_from_subscription($subscription_id);
             }
 
-            log_notification("subscription_started", array("subscription_id" => $subscription_id));
+            log_notification("subscription_started", array("subscription_id" => $subscription_id, "invoice_id" => isset($invoice_id) ? $invoice_id : 0));
             echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
         }
     }
@@ -962,13 +966,14 @@ class Subscriptions extends Security_Controller {
             app_redirect("forbidden");
         }
 
+        validate_numeric_value($subscription_id);
+
         $view_data["custom_field_headers_of_task"] = $this->Custom_fields_model->get_custom_field_headers_for_table("tasks", $this->login_user->is_admin, $this->login_user->user_type);
 
         $view_data['subscription_id'] = clean_data($subscription_id);
         $view_data["can_create_tasks"] = $this->can_edit_subscriptions();
         return $this->template->view("subscriptions/tasks/index", $view_data);
     }
-
 }
 
 /* End of file Subscriptions.php */

@@ -1,11 +1,12 @@
 <div id="file-manager-window-area" class="show-context-menu">
+
     <ul class="files-and-folders-list" data-has_write_permission="<?php echo $has_write_permission; ?>" data-has_upload_permission="<?php echo $has_upload_permission; ?>">
         <?php
         foreach ($folders_list as $folder) {
             $is_favourite = strpos($folder->starred_by, ":" . $login_user->id . ":") ? 1 : '';
             $has_this_folder_write_permission = false;
 
-            if ($login_user->is_admin || $folder->actual_permission_rank >= 6 || ($folder->context == "client" && ($login_user->user_type == "client" && $login_user->client_id == $folder->context_id) || ($can_edit_clients && $login_user->user_type == "staff"))) {
+            if ($login_user->is_admin || ($folder->context == "file_manager" && $folder->actual_permission_rank >= 6) || ($folder->context != "file_manager" && $login_user->user_type == "staff")) {
                 $has_this_folder_write_permission = true;
             }
         ?>
@@ -65,7 +66,14 @@
                 $file_size = convert_file_size($folder_item->file_size);
 
                 $preview_link_attr = $file_preview_link_attributes;
-                $preview_link_attr["data-url"] = $file_preview_url . "/" . $folder_item->id . "/" . $client_id;
+
+                $data_url = $file_preview_url . "/" . $folder_item->id;
+                if ($client_id) {
+                    $data_url .= "/" . $client_id;
+                }
+
+                $preview_link_attr["data-url"] = $data_url;
+
                 $preview_link_attr["data-preview_function"] = "showFilePreviewAppModal";
                 $preview_link_attr["data-group"] = "window_files";
             ?>

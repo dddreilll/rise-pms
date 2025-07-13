@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -26,7 +28,7 @@ class MockSession extends Session
     /**
      * Holds our "cookie" data.
      *
-     * @var Cookie[]
+     * @var list<Cookie>
      */
     public $cookies = [];
 
@@ -57,7 +59,7 @@ class MockSession extends Session
      */
     protected function setCookie()
     {
-        $expiration   = $this->sessionExpiration === 0 ? 0 : Time::now()->getTimestamp() + $this->sessionExpiration;
+        $expiration   = $this->config->expiration === 0 ? 0 : Time::now()->getTimestamp() + $this->config->expiration;
         $this->cookie = $this->cookie->withValue(session_id())->withExpires($expiration);
 
         $this->cookies[] = $this->cookie;

@@ -23,7 +23,7 @@
                 <?php } ?>
             </div>
 
-            <p><?php echo $reply->description ? nl2br(link_it(process_images_from_content($reply->description))) : ""; ?></p>
+            <p><?php echo $reply->description ? custom_nl2br(link_it(process_images_from_content($reply->description))) : ""; ?></p>
         </div>
     </div>
 <?php } ?>

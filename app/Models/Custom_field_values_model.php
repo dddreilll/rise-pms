@@ -109,16 +109,20 @@ class Custom_field_values_model extends Crud_model {
 
     function upsert($data, $save_to_related_type = "") {
         //check if any similar field exists for migration
+        $save_to_related_type = $this->_get_clean_value($save_to_related_type);
+
         if ($save_to_related_type) {
             $new_custom_field_id = $this->upsert_custom_field($data, $save_to_related_type);
             $data["custom_field_id"] = $new_custom_field_id;
         }
 
         $existing = $this->get_one_where(
-                array("related_to_type" => $this->_get_clean_value($data, "related_to_type"),
-                    "related_to_id" => $this->_get_clean_value($data, "related_to_id"),
-                    "custom_field_id" => $this->_get_clean_value($data, "custom_field_id"),
-                    "deleted" => 0)
+            array(
+                "related_to_type" => $this->_get_clean_value($data, "related_to_type"),
+                "related_to_id" => $this->_get_clean_value($data, "related_to_id"),
+                "custom_field_id" => $this->_get_clean_value($data, "custom_field_id"),
+                "deleted" => 0
+            )
         );
 
         $custom_field_info = $this->Custom_fields_model->get_one($this->_get_clean_value($data, "custom_field_id"));
@@ -130,16 +134,27 @@ class Custom_field_values_model extends Crud_model {
             "hide_from_clients" => $custom_field_info->hide_from_clients
         );
 
+        $value = get_array_value($data, "value");
+
+        if (
+            $custom_field_info->field_type === "select" ||
+            $custom_field_info->field_type === "multi_select" ||
+            $custom_field_info->field_type === "multiple_choice" ||
+            $custom_field_info->field_type === "checkboxes"
+        ) {
+            $data["value"] = $this->_get_clean_value($value);
+        }
+
         if ($existing) {
             //update
             //return changes of existing custom field
             $save_id = $this->ci_save($data, $existing->id); //update
 
             if ($save_id) {
-                if ($existing->value != $this->_get_clean_value($data, "value")) {
+                if ($existing->value != $value) {
                     //updated, but has changed values
                     $changes["from"] = $existing->value;
-                    $changes["to"] = $this->_get_clean_value($data, "value");
+                    $changes["to"] = $value;
                     return array("operation" => "update", "save_id" => $save_id, "changes" => $changes);
                 } else {
                     //updated but changed the default input fields for first time
@@ -152,5 +167,4 @@ class Custom_field_values_model extends Crud_model {
             return array("operation" => "insert", "save_id" => $save_id, "changes" => $changes);
         }
     }
-
 }

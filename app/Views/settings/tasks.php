@@ -28,34 +28,35 @@
                     <div role="tabpanel" class="tab-pane fade" id="task-settings-tab">
                         <?php echo form_open(get_uri("settings/save_task_settings"), array("id" => "task-settings-form", "class" => "general-form dashed-row", "role" => "form")); ?>
 
-                        <div class="card mb0">
+                        <div class="mb0">
                             <div class="card-body">
 
-                                <div class="form-group">
+                                <div class="form-group form-switch">
                                     <div class="row">
-                                        <label for="enable_recurring_option_for_tasks" class="col-md-3"><?php echo app_lang('enable_recurring_option_for_tasks'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
-                                        <div class="col-md-9">
+                                        <label for="enable_recurring_option_for_tasks" class="col-md-4"><?php echo app_lang('enable_recurring_option_for_tasks'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
+                                        <div class="col-md-8">
                                             <?php
-                                            echo form_dropdown(
-                                                    "enable_recurring_option_for_tasks", array("1" => app_lang("yes"), "0" => app_lang("no")), get_setting('enable_recurring_option_for_tasks') ? get_setting('enable_recurring_option_for_tasks') : 0, "class='select2 mini' id='enable_recurring_option_for_tasks'"
-                                            );
-                                            ?>                     
+                                            echo form_checkbox("enable_recurring_option_for_tasks", "1", get_setting("enable_recurring_option_for_tasks") ? true : false, "id='enable_recurring_option_for_tasks' class='form-check-input'");
+                                            ?>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div id="create_recurring_tasks_before_area" class="form-group <?php echo get_setting("enable_recurring_option_for_tasks") ? "" : "hide"; ?>">
                                     <div class="row">
-                                        <label for="create_recurring_tasks_before" class=" col-md-3"><?php echo app_lang('create_recurring_tasks_before'); ?> <span class="help" data-bs-toggle="tooltip" data-placement="left" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
-                                        <div class="col-md-9">
+                                        <label for="create_recurring_tasks_before" class=" col-md-4"><?php echo app_lang('create_recurring_tasks_before'); ?> <span class="help" data-bs-toggle="tooltip" data-placement="left" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
+                                        <div class="col-md-8">
                                             <?php
                                             echo form_dropdown(
-                                                    "create_recurring_tasks_before", array(
-                                                "" => " - ",
-                                                "1" => "1 " . app_lang("day"),
-                                                "2" => "2 " . app_lang("days"),
-                                                "3" => "3 " . app_lang("days")
-                                                    ), get_setting('create_recurring_tasks_before'), "class='select2 mini'"
+                                                "create_recurring_tasks_before",
+                                                array(
+                                                    "" => " - ",
+                                                    "1" => "1 " . app_lang("day"),
+                                                    "2" => "2 " . app_lang("days"),
+                                                    "3" => "3 " . app_lang("days")
+                                                ),
+                                                get_setting('create_recurring_tasks_before'),
+                                                "class='select2 mini'"
                                             );
                                             ?>
                                         </div>
@@ -64,23 +65,63 @@
 
                                 <div class="form-group">
                                     <div class="row">
-                                        <label for="project_task_deadline_pre_reminder" class=" col-md-3"><?php echo app_lang('send_task_deadline_pre_reminder'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
-                                        <div class="col-md-9">
+                                        <label for="project_task_deadline_pre_reminder" class=" col-md-4"><?php echo app_lang('send_task_deadline_pre_reminder'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
+                                        <div class="col-md-8">
                                             <?php
                                             echo form_dropdown(
-                                                    "project_task_deadline_pre_reminder", array(
-                                                "" => " - ",
-                                                "1" => "1 " . app_lang("day"),
-                                                "2" => "2 " . app_lang("days"),
-                                                "3" => "3 " . app_lang("days"),
-                                                "5" => "5 " . app_lang("days"),
-                                                "7" => "7 " . app_lang("days"),
-                                                "10" => "10 " . app_lang("days"),
-                                                "14" => "14 " . app_lang("days"),
-                                                "15" => "15 " . app_lang("days"),
-                                                "20" => "20 " . app_lang("days"),
-                                                "30" => "30 " . app_lang("days"),
-                                                    ), get_setting('project_task_deadline_pre_reminder'), "class='select2 mini'"
+                                                "project_task_deadline_pre_reminder",
+                                                array(
+                                                    "" => " - ",
+                                                    "1" => "1 " . app_lang("day"),
+                                                    "2" => "2 " . app_lang("days"),
+                                                    "3" => "3 " . app_lang("days"),
+                                                    "5" => "5 " . app_lang("days"),
+                                                    "7" => "7 " . app_lang("days"),
+                                                    "10" => "10 " . app_lang("days"),
+                                                    "14" => "14 " . app_lang("days"),
+                                                    "15" => "15 " . app_lang("days"),
+                                                    "20" => "20 " . app_lang("days"),
+                                                    "30" => "30 " . app_lang("days"),
+                                                ),
+                                                get_setting('project_task_deadline_pre_reminder'),
+                                                "class='select2 mini'"
+                                            );
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group form-switch">
+                                    <div class="row">
+                                        <label for="project_task_reminder_on_the_day_of_deadline" class="col-md-4"><?php echo app_lang('send_task_reminder_on_the_day_of_deadline'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
+                                        <div class="col-md-8">
+                                            <?php
+                                            echo form_checkbox("project_task_reminder_on_the_day_of_deadline", "1", get_setting("project_task_reminder_on_the_day_of_deadline") ? true : false, "id='project_task_reminder_on_the_day_of_deadline' class='form-check-input'");
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="row">
+                                        <label for="project_task_deadline_overdue_reminder" class=" col-md-4"><?php echo app_lang('send_task_deadline_overdue_reminder'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
+                                        <div class="col-md-8">
+                                            <?php
+                                            echo form_dropdown(
+                                                "project_task_deadline_overdue_reminder",
+                                                array(
+                                                    "" => " - ",
+                                                    "1" => "1 " . app_lang("day"),
+                                                    "2" => "2 " . app_lang("days"),
+                                                    "3" => "3 " . app_lang("days"),
+                                                    "5" => "5 " . app_lang("days"),
+                                                    "7" => "7 " . app_lang("days"),
+                                                    "10" => "10 " . app_lang("days"),
+                                                    "14" => "14 " . app_lang("days"),
+                                                    "15" => "15 " . app_lang("days"),
+                                                    "20" => "20 " . app_lang("days"),
+                                                    "30" => "30 " . app_lang("days"),
+                                                ),
+                                                get_setting('project_task_deadline_overdue_reminder'),
+                                                "class='select2 mini'"
                                             );
                                             ?>
                                         </div>
@@ -88,35 +129,23 @@
                                 </div>
                                 <div class="form-group">
                                     <div class="row">
-                                        <label for="project_task_reminder_on_the_day_of_deadline" class="col-md-3"><?php echo app_lang('send_task_reminder_on_the_day_of_deadline'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
-                                        <div class="col-md-9">
+                                        <label for="task_point_range" class="col-md-4"><?php echo app_lang('task_point_range'); ?></label>
+                                        <div class="col-md-8">
                                             <?php
                                             echo form_dropdown(
-                                                    "project_task_reminder_on_the_day_of_deadline", array("1" => app_lang("yes"), "0" => app_lang("no")), get_setting('project_task_reminder_on_the_day_of_deadline'), "class='select2 mini'"
-                                            );
-                                            ?>                     
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label for="project_task_deadline_overdue_reminder" class=" col-md-3"><?php echo app_lang('send_task_deadline_overdue_reminder'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather='help-circle' class="icon-16"></i></span></label>
-                                        <div class="col-md-9">
-                                            <?php
-                                            echo form_dropdown(
-                                                    "project_task_deadline_overdue_reminder", array(
-                                                "" => " - ",
-                                                "1" => "1 " . app_lang("day"),
-                                                "2" => "2 " . app_lang("days"),
-                                                "3" => "3 " . app_lang("days"),
-                                                "5" => "5 " . app_lang("days"),
-                                                "7" => "7 " . app_lang("days"),
-                                                "10" => "10 " . app_lang("days"),
-                                                "14" => "14 " . app_lang("days"),
-                                                "15" => "15 " . app_lang("days"),
-                                                "20" => "20 " . app_lang("days"),
-                                                "30" => "30 " . app_lang("days"),
-                                                    ), get_setting('project_task_deadline_overdue_reminder'), "class='select2 mini'"
+                                                "task_point_range",
+                                                array(
+                                                    "5" => "1-5",
+                                                    "10" => "1-10",
+                                                    "15" => "1-15",
+                                                    "20" => "1-20",
+                                                    "05" => "0-5",
+                                                    "010" => "0-10",
+                                                    "015" => "0-15",
+                                                    "020" => "0-20",
+                                                ),
+                                                get_setting('task_point_range'),
+                                                "class='select2 mini'"
                                             );
                                             ?>
                                         </div>
@@ -124,29 +153,8 @@
                                 </div>
                                 <div class="form-group">
                                     <div class="row">
-                                        <label for="task_point_range" class="col-md-3"><?php echo app_lang('task_point_range'); ?></label>
-                                        <div class="col-md-9">
-                                            <?php
-                                            echo form_dropdown(
-                                                    "task_point_range", array(
-                                                "5" => "1-5",
-                                                "10" => "1-10",
-                                                "15" => "1-15",
-                                                "20" => "1-20",
-                                                "05" => "0-5",
-                                                "010" => "0-10",
-                                                "015" => "0-15",
-                                                "020" => "0-20",
-                                                    ), get_setting('task_point_range'), "class='select2 mini'"
-                                            );
-                                            ?>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <div class="row">
-                                        <label for="show_in_kanban" class="col-md-3"><?php echo app_lang('show_in_kanban'); ?></label>
-                                        <div class=" col-md-9">
+                                        <label for="show_in_kanban" class="col-md-4"><?php echo app_lang('show_in_kanban'); ?></label>
+                                        <div class=" col-md-8">
                                             <?php
                                             echo form_input(array(
                                                 "id" => "show_in_kanban",
@@ -159,15 +167,33 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group form-switch">
                                     <div class="row">
-                                        <label for="show_time_with_task_start_date_and_deadline" class="col-md-3"><?php echo app_lang('show_time_with_task_start_date_and_deadline'); ?></label>
-                                        <div class="col-md-9">
+                                        <label for="show_time_with_task_start_date_and_deadline" class="col-md-4"><?php echo app_lang('show_time_with_task_start_date_and_deadline'); ?></label>
+                                        <div class="col-md-8">
                                             <?php
-                                            echo form_dropdown(
-                                                    "show_time_with_task_start_date_and_deadline", array("1" => app_lang("yes"), "0" => app_lang("no")), get_setting('show_time_with_task_start_date_and_deadline') ? get_setting('show_time_with_task_start_date_and_deadline') : 0, "class='select2 mini' id='show_time_with_task_start_date_and_deadline'"
-                                            );
-                                            ?>                     
+                                            echo form_checkbox("show_time_with_task_start_date_and_deadline", "1", get_setting("show_time_with_task_start_date_and_deadline") ? true : false, "id='show_time_with_task_start_date_and_deadline' class='form-check-input'");
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group form-switch">
+                                    <div class="row">
+                                        <label for="show_the_status_checkbox_in_tasks_list" class="col-md-4"><?php echo app_lang('show_the_status_checkbox_in_tasks_list'); ?></label>
+                                        <div class="col-md-8">
+                                            <?php
+                                            echo form_checkbox("show_the_status_checkbox_in_tasks_list", "1", get_setting("show_the_status_checkbox_in_tasks_list") ? true : false, "id='show_the_status_checkbox_in_tasks_list' class='form-check-input'");
+                                            ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group form-switch">
+                                    <div class="row">
+                                        <label for="support_only_project_related_tasks_globally" class="col-md-4"><?php echo app_lang('support_only_project_related_tasks_globally_label'); ?></label>
+                                        <div class="col-md-8">
+                                            <?php
+                                            echo form_checkbox("support_only_project_related_tasks_globally", "1", get_setting("support_only_project_related_tasks_globally") ? true : false, "id='support_only_project_related_tasks_globally' class='form-check-input'");
+                                            ?>
                                         </div>
                                     </div>
                                 </div>
@@ -193,12 +219,14 @@
 
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#task-settings-form").appForm({
             isModal: false,
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 if (result.success) {
-                    appAlert.success(result.message, {duration: 10000});
+                    appAlert.success(result.message, {
+                        duration: 10000
+                    });
                 } else {
                     appAlert.error(result.message);
                 }
@@ -214,8 +242,8 @@
         });
 
         //show/hide recurring before area
-        $("#enable_recurring_option_for_tasks").select2().on("change", function () {
-            if ($(this).val() === "1") {
+        $("#enable_recurring_option_for_tasks").on("change", function() {
+            if ($(this).is(":checked")) {
                 $("#create_recurring_tasks_before_area").removeClass("hide");
             } else {
                 $("#create_recurring_tasks_before_area").addClass("hide");
@@ -224,7 +252,7 @@
 
         //change the add button attributes on changing tab panel
         var addButton = $("#task-status-button");
-        $(".nav-tabs li").click(function () {
+        $(".nav-tabs li").click(function() {
             var activeField = $(this).find("a").attr("data-bs-target");
 
             if (activeField === "#task-status-tab") { //task status

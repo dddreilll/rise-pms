@@ -57,9 +57,9 @@
                         <?php
                         if ($supported_until) {
                             if ($has_support) {
-                                echo $supported_until . "<span class='badge large bg-primary ml5'>Supported</span> ";
+                                echo $supported_until . "<span class='badge bg-primary ml5'>Supported</span> ";
                             } else {
-                                echo $supported_until . "<span class='badge large bg-danger ml5'>Support Expired</span> ";
+                                echo $supported_until . "<span class='badge bg-danger ml5'>Support Expired</span> ";
                                 echo "<br>To purchase support, please visit <a href='https://codecanyon.net/item/rise-ultimate-project-manager/15455641'>here</a>.";
                             }
                         }

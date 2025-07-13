@@ -28,6 +28,7 @@ class Team_model extends Crud_model {
     function get_members($team_ids = array()) {
         $team_table = $this->db->prefixTable('team');
         $team_ids = implode(",", $team_ids);
+        $team_ids = $this->_get_clean_value($team_ids);
 
         $sql = "SELECT $team_table.members
         FROM $team_table

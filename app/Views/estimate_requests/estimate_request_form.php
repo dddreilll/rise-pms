@@ -9,7 +9,7 @@
 
         <h3 id="estimate-form-title" class=" pl10 pr10"> <?php echo $model_info->title; ?></h3>
 
-        <div class="pl10 pr10"><?php echo nl2br($model_info->description ? process_images_from_content($model_info->description) : ""); ?></div>
+        <div class="pl10 pr10"><?php echo custom_nl2br($model_info->description ? process_images_from_content($model_info->description) : ""); ?></div>
 
         <?php if (isset($clients_dropdown) && $clients_dropdown) { ?>
             <div class="form-group mt15 mb15">

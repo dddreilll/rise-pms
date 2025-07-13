@@ -20,7 +20,7 @@ if (!function_exists('get_change_logs')) {
 
         $from_value = is_null($from_value) ? "" : $from_value;
         $to_value = is_null($to_value) ? "" : $to_value;
-        
+
         $changes = "";
 
         $ci = new App_Controller();
@@ -53,17 +53,8 @@ if (!function_exists('get_change_logs')) {
                     $changes = "<del>" . $from_value . "</del> <ins>" . $to_value . "</ins>";
                 }
             } else if (get_array_value($schema_info, "type") === "text") {
-               
-                $from_value = htmlspecialchars_decode(htmlentities($from_value));
-                $to_value = htmlspecialchars_decode(htmlentities($to_value));
-//                $from_value = mb_convert_encoding($from_value, 'HTML-ENTITIES', 'UTF-8');
-//                $to_value = mb_convert_encoding($to_value, 'HTML-ENTITIES', 'UTF-8');
-
-                require_once(APPPATH . "ThirdParty/php-htmldiff/vendor/autoload.php");
-                $htmlDiff = new \Caxy\HtmlDiff\HtmlDiff(nl2br($from_value), nl2br($to_value));
-                $changes = $htmlDiff->build();
-                $changes = is_null($changes) ? "" : $changes;
-                //$changes = mb_convert_encoding($changes, 'HTML-ENTITIES', 'UTF-8');
+                
+                $changes = get_html_diff($from_value, $to_value);
                 $changes = htmlspecialchars_decode(htmlentities($changes));
             } else if (get_array_value($schema_info, "type") === "foreign_key") {
                 $linked_model = get_array_value($schema_info, "linked_model");
@@ -150,10 +141,81 @@ if (!function_exists('get_change_logs')) {
             return false;
         }
     }
-
 }
 
+if (!function_exists('get_html_diff')) {
 
+    function get_html_diff($old_html, $new_html) {
+        // Ensure empty strings if the input is empty
+        $old_html = $old_html ? $old_html : "";
+        $new_html = $new_html ? $new_html : "";
+
+        $new_html = preg_replace('/(<\/(p|li|h1)>)(?=\S)/', '$1 ', $new_html);
+        $old_html = preg_replace('/(<\/(p|li|h1)>)(?=\S)/', '$1 ', $old_html);
+
+
+        // Strip HTML tags for comparison
+        $old_plain_text = strip_tags($old_html);
+        $new_plain_text = strip_tags($new_html);
+
+        // Split plain text into words
+        $old_words = preg_split('/\s+/', ($old_plain_text), -1, PREG_SPLIT_NO_EMPTY);
+        $new_words = preg_split('/\s+/', ($new_plain_text), -1, PREG_SPLIT_NO_EMPTY);
+
+        // Initialize final output and indexes
+        $final_output = '';
+        $old_index = 0;
+        $new_index = 0;
+
+        // Temporary variables to collect changes
+        $added_words = [];
+        $removed_words = [];
+
+        while ($old_index < count($old_words) || $new_index < count($new_words)) {
+            if ($old_index < count($old_words) && $new_index < count($new_words) && get_array_value($old_words, $old_index) === get_array_value($new_words, $new_index)) {
+                // Both texts are the same
+                // Output any collected changes before moving on
+                if (!empty($removed_words)) {
+                    $final_output .= '<del class="diffdel">' . implode(' ', $removed_words) . '</del> ';
+                    $removed_words = [];
+                }
+                if (!empty($added_words)) {
+                    $final_output .= '<ins class="diffins">' . implode(' ', $added_words) . '</ins> ';
+                    $added_words = [];
+                }
+                // Add common word to final output
+                $final_output .= htmlspecialchars(get_array_value($old_words, $old_index)) . ' ';
+                $old_index++;
+                $new_index++;
+            } else {
+                // If the words are different, check which one to process
+                if ($new_index < count($new_words) && ($old_index >= count($old_words) ||  get_array_value($new_words, $new_index) !== get_array_value($old_words, $old_index))) {
+                    // New word added
+                    $added_words[] = htmlspecialchars(get_array_value($new_words, $new_index));
+                    $new_index++;
+                }
+
+                if ($old_index < count($old_words) && ($new_index >= count($new_words) || get_array_value($old_words, $old_index) !== get_array_value($new_words, $new_index))) {
+                    // Old word removed
+                    $removed_words[] = htmlspecialchars(get_array_value($old_words, $old_index));
+                    $old_index++;
+                }
+            }
+        }
+
+        // Output any remaining collected changes
+        if (!empty($removed_words)) {
+            $final_output .= '<del class="diffdel">' . implode(' ', $removed_words) . '</del> ';
+        }
+
+        if (!empty($added_words)) {
+            $final_output .= '<ins class="diffins">' . implode(' ', $added_words) . '</span> ';
+        }
+
+        // Trim whitespace and return
+        return trim($final_output);
+    }
+}
 
 /**
  * get change logs of custom fields
@@ -202,7 +264,6 @@ if (!function_exists('get_change_logs_of_custom_fields')) {
             }
         }
     }
-
 }
 
 
@@ -257,7 +318,6 @@ if (!function_exists('get_logs_of_bitbucket_or_github_commit')) {
 
         return $changes_array;
     }
-
 }
 
 /*
@@ -298,5 +358,4 @@ if (!function_exists('get_change_logs_array')) {
 
         return $changes_array;
     }
-
 }

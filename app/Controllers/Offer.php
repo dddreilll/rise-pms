@@ -23,6 +23,10 @@ class Offer extends Security_Controller
 
         validate_numeric_value($proposal_id);
 
+        if (strlen($public_key) !== 10) {
+            return false;
+        }
+
         //check public key
         $proposal_info = $this->Proposals_model->get_one($proposal_id);
         if ($proposal_info->public_key !== $public_key) {
@@ -36,8 +40,11 @@ class Offer extends Security_Controller
             show_404();
         }
 
-        if ($proposal_info->status != "draft") {
-            $this->Proposals_model->update_proposal_preview_activity($proposal_id);
+        if (!isset($this->login_user->user_type) || (isset($this->login_user->user_type) && $this->login_user->user_type !== "staff")) {
+            if ($proposal_info->status != "draft") {
+                $this->Proposals_model->update_proposal_preview_activity($proposal_id);
+                log_notification("proposal_preview_opened", array("proposal_id" => $proposal_id), isset($this->login_user->id) ? $this->login_user->id : "999999996");
+            }
         }
 
         $view_data['proposal_preview'] = prepare_proposal_view($proposal_data);
@@ -45,6 +52,7 @@ class Offer extends Security_Controller
         $view_data['proposal_id'] = $proposal_id;
         $view_data['proposal_type'] = "public";
         $view_data['public_key'] = clean_data($public_key);
+        $view_data["has_pdf_access"] = $this->check_proposal_pdf_access_for_clients();
 
         return view("proposals/proposal_public_preview", $view_data);
     }
@@ -137,7 +145,8 @@ class Offer extends Security_Controller
     {
         $validation_array = array(
             "id" => "numeric|required",
-            "public_key" => "required"
+            "public_key" => "required",
+            "email" => "valid_email"
         );
 
         if (get_setting("add_signature_option_on_accepting_proposal")) {
@@ -180,8 +189,8 @@ class Offer extends Security_Controller
                 show_404();
             }
 
-            $meta_data["name"] = $name;
-            $meta_data["email"] = $email;
+            $meta_data["name"] = clean_data($name);
+            $meta_data["email"] = clean_data($email);
         } else {
             //from preview, should be logged in client contact
             $this->init_permission_checker("proposal");
@@ -208,6 +217,10 @@ class Offer extends Security_Controller
     {
         validate_numeric_value($proposal_id);
         if (!$proposal_id) {
+            show_404();
+        }
+
+        if(!$this->check_proposal_pdf_access_for_clients()){
             show_404();
         }
 

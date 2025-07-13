@@ -53,7 +53,7 @@
                         </div>
 
                         <div class="col-md-12 mb15">
-                            <?php echo $expense_info->description ? nl2br(link_it(process_images_from_content($expense_info->description))) : "-"; ?>
+                            <?php echo $expense_info->description ? custom_nl2br(link_it(process_images_from_content($expense_info->description))) : "-"; ?>
                         </div>
 
                         <?php if ($expense_info->category_title) { ?>

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -156,6 +158,8 @@ abstract class BaseHandler implements ImageHandlerInterface
 
     /**
      * Make the image resource object if needed
+     *
+     * @return void
      */
     abstract protected function ensureResource();
 
@@ -422,6 +426,8 @@ abstract class BaseHandler implements ImageHandlerInterface
 
     /**
      * Handler-specific method for overlaying text on an image.
+     *
+     * @return void
      */
     abstract protected function _text(string $text, array $options = []);
 
@@ -467,31 +473,16 @@ abstract class BaseHandler implements ImageHandlerInterface
     {
         $orientation = $this->getEXIF('Orientation', $silent);
 
-        switch ($orientation) {
-            case 2:
-                return $this->flip('horizontal');
-
-            case 3:
-                return $this->rotate(180);
-
-            case 4:
-                return $this->rotate(180)->flip('horizontal');
-
-            case 5:
-                return $this->rotate(270)->flip('horizontal');
-
-            case 6:
-                return $this->rotate(270);
-
-            case 7:
-                return $this->rotate(90)->flip('horizontal');
-
-            case 8:
-                return $this->rotate(90);
-
-            default:
-                return $this;
-        }
+        return match ($orientation) {
+            2       => $this->flip('horizontal'),
+            3       => $this->rotate(180),
+            4       => $this->rotate(180)->flip('horizontal'),
+            5       => $this->rotate(270)->flip('horizontal'),
+            6       => $this->rotate(270),
+            7       => $this->rotate(90)->flip('horizontal'),
+            8       => $this->rotate(90),
+            default => $this,
+        };
     }
 
     /**
@@ -545,8 +536,6 @@ abstract class BaseHandler implements ImageHandlerInterface
      *  - bottom
      *  - bottom-right
      *
-     * @param int $height
-     *
      * @return BaseHandler
      */
     public function fit(int $width, ?int $height = null, string $position = 'center')
@@ -557,12 +546,12 @@ abstract class BaseHandler implements ImageHandlerInterface
         [$cropWidth, $cropHeight] = $this->calcAspectRatio($width, $height, $origWidth, $origHeight);
 
         if ($height === null) {
-            $height = ceil(($width / $cropWidth) * $cropHeight);
+            $height = (int) ceil(($width / $cropWidth) * $cropHeight);
         }
 
         [$x, $y] = $this->calcCropCoords($cropWidth, $cropHeight, $origWidth, $origHeight, $position);
 
-        return $this->crop($cropWidth, $cropHeight, $x, $y)->resize($width, $height);
+        return $this->crop($cropWidth, $cropHeight, (int) $x, (int) $y)->resize($width, $height);
     }
 
     /**
@@ -689,6 +678,8 @@ abstract class BaseHandler implements ImageHandlerInterface
      *    $image->resize(100, 200, true)
      *          ->save($target);
      *
+     * @param non-empty-string|null $target
+     *
      * @return bool
      */
     abstract public function save(?string $target = null, int $quality = 90);
@@ -722,6 +713,8 @@ abstract class BaseHandler implements ImageHandlerInterface
      *
      * This function lets us re-proportion the width/height
      * if users choose to maintain the aspect ratio when resizing.
+     *
+     * @return void
      */
     protected function reproportion()
     {

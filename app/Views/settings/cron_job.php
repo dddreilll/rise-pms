@@ -23,7 +23,7 @@
                                 ?>
                             </div>
                         </div>
-                    </div>  
+                    </div>
                     <div class="form-group clearfix">
                         <div class="row">
                             <label for="last_cron_job_run" class=" col-md-2"><?php echo app_lang('last_cron_job_run'); ?></label>
@@ -43,11 +43,11 @@
                                     $status_class = "bg-danger";
                                 }
 
-                                echo "<span class='badge $status_class large'>" . $text . "</span>";
+                                echo "<span class='badge $status_class'>" . $text . "</span>";
                                 ?>
                             </div>
                         </div>
-                    </div> 
+                    </div>
                     <div class="form-group clearfix">
                         <div class="row">
                             <label for="recommended_execution_intervals" class=" col-md-2"><?php echo app_lang('recommended_execution_interval'); ?></label>
@@ -55,17 +55,21 @@
                                 Every 10 minutes
                             </div>
                         </div>
-                    </div> 
+                    </div>
                     <div class="form-group clearfix">
                         <div class="row">
-                            <label  class=" col-md-2">cPanel Cron Job Command *</label>
+                            <label class=" col-md-2">cPanel Cron Job Command *</label>
                             <div class=" col-md-10">
                                 <div>
                                     <?php echo "<pre>wget -q -O- " . get_uri("cron") . "</pre>"; ?>
                                 </div>
+
+                                <div class="">
+                                    <?php echo anchor(get_uri("cron"), app_lang("trigger_manually"), array("target" => "_blank", "class" => "btn btn-default mt15")); ?>
+                                </div>
                             </div>
                         </div>
-                    </div> 
+                    </div>
                 </div>
 
             </div>

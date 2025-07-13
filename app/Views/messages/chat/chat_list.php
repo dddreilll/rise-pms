@@ -19,13 +19,13 @@ if ($messages) {
         ?>
         <div class='js-message-row message-row <?php echo $status; ?>' data-id='<?php echo $message->id; ?>' data-index='<?php echo $message->id; ?>'>
             <div class="d-flex">
-                <div class='flex-shrink-0'>
+                <div class='flex-shrink-0 mt5'>
                     <span class='avatar avatar-xs'>
                         <img src='<?php echo get_avatar($message->user_image); ?>' />
                         <?php echo $online; ?>
                     </span>
                 </div>
-                <div class='w-100 ps-2'>
+                <div class='w-100 pl10'>
                     <div class='mb5'>
                         <strong><?php echo $message->user_name; ?></strong>
                         <span class='text-off float-end time'><?php echo format_to_relative_time($message->message_time); ?></span>

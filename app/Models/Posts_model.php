@@ -64,6 +64,8 @@ class Posts_model extends Crud_model {
         $now = get_current_utc_time("Y-m-d");
         $posts_table = $this->db->prefixTable('posts');
         
+        $allowed_member_ids = $this->_get_clean_value($allowed_member_ids);
+
         $where = "";
         if ($allowed_member_ids) {
             $where = " AND $posts_table.created_by IN($allowed_member_ids)";

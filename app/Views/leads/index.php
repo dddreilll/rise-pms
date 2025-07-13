@@ -6,15 +6,14 @@
 
         <div class="tab-title clearfix no-border">
             <div class="title-button-group">
-
-                <?php echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-outline-light", "title" => app_lang('manage_labels'), "data-post-type" => "client")); ?>
+                <?php echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-default", "title" => app_lang('manage_labels'), "data-post-type" => "client")); ?>
                 <?php echo modal_anchor(get_uri("leads/import_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang('import_leads'), array("class" => "btn btn-default", "title" => app_lang('import_leads'))); ?>
                 <?php echo modal_anchor(get_uri("leads/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_lead'), array("class" => "btn btn-default", "title" => app_lang('add_lead'))); ?>
             </div>
         </div>
     </ul>
 
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <div class="table-responsive">
             <table id="lead-table" class="display" cellspacing="0" width="100%">            
             </table>
@@ -31,18 +30,23 @@
     var ignoreSavedFilter = true;
     }
 
+    var batchUpdateUrl = "<?php echo_uri('leads/batch_update_modal_form'); ?>";
+    var batchDeleteUrl = "<?php echo_uri('leads/delete_selected_leads'); ?>";
+
     $("#lead-table").appTable({
     source: '<?php echo_uri("leads/list_data") ?>',
             serverSide: true,
             smartFilterIdentity: "all_leads_list", //a to z and _ only. should be unique to avoid conflicts
+            selectionHandler: {batchUpdateUrl: batchUpdateUrl, batchDeleteUrl: batchDeleteUrl},
             ignoreSavedFilter: ignoreSavedFilter,
             columns: [
             {title: "<?php echo app_lang("name") ?>", "class": "all", order_by: "company_name"},
             {title: "<?php echo app_lang("primary_contact") ?>", order_by: "primary_contact"},
+            {title: "<?php echo app_lang("phone") ?>"},
             {title: "<?php echo app_lang("owner") ?>", order_by: "owner_name"},
             {title: "<?php echo app_lang("labels") ?>"},
             {visible: false, searchable: false, order_by: "created_date"},
-            {title: "<?php echo app_lang("created_date") ?>", "iDataSort": 4, order_by: "created_date"},
+            {title: "<?php echo app_lang("created_date") ?>", "iDataSort": 5, order_by: "created_date"},
             {title: "<?php echo app_lang("status") ?>", order_by: "status"}
 <?php echo $custom_field_headers; ?>,
             {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
@@ -58,9 +62,9 @@
 
             <?php echo $custom_field_filters; ?>
             ],
-            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, showClearButton: true}],
-            printColumns: combineCustomFieldsColumns([0, 1, 2, 5, 6], '<?php echo $custom_field_headers; ?>'),
-            xlsColumns: combineCustomFieldsColumns([0, 1, 2, 5, 6], '<?php echo $custom_field_headers; ?>')
+            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, label: "<?php echo app_lang('created_date'); ?>", showClearButton: true}],
+            printColumns: combineCustomFieldsColumns([0, 1, 2, 3, 4, 6, 7], '<?php echo $custom_field_headers; ?>'),
+            xlsColumns: combineCustomFieldsColumns([0, 1, 2, 3, 4, 6, 7], '<?php echo $custom_field_headers; ?>')
     });
     }
     );

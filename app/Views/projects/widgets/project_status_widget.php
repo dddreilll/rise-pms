@@ -1,5 +1,5 @@
 <div class="box">
-    <div class="box-content border-end">
+    <div class="box-content b-r">
         <div class="card-body">
             <h1 class=""><?php echo $project_open; ?></h1>
             <span class="text-off uppercase"><?php echo app_lang("open_projects"); ?></span>

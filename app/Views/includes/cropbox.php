@@ -13,11 +13,11 @@ load_js(array(
                 </div>
             </div>
             <div class="modal-footer clearfix">
-                <button  id="image-zoomout-button" type="button" class="btn btn-default float-start mr10"><i data-feather="minus" class="icon-16"></i></button>
+                <button id="image-zoomout-button" type="button" class="btn btn-default float-start mr10"><i data-feather="minus" class="icon-16"></i></button>
                 <button id="image-zoomin-button" type="button" class="btn btn-default float-start"><i data-feather="plus" class="icon-16"></i></button>
 
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal"> <i data-feather="x" class="icon-16"></i> <?php echo app_lang("close"); ?></button>
-                <button id="image-crop-button" type="button" class="btn btn-primary" data-bs-dismiss="modal"> <i data-feather="check-circle" class="icon-16"></i> <?php echo app_lang("crop"); ?></button>
+                <button type="button" class="btn btn-default close-cropbox-modal"> <i data-feather="x" class="icon-16"></i> <?php echo app_lang("close"); ?></button>
+                <button id="image-crop-button" type="button" class="btn btn-primary close-cropbox-modal"> <i data-feather="check-circle" class="icon-16"></i> <?php echo app_lang("crop"); ?></button>
             </div>
         </div>
     </div>
@@ -25,21 +25,21 @@ load_js(array(
 
 
 <script type="text/javascript">
-    var options =
-            {
-                thumbBox: '.thumb-box',
-                spinner: '.spinner',
-                imgSrc: ''
-            };
+    var options = {
+        thumbBox: '.thumb-box',
+        spinner: '.spinner',
+        imgSrc: ''
+    };
     var cropper = $('.crop-box').cropbox(options);
+
     function showCropBox(element) {
         var $selector = $(element),
-                file = element.files ? element.files[0] : "";
+            file = element.files ? element.files[0] : "";
         if (file) {
             var height = $selector.attr("data-height") || 200,
-                    width = $selector.attr("data-width") || 200,
-                    previewCntainer = $selector.attr('data-preview-container'),
-                    inputField = $selector.attr('data-input-field');
+                width = $selector.attr("data-width") || 200,
+                previewCntainer = $selector.attr('data-preview-container'),
+                inputField = $selector.attr('data-input-field');
             $('#image-crop-button').attr('data-preview-container', previewCntainer);
             $('#image-crop-button').attr('data-input-field', inputField);
             appLoader.show();
@@ -55,16 +55,43 @@ load_js(array(
             }
 
             if (typeof FileReader == 'function') {
-                $(options.thumbBox).css({"width": width + "px", "height": height + "px", "margin-top": (height / 2) * -1 + "px", "margin-left": (width / 2) * -1 + "px"});
+                $(options.thumbBox).css({
+                    "width": width + "px",
+                    "height": height + "px",
+                    "margin-top": (height / 2) * -1 + "px",
+                    "margin-left": (width / 2) * -1 + "px"
+                });
                 var reader = new FileReader();
-                reader.onload = function (e) {
+                reader.onload = function(e) {
                     options.imgSrc = e.target.result;
                     cropper = $('.crop-box').cropbox(options);
                 };
                 reader.readAsDataURL(file);
-                setTimeout(function () {
-                    $("#cropModal").modal('toggle');
-                    setTimeout(function () {
+
+                if (Number(width) > 500) {
+                    $("#cropModal").find(".modal-dialog").addClass("modal-lg");
+                }
+
+                if (Number(height) > 400) {
+                    $("#cropModal").find(".crop-box").css("height", Number(height) + 40 + "px");
+                }
+
+                if (Number(height) > 500) {
+                    $("#cropModal").find(".modal-body").css("height", height + "px");
+                }
+
+                setTimeout(function() {
+                    var cropModal = new bootstrap.Modal($('#cropModal')[0]);
+                    cropModal.show();
+
+                    var modalBackdrop = $('.modal-backdrop').last();
+                    if (modalBackdrop.length) {
+                        modalBackdrop.css('z-index', '1056');
+                    }
+
+                    $('#cropModal').css('z-index', '1060');
+
+                    setTimeout(function() {
                         cropper.zoomIn();
                         cropper.zoomOut();
                         appLoader.hide();
@@ -77,19 +104,24 @@ load_js(array(
         }
     }
 
-    $(document).ready(function () {
-        $('#image-crop-button').on('click', function () {
+    $(document).ready(function() {
+        $('#image-crop-button').on('click', function() {
             var img = cropper.getDataURL(),
-                    previewCntainer = $(this).attr('data-preview-container'),
-                    inputField = $(this).attr('data-input-field');
+                previewCntainer = $(this).attr('data-preview-container'),
+                inputField = $(this).attr('data-input-field');
             $(previewCntainer).attr("src", img);
             $(inputField).val(img).trigger("change");
         });
-        $('#image-zoomin-button').on('click', function () {
+        $('#image-zoomin-button').on('click', function() {
             cropper.zoomIn();
         });
-        $('#image-zoomout-button').on('click', function () {
+        $('#image-zoomout-button').on('click', function() {
             cropper.zoomOut();
+        });
+
+        $('.close-cropbox-modal').on('click', function() {
+            var cropModalInstance = bootstrap.Modal.getInstance($('#cropModal')[0]);
+            cropModalInstance.hide();
         });
     });
 </script>

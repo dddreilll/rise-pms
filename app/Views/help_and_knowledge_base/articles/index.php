@@ -29,7 +29,7 @@
                 {name: "category_id", class: "w200", options: <?php echo $categories_dropdown; ?>}
             ],
             columns: [
-                {title: "<?php echo app_lang('title') ?>"},
+                {title: "<?php echo app_lang('title') ?>", "class": "all"},
                 {title: "<?php echo app_lang('category') ?>", "class": "w30p"},
                 {title: "<?php echo app_lang('status') ?>", "class": "w10p"},
                 {title: "<?php echo app_lang('total_views') ?>", "class": "w10p"},

@@ -14,7 +14,7 @@
             <div class="proposal-preview">
                 <div class="proposal-preview-container pt0 pb0">
 
-                    <div class="clearfix pl5 pr5 pb10">
+                    <div class="clearfix pl5 pr5 pb10 preview-editor-button-group">
                         <?php echo modal_anchor(get_uri("proposal_templates/insert_template_modal_form"), "<i data-feather='rotate-ccw' class='icon-16'></i> " . app_lang('change_template'), array("class" => "btn btn-default float-start", "title" => app_lang('change_template'))); ?>
                         <button type="button" class="btn btn-primary ml10 float-end" id="proposal-save-and-show-btn"><span data-feather='check-circle' class="icon-16"></span> <?php echo app_lang('save_and_show'); ?></button>
                         <button type="submit" class="btn btn-primary float-end"><span data-feather='check-circle' class="icon-16"></span> <?php echo app_lang('save'); ?></button>
@@ -27,7 +27,10 @@
                             "name" => "view",
                             "value" => process_images_from_content($proposal_info->content, false),
                             "placeholder" => app_lang('view'),
-                            "class" => "form-control"
+                            "class" => "form-control",
+                            "data-toolbar" => "pdf_friendly_toolbar",
+                            "data-height" => 600,
+                            "data-encode_ajax_post_data" => "1"
                         ));
                         ?>
                     </div>
@@ -51,34 +54,12 @@
     $(document).ready(function () {
         $("#proposal-editor-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                var view = encodeAjaxPostData(getWYSIWYGEditorHTML("#proposal-view"));
-                $.each(data, function (index, obj) {
-                    if (obj.name === "view") {
-                        data[index]["value"] = view;
-                    }
-                });
-            },
             onSuccess: function (response) {
                 appAlert.success(response.message, {duration: 10000});
             }
         });
 
-        initWYSIWYGEditor("#proposal-view", {
-            height: 600,
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'clear']],
-                ['fontname', ['fontname']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['hr', 'link', 'picture', 'video']],
-                ['view', ['fullscreen', 'codeview']]
-            ],
-            lang: "<?php echo app_lang('language_locale_long'); ?>"
-        });
+        initWYSIWYGEditor("#proposal-view");
 
         //insert proposal template
         $("body").on("click", "#proposal-template-table tr", function () {
@@ -91,8 +72,8 @@
                 dataType: 'json',
                 success: function (result) {
                     if (result.success) {
-                        $("#proposal-view").summernote("code", result.template);
-
+                        setWYSIWYGEditorHTML("#proposal-view", result.template);
+ 
                         //close the modal
                         $("#close-template-modal-btn").trigger("click");
                     } else {

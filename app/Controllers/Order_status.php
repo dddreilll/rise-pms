@@ -51,7 +51,7 @@ class Order_status extends Security_Controller {
     }
 
     //update the sort value for the fields
-    function update_field_sort_values($id = 0) {
+    function update_field_sort_values() {
 
         $sort_values = $this->request->getPost("sort_values");
         if ($sort_values) {
@@ -65,7 +65,10 @@ class Order_status extends Security_Controller {
                 $sort_item = explode("-", $value); //extract id and sort value
 
                 $id = get_array_value($sort_item, 0);
+                validate_numeric_value($id);
+
                 $sort = get_array_value($sort_item, 1);
+                validate_numeric_value($sort);
 
                 $data = array("sort" => $sort);
                 $this->Order_status_model->ci_save($data, $id);

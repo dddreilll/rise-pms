@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -24,7 +26,7 @@ interface PreparedQueryInterface
      * Takes a new set of data and runs it against the currently
      * prepared query. Upon success, will return a Results object.
      *
-     * @return bool|ResultInterface
+     * @return         bool|ResultInterface
      * @phpstan-return bool|ResultInterface<TConnection, TResult>
      */
     public function execute(...$data);

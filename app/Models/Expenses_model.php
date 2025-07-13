@@ -130,6 +130,9 @@ class Expenses_model extends Crud_model {
         $expenses_table = $this->db->prefixTable('expenses');
         $taxes_table = $this->db->prefixTable('taxes');
 
+        $year = $this->_get_clean_value($year);
+        $project_id = $this->_get_clean_value($project_id);
+
         $where = "";
         if ($project_id) {
             $where = " AND $expenses_table.project_id=$project_id";
@@ -148,6 +151,7 @@ class Expenses_model extends Crud_model {
     //get the recurring expenses which are ready to renew as on a given date
     function get_renewable_expenses($date) {
         $expenses_table = $this->db->prefixTable('expenses');
+        $date = $this->_get_clean_value($date);
 
         $sql = "SELECT * FROM $expenses_table
                         WHERE $expenses_table.deleted=0 AND $expenses_table.recurring=1

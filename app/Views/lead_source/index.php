@@ -1,5 +1,5 @@
 <div class="table-responsive">
-    <table id="lead-source-table" class="display no-thead b-t b-b-only no-hover" cellspacing="0" width="100%">         
+    <table id="lead-source-table" class="display no-thead b-b-only no-hover" cellspacing="0" width="100%">         
     </table>
 </div>
 

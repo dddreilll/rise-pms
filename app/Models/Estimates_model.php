@@ -99,6 +99,7 @@ class Estimates_model extends Crud_model {
         $estimates_table = $this->db->prefixTable('estimates');
         $clients_table = $this->db->prefixTable('clients');
         $taxes_table = $this->db->prefixTable('taxes');
+        $estimate_id = $this->_get_clean_value($estimate_id);
 
         $item_sql = "SELECT SUM($estimate_items_table.total) AS estimate_subtotal
         FROM $estimate_items_table
@@ -169,6 +170,7 @@ class Estimates_model extends Crud_model {
 
     //save initial number of estimate
     function save_initial_number_of_estimate($value) {
+        $value = $this->_get_clean_value($value);
         $estimates_table = $this->db->prefixTable('estimates');
 
         $sql = "ALTER TABLE $estimates_table AUTO_INCREMENT=$value;";

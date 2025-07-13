@@ -1,4 +1,4 @@
-<div class="clearfix default-bg">
+<div class="clearfix default-bg details-view-container">
     <div class="row">
         <div class="col-md-9 d-flex align-items-stretch">
             <div class="card p15 w-100">
@@ -42,7 +42,7 @@
 
                         <div class="clearfix">
                             <div class="float-start mt20 ml15">
-                                <?php echo modal_anchor(get_uri("store/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item'), "data-post-order_id" => $order_info->id)); ?>
+                                <?php echo modal_anchor(get_uri("store/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-primary text-white", "title" => app_lang('add_item'), "data-post-order_id" => $order_info->id)); ?>
                             </div>
                             <div class="float-end pr15" id="order-total-section">
                                 <?php echo view("orders/order_total_section"); ?>
@@ -64,7 +64,7 @@
                             </div>
                         <?php } ?>
 
-                        <p class="b-t b-info pt-3 m15"><?php echo nl2br($order_info->note ? process_images_from_content($order_info->note) : ""); ?></p>
+                        <p class="b-t b-info pt-3 m15"><?php echo custom_nl2br($order_info->note ? process_images_from_content($order_info->note) : ""); ?></p>
                     </div>
                 </div>
             </div>
@@ -91,10 +91,10 @@
             displayLength: 100,
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("item") ?> ", sortable: false},
+                {title: "<?php echo app_lang("item") ?> ", sortable: false, "class": "all"},
                 {title: "<?php echo app_lang("quantity") ?>", "class": "text-right w15p", sortable: false},
                 {title: "<?php echo app_lang("rate") ?>", "class": "text-right w15p", sortable: false},
-                {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p", sortable: false},
+                {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p all", sortable: false},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100", sortable: false}
             ],
 

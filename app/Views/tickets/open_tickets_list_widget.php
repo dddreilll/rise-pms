@@ -1,5 +1,5 @@
 <div class="card bg-white">
-    <div class="card-header no-border">
+    <div class="card-header">
         <i data-feather="life-buoy" class="icon-16"></i>&nbsp; <?php echo app_lang('open_tickets'); ?>
     </div>
 
@@ -32,15 +32,17 @@
             responsive: false, //hide responsive (+) icon
             columns: [
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("ticket_id") ?>', "class": idColumnClass},
-                {title: '<?php echo app_lang("title") ?>', "class": titleColumnClass},
+                {visible: false, searchable: false},
+                {title: "<?php echo app_lang("ticket_id") ?>", "class": idColumnClass},
+                {title: "<?php echo app_lang("title") ?>", "class": titleColumnClass},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("ticket_type") ?>', "iDataSort": 3, "class": "w70", visible: showOption},
-                {title: '<?php echo app_lang("assigned_to") ?>', "iDataSort": 5, "class": "w70", visible: showOption},
+                {title: "<?php echo app_lang("ticket_type") ?>", "iDataSort": 3, "class": "w70", visible: showOption},
+                {title: "<?php echo app_lang("labels") ?>", "class": "w70", visible: showOption},
+                {title: "<?php echo app_lang("assigned_to") ?>", "iDataSort": 5, "class": "w70", visible: showOption},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("last_activity") ?>', "iDataSort": 6, "class": "w70", visible: showOption},
-                {title: '<?php echo app_lang("status") ?>', "class": "w70", visible: showOption},
+                {title: "<?php echo app_lang("last_activity") ?>", "iDataSort": 6, "class": "w70", visible: showOption},
+                {title: "<?php echo app_lang("status") ?>", "class": "w70", visible: showOption},
                 {visible: false, searchable: false}
             ],
             onInitComplete: function () {

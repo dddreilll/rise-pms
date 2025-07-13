@@ -3,7 +3,7 @@
     <head>
         <?php echo view('includes/head'); ?>
     </head>
-    <body>
+    <body class="public-view signup-page">
         <?php
         if (get_setting("show_background_image_in_signin_page") === "yes") {
             $background_url = get_file_from_setting("signin_page_background");
@@ -209,11 +209,9 @@
                                 <?php } ?>
                             <?php } ?>
 
-                            <?php if ($signup_type !== "verify_email") { ?>
-                                <div class="col-md-12">
-                                    <?php echo view("signin/re_captcha"); ?>
-                                </div>
-                            <?php } ?>
+                            <div class="col-md-12">
+                                <?php echo view("signin/re_captcha"); ?>
+                            </div>
 
                             <div class="form-group">
                                 <div class="col-md-12">

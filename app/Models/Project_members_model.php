@@ -74,10 +74,13 @@ class Project_members_model extends Crud_model {
         $project_members_table = $this->db->prefixTable('project_members');
         $users_table = $this->db->prefixTable('users');
 
+        $project_id = $this->_get_clean_value($project_id);
+
         $where = " AND $project_members_table.project_id=$project_id";
 
         if (is_array($user_ids) && count($user_ids)) {
             $users_list = join(",", $user_ids);
+            $users_list = $this->_get_clean_value($users_list);
             $where .= " AND $users_table.id IN($users_list)";
         }
 
@@ -113,6 +116,7 @@ class Project_members_model extends Crud_model {
     function get_rest_team_members_for_a_project($project_id = 0) {
         $project_members_table = $this->db->prefixTable('project_members');
         $users_table = $this->db->prefixTable('users');
+        $project_id = $this->_get_clean_value($project_id);
 
         $sql = "SELECT $users_table.id, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS member_name
         FROM $users_table
@@ -127,6 +131,7 @@ class Project_members_model extends Crud_model {
         $project_members_table = $this->db->prefixTable('project_members');
         $users_table = $this->db->prefixTable('users');
         $projects_table = $this->db->prefixTable('projects');
+        $project_id = $this->_get_clean_value($project_id);
 
         $sql = "SELECT $users_table.id, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS contact_name
         FROM $users_table

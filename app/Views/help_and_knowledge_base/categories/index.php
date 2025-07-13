@@ -17,7 +17,7 @@
         $("#category-table").appTable({
             source: '<?php echo_uri("help/categories_list_data/" . $type) ?>',
             columns: [
-                {title: '<?php echo app_lang("title"); ?>'},
+                {title: '<?php echo app_lang("title"); ?>', "class": "all"},
                 {title: '<?php echo app_lang("description"); ?>'},
                 {title: '<?php echo app_lang("status"); ?>'},
                 {title: '<?php echo app_lang("sort"); ?>'},

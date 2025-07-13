@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -20,6 +22,8 @@ use SplFileInfo;
 
 /**
  * Wrapper for PHP's built-in SplFileInfo, with goodies.
+ *
+ * @see \CodeIgniter\Files\FileTest
  */
 class File extends SplFileInfo
 {
@@ -55,7 +59,8 @@ class File extends SplFileInfo
      *
      * Implementations SHOULD return the value stored in the "size" key of
      * the file in the $_FILES array if available, as PHP calculates this based
-     * on the actual size transmitted.
+     * on the actual size transmitted. A RuntimeException will be thrown if the file
+     * does not exist or an error occurs.
      *
      * @return false|int The file size in bytes, or false on failure
      */
@@ -72,16 +77,11 @@ class File extends SplFileInfo
      */
     public function getSizeByUnit(string $unit = 'b')
     {
-        switch (strtolower($unit)) {
-            case 'kb':
-                return number_format($this->getSize() / 1024, 3);
-
-            case 'mb':
-                return number_format(($this->getSize() / 1024) / 1024, 3);
-
-            default:
-                return $this->getSize();
-        }
+        return match (strtolower($unit)) {
+            'kb'    => number_format($this->getSize() / 1024, 3),
+            'mb'    => number_format(($this->getSize() / 1024) / 1024, 3),
+            default => $this->getSize(),
+        };
     }
 
     /**
@@ -138,7 +138,7 @@ class File extends SplFileInfo
     public function move(string $targetPath, ?string $name = null, bool $overwrite = false)
     {
         $targetPath = rtrim($targetPath, '/') . '/';
-        $name ??= $this->getBaseName();
+        $name ??= $this->getBasename();
         $destination = $overwrite ? $targetPath . $name : $this->getDestination($targetPath . $name);
 
         $oldName = $this->getRealPath() ?: $this->__toString();
@@ -171,7 +171,7 @@ class File extends SplFileInfo
             $info      = pathinfo($destination);
             $extension = isset($info['extension']) ? '.' . $info['extension'] : '';
 
-            if (strpos($info['filename'], $delimiter) !== false) {
+            if (str_contains($info['filename'], $delimiter)) {
                 $parts = explode($delimiter, $info['filename']);
 
                 if (is_numeric(end($parts))) {

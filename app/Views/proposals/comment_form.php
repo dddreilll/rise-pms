@@ -11,7 +11,7 @@
         <?php echo form_open(get_uri("proposals/save_comment"), array("id" => "comment-form", "class" => "general-form", "role" => "form")); ?>
         <div class="d-flex">
             <div class="flex-shrink-0">
-                <div class="avatar avatar-sm mr15">
+                <div class="avatar avatar-sm hidden-xs mr15">
                     <img src="<?php echo get_avatar($login_user->image); ?>" alt="..." />
                 </div>
             </div>

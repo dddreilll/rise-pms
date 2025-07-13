@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -25,13 +27,14 @@ use IteratorAggregate;
  * filtering, and ordering them.
  *
  * @template-implements IteratorAggregate<int, File>
+ * @see \CodeIgniter\Files\FileCollectionTest
  */
 class FileCollection implements Countable, IteratorAggregate
 {
     /**
      * The current list of file paths.
      *
-     * @var string[]
+     * @var list<string>
      */
     protected $files = [];
 
@@ -74,24 +77,24 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Removes files that are not part of the given directory (recursive).
      *
-     * @param string[] $files
+     * @param list<string> $files
      *
-     * @return string[]
+     * @return list<string>
      */
     final protected static function filterFiles(array $files, string $directory): array
     {
         $directory = self::resolveDirectory($directory);
 
-        return array_filter($files, static fn (string $value): bool => strpos($value, $directory) === 0);
+        return array_filter($files, static fn (string $value): bool => str_starts_with($value, $directory));
     }
 
     /**
      * Returns any files whose `basename` matches the given pattern.
      *
-     * @param string[] $files
-     * @param string   $pattern Regex or pseudo-regex string
+     * @param list<string> $files
+     * @param string       $pattern Regex or pseudo-regex string
      *
-     * @return string[]
+     * @return list<string>
      */
     final protected static function matchFiles(array $files, string $pattern): array
     {
@@ -102,10 +105,10 @@ class FileCollection implements Countable, IteratorAggregate
                 ['\#', '\.', '.*', '.'],
                 $pattern
             );
-            $pattern = "#{$pattern}#";
+            $pattern = "#\\A{$pattern}\\z#";
         }
 
-        return array_filter($files, static fn ($value) => (bool) preg_match($pattern, basename($value)));
+        return array_filter($files, static fn ($value): bool => (bool) preg_match($pattern, basename($value)));
     }
 
     // --------------------------------------------------------------------
@@ -115,7 +118,7 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Loads the Filesystem helper and adds any initial files.
      *
-     * @param string[] $files
+     * @param list<string> $files
      */
     public function __construct(array $files = [])
     {
@@ -135,7 +138,7 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Optimizes and returns the current file list.
      *
-     * @return string[]
+     * @return list<string>
      */
     public function get(): array
     {
@@ -149,7 +152,7 @@ class FileCollection implements Countable, IteratorAggregate
      * Sets the file list directly, files are still subject to verification.
      * This works as a "reset" method with [].
      *
-     * @param string[] $files The new file list to use
+     * @param list<string> $files The new file list to use
      *
      * @return $this
      */
@@ -163,7 +166,7 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Adds an array/single file or directory to the list.
      *
-     * @param string|string[] $paths
+     * @param list<string>|string $paths
      *
      * @return $this
      */
@@ -179,7 +182,7 @@ class FileCollection implements Countable, IteratorAggregate
             try {
                 // Test for a directory
                 self::resolveDirectory($path);
-            } catch (FileException $e) {
+            } catch (FileException) {
                 $this->addFile($path);
 
                 continue;
@@ -198,7 +201,7 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Verifies and adds files to the list.
      *
-     * @param string[] $files
+     * @param list<string> $files
      *
      * @return $this
      */
@@ -226,7 +229,7 @@ class FileCollection implements Countable, IteratorAggregate
     /**
      * Removes files from the list.
      *
-     * @param string[] $files
+     * @param list<string> $files
      *
      * @return $this
      */
@@ -255,7 +258,7 @@ class FileCollection implements Countable, IteratorAggregate
      * Verifies and adds files from each
      * directory to the list.
      *
-     * @param string[] $directories
+     * @param list<string> $directories
      *
      * @return $this
      */

@@ -2,7 +2,14 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Excel_import;
+
 class Leaves extends Security_Controller {
+
+    private $users_id_by_name = array();
+    private $leave_types_id_by_title = array();
+
+    use Excel_import;
 
     function __construct() {
         parent::__construct();
@@ -39,6 +46,7 @@ class Leaves extends Security_Controller {
     //load assign leave modal 
 
     function assign_leave_modal_form($applicant_id = 0) {
+        validate_numeric_value($applicant_id);
 
         if ($applicant_id) {
             $view_data['team_members_info'] = $this->Users_model->get_one($applicant_id);
@@ -70,6 +78,8 @@ class Leaves extends Security_Controller {
     function assign_leave() {
         $leave_data = $this->_prepare_leave_form_data();
         $applicant_id = $this->request->getPost('applicant_id');
+        validate_numeric_value($applicant_id);
+
         $leave_data['applicant_id'] = $applicant_id;
         $leave_data['created_by'] = $this->login_user->id;
         $leave_data['checked_by'] = $this->login_user->id;
@@ -523,10 +533,53 @@ class Leaves extends Security_Controller {
         }
     }
 
-    function import_leaves_modal_form() {
-        $this->access_only_allowed_members();
+    private function _validate_excel_import_access() {
+        return ($this->access_only_allowed_members());
+    }
 
-        return $this->template->view("leaves/import_leaves_modal_form");
+    private function _get_controller_slag() {
+        return "leaves";
+    }
+
+    private function _get_custom_field_context() {
+        return "leaves";
+    }
+
+    private function _get_headers_for_import() {
+        $this->_init_required_data_before_starting_import();
+
+        return array(
+            array("name" => "applicant", "custom_validation" => function ($applicant) {
+                //check the user is exist or not
+                if ($applicant) {
+                    $user_id = get_array_value($this->users_id_by_name, trim($applicant));
+                    if (!$user_id) {
+                        return array("error" => sprintf(app_lang("import_not_exists_error_message"), app_lang("user")));
+                    }
+                } else {
+                    return array("error" => sprintf(app_lang("import_error_field_required"), app_lang("applicant")));
+                }
+            }),
+            array("name" => "leave_type", "required" => true, "required_message" => sprintf(app_lang("import_error_field_required"), app_lang("leave_type"))),
+            array("name" => "start_date", "required" => true, "required_message" => app_lang("import_date_error_message"), "custom_validation" => function ($start_date) {
+                if (!$this->_check_valid_date($start_date)) {
+                    return array("error" => app_lang("import_date_error_message"));
+                }
+            }),
+            array("name" => "end_date", "required" => true, "required_message" => app_lang("import_date_error_message"), "custom_validation" => function ($start_date) {
+                if (!$this->_check_valid_date($start_date)) {
+                    return array("error" => app_lang("import_date_error_message"));
+                }
+            }),
+            array("name" => "total_hours", "required" => true, "required_message" => sprintf(app_lang("import_error_field_required"), app_lang("total_hours"))),
+            array("name" => "total_days", "required" => true, "required_message" => sprintf(app_lang("import_error_field_required"), app_lang("total_days"))),
+            array("name" => "reason", "required" => true, "required_message" => sprintf(app_lang("import_error_field_required"), app_lang("reason"))),
+            array("name" => "status", "required" => true, "required_message" => sprintf(app_lang("import_error_field_required"), app_lang("status")), "custom_validation" => function ($status) {
+                if ($status && !in_array(strtolower($status), array("pending", "approved", "rejected", "canceled"))) {
+                    return array("error" => sprintf(app_lang("import_leave_status_error_message"), $status) . ".");
+                }
+            })
+        );
     }
 
     function download_sample_excel_file() {
@@ -534,317 +587,75 @@ class Leaves extends Security_Controller {
         return $this->download_app_files(get_setting("system_file_path"), serialize(array(array("file_name" => "import-leaves-sample.xlsx"))));
     }
 
-    function validate_import_leaves_file() {
-        $this->access_only_allowed_members();
-
-        $file_name = $this->request->getPost("file_name");
-        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-        if (!is_valid_file_to_upload($file_name)) {
-            echo json_encode(array("success" => false, 'message' => app_lang('invalid_file_type')));
-            exit();
+    private function _init_required_data_before_starting_import() {
+        $users = $this->Users_model->get_team_members_id_and_name()->getResult();
+        $users_id_by_name = array();
+        foreach ($users as $user) {
+            $users_id_by_name[$user->user_name] = $user->id;
         }
 
-        if ($file_ext == "xlsx") {
-            echo json_encode(array("success" => true));
-        } else {
-            echo json_encode(array("success" => false, 'message' => app_lang('please_upload_a_excel_file') . " (.xlsx)"));
+        $leave_types = $this->Leave_types_model->get_details()->getResult();
+        $leave_types_id_by_title = array();
+        foreach ($leave_types as $leave_type) {
+            $leave_types_id_by_title[$leave_type->title] = $leave_type->id;
         }
+
+        $this->users_id_by_name = $users_id_by_name;
+        $this->leave_types_id_by_title = $leave_types_id_by_title;
     }
 
-    function save_leave_from_excel_file() {
-        $this->access_only_allowed_members();
-
-        if (!$this->validate_import_leaves_file_data(true)) {
-            echo json_encode(array('success' => false, 'message' => app_lang('error_occurred')));
-        }
-
-        $file_name = $this->request->getPost('file_name');
-        require_once(APPPATH . "ThirdParty/PHPOffice-PhpSpreadsheet/vendor/autoload.php");
-
-        $temp_file_path = get_setting("temp_file_path");
-        $excel_file = \PhpOffice\PhpSpreadsheet\IOFactory::load($temp_file_path . $file_name);
-        $excel_file = $excel_file->getActiveSheet()->toArray();
-        $allowed_headers = $this->_get_allowed_headers();
+    private function _save_a_row_of_excel_data($row_data) {
         $now = get_current_utc_time();
 
-        foreach ($excel_file as $key => $value) { //rows
-            if ($key === 0) { //first line is headers, continue to the next loop
-                continue;
-            }
+        $leave_data_array = $this->_prepare_leave_data($row_data);
+        $leave_data = get_array_value($leave_data_array, "leave_data");
 
-            $leave_data_array = $this->_prepare_leave_data($value, $allowed_headers);
-            $leave_data = get_array_value($leave_data_array, "leave_data");
-
-            //couldn't prepare valid data
-            if (!($leave_data && count($leave_data))) {
-                continue;
-            }
-
-            $leave_data["created_at"] = $now;
-            $leave_data["created_by"] = $this->login_user->id;
-
-            //save leave data
-            $leave_save_id = $this->Leave_applications_model->ci_save($leave_data);
-            if (!$leave_save_id) {
-                continue;
-            }
-        }
-
-        delete_file_from_directory($temp_file_path . $file_name); //delete temp file
-
-        echo json_encode(array('success' => true, 'message' => app_lang("record_saved")));
-    }
-
-    private function _get_applicant_id($applicant = "") {
-        $applicant = trim($applicant);
-        if (!$applicant) {
+        //couldn't prepare valid data
+        if (!($leave_data && count($leave_data) > 1)) {
             return false;
         }
 
-        $existing_user = $this->Users_model->get_user_from_full_name($applicant, "staff");
-        if ($existing_user) {
-            return $existing_user->id;
-        } else {
+        //found information about leave, add some additional info
+        $leave_data["created_at"] = $now;
+        $leave_data["created_by"] = $this->login_user->id;
+
+        //save leave data
+        $leave_save_id = $this->Leave_applications_model->ci_save($leave_data);
+        if (!$leave_save_id) {
             return false;
         }
     }
 
-    private function _get_leave_type_id($leave_type = "") {
-        if (!$leave_type) {
-            return false;
-        }
+    private function _prepare_leave_data($row_data) {
 
-        $existing_leave_type = $this->Leave_types_model->get_one_where(array("title" => $leave_type, "deleted" => 0));
-        if ($existing_leave_type->id) {
-            //leave leave_type exists, add the leave_type id
-            return $existing_leave_type->id;
-        } else {
-            //leave leave_type doesn't exists, create a new one and add leave_type id
-            $leave_type_data = array("title" => $leave_type, "color" => "#83c340");
-            return $this->Leave_types_model->ci_save($leave_type_data);
-        }
-    }
-
-    private function _get_allowed_headers() {
-        return array(
-            "applicant",
-            "leave_type",
-            "start_date",
-            "end_date",
-            "total_hours",
-            "total_days",
-            "reason",
-            "status"
-        );
-    }
-
-    private function _store_headers_position($headers_row = array()) {
-        $allowed_headers = $this->_get_allowed_headers();
-
-        //check if all headers are correct and on the right position
-        $final_headers = array();
-        foreach ($headers_row as $key => $header) {
-            if (!$header) {
-                continue;
-            }
-
-            $key_value = str_replace(' ', '_', strtolower(trim($header, " ")));
-            $header_on_this_position = get_array_value($allowed_headers, $key);
-            $header_array = array("key_value" => $header_on_this_position, "value" => $header);
-
-            if ($header_on_this_position == $key_value) {
-                //allowed headers
-                //the required headers should be on the correct positions
-                //pushed header at last of this loop
-            } else {
-                //invalid header, flag as red
-                $header_array["has_error"] = true;
-            }
-
-            if ($key_value) {
-                array_push($final_headers, $header_array);
-            }
-        }
-
-        return $final_headers;
-    }
-
-    function validate_import_leaves_file_data($check_on_submit = false) {
-        $this->access_only_allowed_members();
-
-        $table_data = "";
-        $error_message = "";
-        $headers = array();
-        $got_error_header = false; //we've to check the valid headers first, and a single header at a time
-        $got_error_table_data = false;
-
-        $file_name = $this->request->getPost("file_name");
-
-        require_once(APPPATH . "ThirdParty/PHPOffice-PhpSpreadsheet/vendor/autoload.php");
-
-        $temp_file_path = get_setting("temp_file_path");
-        $excel_file = \PhpOffice\PhpSpreadsheet\IOFactory::load($temp_file_path . $file_name);
-        $excel_file = $excel_file->getActiveSheet()->toArray();
-
-        $table_data .= '<table class="table table-responsive table-bordered table-hover" style="width: 100%; color: #444;">';
-
-        $table_data_header_array = array();
-        $table_data_body_array = array();
-
-        foreach ($excel_file as $row_key => $value) {
-            if ($row_key == 0) { //validate headers
-                $headers = $this->_store_headers_position($value);
-
-                foreach ($headers as $row_data) {
-                    $has_error_class = false;
-                    if (get_array_value($row_data, "has_error") && !$got_error_header) {
-                        $has_error_class = true;
-                        $got_error_header = true;
-
-                        $error_message = sprintf(app_lang("import_client_error_header"), app_lang(get_array_value($row_data, "key_value")));
-                    }
-
-                    array_push($table_data_header_array, array("has_error_class" => $has_error_class, "value" => get_array_value($row_data, "value")));
-                }
-            } else { //validate data
-                if (!array_filter($value)) {
-                    continue;
-                }
-
-                $error_message_on_this_row = "<ol class='pl15'>";
-
-                foreach ($value as $key => $row_data) {
-                    $has_error_class = false;
-
-                    if (!$got_error_header) {
-                        $row_data_validation = $this->_row_data_validation_and_get_error_message($key, $row_data);
-                        if ($row_data_validation) {
-                            $has_error_class = true;
-                            $error_message_on_this_row .= "<li>" . $row_data_validation . "</li>";
-                            $got_error_table_data = true;
-                        }
-                    }
-
-                    if (count($headers) > $key) {
-                        $table_data_body_array[$row_key][] = array("has_error_class" => $has_error_class, "value" => $row_data);
-                    }
-                }
-
-                $error_message_on_this_row .= "</ol>";
-
-                //error messages for this row
-                if ($got_error_table_data) {
-                    $table_data_body_array[$row_key][] = array("has_error_text" => true, "value" => $error_message_on_this_row);
-                }
-            }
-        }
-
-        //return false if any error found on submitting file
-        if ($check_on_submit) {
-            return ($got_error_header || $got_error_table_data) ? false : true;
-        }
-
-        //add error header if there is any error in table body
-        if ($got_error_table_data) {
-            array_push($table_data_header_array, array("has_error_text" => true, "value" => app_lang("error")));
-        }
-
-        //add headers to table
-        $table_data .= "<tr>";
-        foreach ($table_data_header_array as $table_data_header) {
-            $error_class = get_array_value($table_data_header, "has_error_class") ? "error" : "";
-            $error_text = get_array_value($table_data_header, "has_error_text") ? "text-danger" : "";
-            $value = get_array_value($table_data_header, "value");
-            $table_data .= "<th class='$error_class $error_text'>" . $value . "</th>";
-        }
-        $table_data .= "</tr>";
-
-        //add body data to table
-        foreach ($table_data_body_array as $table_data_body_row) {
-            $table_data .= "<tr>";
-            $error_text = "";
-
-            foreach ($table_data_body_row as $table_data_body_row_data) {
-                $error_class = get_array_value($table_data_body_row_data, "has_error_class") ? "error" : "";
-                $error_text = get_array_value($table_data_body_row_data, "has_error_text") ? "text-danger" : "";
-                $value = get_array_value($table_data_body_row_data, "value");
-                $table_data .= "<td class='$error_class $error_text'>" . $value . "</td>";
-            }
-
-            if ($got_error_table_data && !$error_text) {
-                $table_data .= "<td></td>";
-            }
-
-            $table_data .= "</tr>";
-        }
-
-        //add error message for header
-        if ($error_message) {
-            $total_columns = count($table_data_header_array);
-            $table_data .= "<tr><td class='text-danger' colspan='$total_columns'><i data-feather='alert-triangle' class='icon-16'></i> " . $error_message . "</td></tr>";
-        }
-
-        $table_data .= "</table>";
-
-        echo json_encode(array("success" => true, 'table_data' => $table_data, 'got_error' => ($got_error_header || $got_error_table_data) ? true : false));
-    }
-
-    private function _row_data_validation_and_get_error_message($key, $data) {
-        $allowed_headers = $this->_get_allowed_headers();
-        $header_value = get_array_value($allowed_headers, $key);
-
-        //all field is required
-        if ($header_value && !$data) {
-            return sprintf(app_lang("import_error_field_required"), app_lang($header_value));
-        }
-
-        //check dates
-        if (($header_value == "start_date" || $header_value == "end_date") && !$this->_check_valid_date($data)) {
-            return app_lang("import_date_error_message");
-        }
-
-        //check user names
-        if ($header_value == "applicant" && !$this->_get_applicant_id($data)) {
-            return sprintf(app_lang("import_error_field_required"), app_lang($header_value));
-        }
-
-        //check valid statuses
-        $valid_statuses = array('pending', 'approved', 'rejected', 'canceled');
-        if ($header_value == "status" && !in_array(strtolower($data), $valid_statuses)) {
-            $status_error = "";
-            foreach ($valid_statuses as $valid_status) {
-                if ($status_error) {
-                    $status_error .= ", ";
-                }
-                $status_error .= ucfirst($valid_status);
-            }
-
-            return app_lang("import_leave_status_error_message") . $status_error . ".";
-        }
-    }
-
-    private function _prepare_leave_data($data_row, $allowed_headers) {
-        //prepare leave data
         $leave_data = array();
 
-        foreach ($data_row as $row_data_key => $row_data_value) { //row values
-            if (!$row_data_value) {
+        foreach ($row_data as $column_index => $value) {
+            if (!$value) {
                 continue;
             }
 
-            $header_key_value = get_array_value($allowed_headers, $row_data_key);
-            if ($header_key_value == "applicant") {
-                $leave_data["applicant_id"] = $this->_get_applicant_id($row_data_value);
-            } else if ($header_key_value == "leave_type") { //we've to make leave type data differently
-                $leave_data["leave_type_id"] = $this->_get_leave_type_id($row_data_value);
-            } else if ($header_key_value == "start_date") {
-                $leave_data["start_date"] = $this->_check_valid_date($row_data_value);
-            } else if ($header_key_value == "end_date") {
-                $leave_data["end_date"] = $this->_check_valid_date($row_data_value);
-            } else if ($header_key_value == "status") {
-                $leave_data["status"] = strtolower($row_data_value);
+            $column_name = $this->_get_column_name($column_index);
+            if ($column_name == "applicant") {
+                $leave_data["applicant_id"] = get_array_value($this->users_id_by_name, trim($value));
+            } else if ($column_name == "leave_type") {
+                $leave_type_id = get_array_value($this->leave_types_id_by_title, $value);
+                if ($leave_type_id) {
+                    $leave_data["leave_type_id"] = $leave_type_id;
+                } else {
+                    $leave_type_data = array("title" => $value, "color" => "#83c340");
+                    $saved_leave_type_id = $this->Leave_types_model->ci_save($leave_type_data);
+                    $leave_data["leave_type_id"] = $saved_leave_type_id;
+                    $this->leave_types_id_by_title[$value] = $saved_leave_type_id;
+                }
+            } else if ($column_name == "start_date") {
+                $leave_data["start_date"] = $this->_check_valid_date($value);
+            } else if ($column_name == "end_date") {
+                $leave_data["end_date"] = $this->_check_valid_date($value);
+            } else if ($column_name == "status") {
+                $leave_data["status"] = strtolower($value);
             } else {
-                $leave_data[$header_key_value] = $row_data_value;
+                $leave_data[$column_name] = $value;
             }
         }
 
@@ -852,8 +663,7 @@ class Leaves extends Security_Controller {
             "leave_data" => $leave_data
         );
     }
-
 }
 
 /* End of file leaves.php */
-    /* Location: ./app/controllers/leaves.php */    
+/* Location: ./app/controllers/leaves.php */

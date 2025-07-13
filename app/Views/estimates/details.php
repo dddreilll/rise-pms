@@ -1,4 +1,4 @@
-<div class="clearfix default-bg">
+<div class="clearfix default-bg details-view-container">
     <div class="row">
         <div class="col-md-9 d-flex">
             <div class="card p15 w-100">
@@ -46,7 +46,7 @@
                             <div class="clearfix">
                                 <?php if ($is_estimate_editable) { ?>
                                     <div class="float-start mt20 ml15">
-                                        <?php echo modal_anchor(get_uri("estimates/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item'), "data-post-estimate_id" => $estimate_info->id)); ?>
+                                        <?php echo modal_anchor(get_uri("estimates/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-primary text-white add-item-btn", "title" => app_lang('add_item'), "data-post-estimate_id" => $estimate_info->id)); ?>
                                     </div>
                                 <?php } ?>
                                 <div class="float-end pr15" id="estimate-total-section">
@@ -54,7 +54,7 @@
                                 </div>
                             </div>
 
-                            <p class="b-t b-info pt10 m15 pb10"><?php echo nl2br($estimate_info->note ? process_images_from_content($estimate_info->note) : ""); ?></p>
+                            <p class="b-t b-info pt10 m15 pb10"><?php echo custom_nl2br($estimate_info->note ? process_images_from_content($estimate_info->note) : ""); ?></p>
 
                             <?php
                             if (get_setting("enable_comments_on_estimates") && !($estimate_info->status === "draft")) {

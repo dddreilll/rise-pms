@@ -3,7 +3,7 @@
         <div class="page-title clearfix items-page-title">
             <h1> <?php echo app_lang('items'); ?></h1>
             <div class="title-button-group">
-                <?php echo modal_anchor(get_uri("items/import_items_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang('import_items'), array("class" => "btn btn-default", "title" => app_lang('import_items'))); ?>
+                <?php echo modal_anchor(get_uri("items/import_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang('import_items'), array("class" => "btn btn-default", "title" => app_lang('import_items'))); ?>
                 <?php echo modal_anchor(get_uri("items/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-default", "title" => app_lang('add_item'))); ?>
             </div>
         </div>

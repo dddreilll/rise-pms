@@ -8,7 +8,7 @@
 
 <div id="add-column-button" class="dropdown-toggle w100p p10 bg-white text-center clickable" data-bs-toggle="collapse" data-bs-target="#add-column-collapse-panel"><i data-feather="plus-circle" class="icon-16"></i> <?php echo app_lang("add_row"); ?></div>
 <div class="collapse font-100p" id="add-column-collapse-panel">
-    <div class="card mb0">
+    <div class="card mb0 rounded-top-0 no-box-shadow">
         <div class="list-group text-center">
 
             <?php

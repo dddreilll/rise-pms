@@ -37,11 +37,6 @@ foreach ($tasks as $task) {
         $unread_comments_class = "unread-comments-of-kanban unread";
     }
 
-    $batch_operation_checkbox = "";
-    if ($login_user->user_type == "staff" && $can_edit_project_tasks && $project_id) {
-        $batch_operation_checkbox = "<span data-act='batch-operation-task-checkbox' title='" . app_lang("batch_update") . "' class='checkbox-blank-sm float-end invisible'></span>";
-    }
-
     $toggle_sub_task_icon = "";
 
     if ($task->has_sub_tasks) {
@@ -115,7 +110,7 @@ foreach ($tasks as $task) {
     }
 
     echo modal_anchor(get_uri("tasks/view"), "<span class='avatar'>" .
-            "<img src='" . get_avatar($task->assigned_to_avatar) . "'>" .
-            "</span>" . $sub_task_icon . $task_id . $task->title . $toggle_sub_task_icon . $batch_operation_checkbox . "<div class='clearfix'>" . $start_date . $end_date . "</div>" . $project_name . $client_name . $kanban_custom_fields_data .
-            $task_labels . $task_checklist_status . $sub_task_status . "<div class='clearfix'></div>" . $parent_task, array("class" => "kanban-item d-block $disable_dragging $unread_comments_class", "data-status_id" => $task->status_id, "data-id" => $task->id, "data-project_id" => $task->project_id, "data-sort" => $task->new_sort, "data-post-id" => $task->id, "title" => app_lang('task_info') . " #$task->id", "data-modal-lg" => "1"));
+        "<img src='" . get_avatar($task->assigned_to_avatar) . "'>" .
+        "</span>" . $sub_task_icon . $task_id . $task->title . $toggle_sub_task_icon . "<div class='clearfix'>" . $start_date . $end_date . "</div>" . $project_name . $client_name . $kanban_custom_fields_data .
+        $task_labels . $task_checklist_status . $sub_task_status . "<div class='clearfix'></div>" . $parent_task, array("class" => "kanban-item d-block $disable_dragging $unread_comments_class", "data-status_id" => $task->status_id, "data-id" => $task->id, "data-project_id" => $task->project_id, "data-sort" => $task->new_sort, "data-post-id" => $task->id, "title" => app_lang('task_info') . " #$task->id", "data-modal-lg" => "1"));
 }

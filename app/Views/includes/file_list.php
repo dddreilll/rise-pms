@@ -29,12 +29,12 @@ if (isset($files) && $files) {
 
             if (is_viewable_image_file($file_name)) {
                 $thumbnail = get_source_url_of_file($value, $timeline_file_path, "thumbnail");
-                echo "<div class='saved-file-item-container'><div style='background-image: url($thumbnail)' class='edit-image-file mb15' ><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span></div></div>";
+                echo "<div class='saved-file-item-container' title='$actual_file_name'><div style='background-image: url($thumbnail)' class='edit-image-file mb15' ><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span></div></div>";
             } else if ($file_extension === "webm" && strpos($file_name, 'recording')) {
                 $url = get_source_url_of_file($value, $timeline_file_path);
-                echo "<div class='saved-file-item-container position-relative saved-recording-file'><div class='edit-image-file mb15'><div class='audio-container' class=''><audio src='$url' controls='' class='' id=''></audio></div><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span><span href='#' class='copy-file-link copy-file-link-btn $show_options' data-file-name='$actual_file_name_without_extension'><span data-feather='copy' class='icon-16'></span></span></div></div>";
+                echo "<div class='saved-file-item-container position-relative saved-recording-file' title='$actual_file_name'><div class='edit-image-file mb15'><div class='audio-container' class=''><audio src='$url' controls='' class='' id=''></audio></div><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span><span href='#' class='copy-file-link copy-file-link-btn $show_options' data-file-name='$actual_file_name_without_extension'><span data-feather='copy' class='icon-16'></span></span></div></div>";
             } else {
-                echo "<div class='saved-file-item-container position-relative saved-recording-file'><div class='edit-image-file mb15'><div class='saved-file-info'><small>$file_extension</small></div><div class='other-saved-file-container'><span data-feather='file'></span></div><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span></div></div>";
+                echo "<div class='saved-file-item-container position-relative saved-recording-file' title='$actual_file_name'><div class='edit-image-file mb15'><div class='saved-file-info'><small>$file_extension</small></div><div class='other-saved-file-container'><span data-feather='file'></span></div><span href='#' class='delete-saved-file $show_options' data-file_name='$file_name'><span data-feather='x' class='icon-16'></span></span></div></div>";
             }
 
             if (isset($mode_type) && $mode_type == "view") {

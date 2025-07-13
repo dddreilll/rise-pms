@@ -22,7 +22,10 @@ class Todo extends Security_Controller {
     }
 
     function modal_form() {
-        $view_data['model_info'] = $this->Todo_model->get_one($this->request->getPost('id'));
+        $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
+        $view_data['model_info'] = $this->Todo_model->get_one($id);
 
         //check permission for saved todo list
         if ($view_data['model_info']->id) {
@@ -88,6 +91,8 @@ class Todo extends Security_Controller {
         $data = array(
             "status" => $this->request->getPost('status')
         );
+
+        $data = clean_data($data);
 
         $save_id = $this->Todo_model->ci_save($data, $this->request->getPost('id'));
 

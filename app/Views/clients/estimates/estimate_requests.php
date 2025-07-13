@@ -1,16 +1,17 @@
-<div class="card rounded-bottom">
-
-    <?php if ($login_user->user_type == "staff") { ?>
+<?php if ($login_user->user_type == "staff") { ?>
+    <div class="card rounded-top-0">
         <div class="tab-title clearfix">
             <h4><?php echo app_lang('estimate_requests'); ?></h4>
         </div>
     <?php } ?>
 
     <div class="table-responsive">
-        <table id="estimate-request-table" class="display" cellspacing="0" width="100%">            
+        <table id="estimate-request-table" class="display" cellspacing="0" width="100%">
         </table>
     </div>
-</div>
+    <?php if ($login_user->user_type == "staff") { ?>
+    </div>
+<?php } ?>
 
 <script type="text/javascript">
     $(document).ready(function () {
@@ -24,7 +25,7 @@
             source: '<?php echo_uri("estimate_requests/estimate_requests_list_data_of_client/" . $client_id) ?>',
             order: [[0, 'desc']],
             columns: [
-                {title: "<?php echo app_lang('id'); ?>"},
+                {title: "<?php echo app_lang('id'); ?>", "class": "all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang('title'); ?>"},
                 {title: "<?php echo app_lang('assigned_to'); ?>", visible: fieldVisibility},

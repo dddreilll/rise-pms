@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,7 +14,7 @@
 namespace CodeIgniter\Database\SQLite3;
 
 use CodeIgniter\Database\Exceptions\DataException;
-use stdclass;
+use stdClass;
 
 /**
  * Class Table
@@ -28,8 +30,7 @@ class Table
     /**
      * All of the fields this table represents.
      *
-     * @var array
-     * @phpstan-var array<string, array<string, bool|int|string|null>>
+     * @var array<string, array<string, bool|int|string|null>> [name => attributes]
      */
     protected $fields = [];
 
@@ -97,7 +98,7 @@ class Table
 
         $prefix = $this->db->DBPrefix;
 
-        if (! empty($prefix) && strpos($table, $prefix) === 0) {
+        if (! empty($prefix) && str_starts_with($table, $prefix)) {
             $table = substr($table, strlen($prefix));
         }
 
@@ -112,9 +113,9 @@ class Table
         $this->keys = array_merge($this->keys, $this->formatKeys($this->db->getIndexData($table)));
 
         // if primary key index exists twice then remove psuedo index name 'primary'.
-        $primaryIndexes = array_filter($this->keys, static fn ($index) => $index['type'] === 'primary');
+        $primaryIndexes = array_filter($this->keys, static fn ($index): bool => $index['type'] === 'primary');
 
-        if (! empty($primaryIndexes) && count($primaryIndexes) > 1 && array_key_exists('primary', $this->keys)) {
+        if ($primaryIndexes !== [] && count($primaryIndexes) > 1 && array_key_exists('primary', $this->keys)) {
             unset($this->keys['primary']);
         }
 
@@ -157,7 +158,7 @@ class Table
     /**
      * Drops columns from the table.
      *
-     * @param array|string $columns
+     * @param list<string>|string $columns Column names to drop.
      *
      * @return Table
      */
@@ -178,14 +179,15 @@ class Table
     }
 
     /**
-     * Modifies a field, including changing data type,
-     * renaming, etc.
+     * Modifies a field, including changing data type, renaming, etc.
+     *
+     * @param list<array<string, bool|int|string|null>> $fieldsToModify
      *
      * @return Table
      */
-    public function modifyColumn(array $fields)
+    public function modifyColumn(array $fieldsToModify)
     {
-        foreach ($fields as $field) {
+        foreach ($fieldsToModify as $field) {
             $oldName = $field['name'];
             unset($field['name']);
 
@@ -200,7 +202,7 @@ class Table
      */
     public function dropPrimaryKey(): Table
     {
-        $primaryIndexes = array_filter($this->keys, static fn ($index) => strtolower($index['type']) === 'primary');
+        $primaryIndexes = array_filter($this->keys, static fn ($index): bool => strtolower($index['type']) === 'primary');
 
         foreach (array_keys($primaryIndexes) as $key) {
             unset($this->keys[$key]);
@@ -233,7 +235,7 @@ class Table
      */
     public function addPrimaryKey(array $fields): Table
     {
-        $primaryIndexes = array_filter($this->keys, static fn ($index) => strtolower($index['type']) === 'primary');
+        $primaryIndexes = array_filter($this->keys, static fn ($index): bool => strtolower($index['type']) === 'primary');
 
         // if primary key already exists we can't add another one
         if ($primaryIndexes !== []) {
@@ -280,7 +282,7 @@ class Table
     /**
      * Creates the new table based on our current fields.
      *
-     * @return mixed
+     * @return bool
      */
     protected function createTable()
     {
@@ -306,7 +308,7 @@ class Table
 
         $this->keys = array_filter(
             $this->keys,
-            static fn ($index) => count(array_intersect($index['fields'], $fieldNames)) === count($index['fields'])
+            static fn ($index): bool => count(array_intersect($index['fields'], $fieldNames)) === count($index['fields'])
         );
 
         // Unique/Index keys
@@ -374,7 +376,7 @@ class Table
      *
      * @param array|bool $fields
      *
-     * @return mixed
+     * @return         mixed
      * @phpstan-return ($fields is array ? array : mixed)
      */
     protected function formatFields($fields)
@@ -392,6 +394,24 @@ class Table
                 'null'    => $field->nullable,
             ];
 
+            if ($field->default === null) {
+                // `null` means that the default value is not defined.
+                unset($return[$field->name]['default']);
+            } elseif ($field->default === 'NULL') {
+                // 'NULL' means that the default value is NULL.
+                $return[$field->name]['default'] = null;
+            } else {
+                $default = trim($field->default, "'");
+
+                if ($this->isIntegerType($field->type)) {
+                    $default = (int) $default;
+                } elseif ($this->isNumericType($field->type)) {
+                    $default = (float) $default;
+                }
+
+                $return[$field->name]['default'] = $default;
+            }
+
             if ($field->primary_key) {
                 $this->keys['primary'] = [
                     'fields' => [$field->name],
@@ -404,19 +424,39 @@ class Table
     }
 
     /**
+     * Is INTEGER type?
+     *
+     * @param string $type SQLite data type (case-insensitive)
+     *
+     * @see https://www.sqlite.org/datatype3.html
+     */
+    private function isIntegerType(string $type): bool
+    {
+        return str_contains(strtoupper($type), 'INT');
+    }
+
+    /**
+     * Is NUMERIC type?
+     *
+     * @param string $type SQLite data type (case-insensitive)
+     *
+     * @see https://www.sqlite.org/datatype3.html
+     */
+    private function isNumericType(string $type): bool
+    {
+        return in_array(strtoupper($type), ['NUMERIC', 'DECIMAL'], true);
+    }
+
+    /**
      * Converts keys retrieved from the database to
      * the format needed to create later.
      *
-     * @param mixed $keys
+     * @param array<string, stdClass> $keys
      *
-     * @return mixed
+     * @return array<string, array{fields: string, type: string}>
      */
     protected function formatKeys($keys)
     {
-        if (! is_array($keys)) {
-            return $keys;
-        }
-
         $return = [];
 
         foreach ($keys as $name => $key) {

@@ -10,10 +10,11 @@
         <div class="col-sm-9 col-lg-10">
             <div class="card">
 
-                <ul data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
+                <ul data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title scrollable-tabs" role="tablist">
                     <li><a role="presentation" data-bs-toggle="tab" href="javascript:;" data-bs-target="#general-settings-tab"> <?php echo app_lang('general_settings'); ?></a></li>
                     <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("settings/top_menu"); ?>" data-bs-target="#top-menu-settings-tab"><?php echo app_lang('top_menu'); ?></a></li>
                     <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("settings/footer"); ?>" data-bs-target="#footer-settings-tab"><?php echo app_lang('footer'); ?></a></li>
+                    <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("settings/pwa"); ?>" data-bs-target="#pwa-settings-tab">PWA</a></li>
                 </ul>
 
                 <div class="tab-content">
@@ -44,7 +45,7 @@
                                                 <i data-feather="upload" class="icon-14"></i> <?php echo app_lang("upload"); ?>
                                             </label>
                                         </div>
-                                        <input type="hidden" id="site_logo" name="site_logo" value=""  />
+                                        <input type="hidden" id="site_logo" name="site_logo" value="" />
                                     </div>
                                 </div>
                             </div>
@@ -83,10 +84,13 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "show_logo_in_signin_page", array(
-                                            "no" => app_lang("no"),
-                                            "yes" => app_lang("yes")
-                                                ), get_setting('show_logo_in_signin_page'), "class='select2 mini'"
+                                            "show_logo_in_signin_page",
+                                            array(
+                                                "no" => app_lang("no"),
+                                                "yes" => app_lang("yes")
+                                            ),
+                                            get_setting('show_logo_in_signin_page'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -98,10 +102,13 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "show_background_image_in_signin_page", array(
-                                            "no" => app_lang("no"),
-                                            "yes" => app_lang("yes")
-                                                ), get_setting('show_background_image_in_signin_page'), "class='select2 mini'"
+                                            "show_background_image_in_signin_page",
+                                            array(
+                                                "no" => app_lang("no"),
+                                                "yes" => app_lang("yes")
+                                            ),
+                                            get_setting('show_background_image_in_signin_page'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -115,7 +122,7 @@
                                             <img id="signin-background-preview" style="max-width: 100px; max-height: 80px;" src="<?php echo get_file_from_setting("signin_page_background"); ?>" alt="..." />
                                         </div>
                                         <div class="float-start mr15">
-                                            <?php echo view("includes/dropzone_preview"); ?>    
+                                            <?php echo view("includes/dropzone_preview"); ?>
                                         </div>
                                         <div class="float-start upload-file-button btn btn-default btn-sm">
                                             <span>...</span>
@@ -140,7 +147,7 @@
                                         ?>
                                     </div>
                                 </div>
-                            </div> 
+                            </div>
                             <div class="form-group">
                                 <div class="row">
                                     <label for="accepted_file_formats" class=" col-md-2"><?php echo app_lang('accepted_file_format'); ?></label>
@@ -185,12 +192,15 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "rows_per_page", array(
-                                            "10" => "10",
-                                            "25" => "25",
-                                            "50" => "50",
-                                            "100" => "100",
-                                                ), get_setting('rows_per_page'), "class='select2 mini'"
+                                            "rows_per_page",
+                                            array(
+                                                "10" => "10",
+                                                "25" => "25",
+                                                "50" => "50",
+                                                "100" => "100",
+                                            ),
+                                            get_setting('rows_per_page'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -202,10 +212,13 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "scrollbar", array(
-                                            "jquery" => "jQuery",
-                                            "native" => "Native"
-                                                ), get_setting('scrollbar'), "class='select2 mini'"
+                                            "scrollbar",
+                                            array(
+                                                "jquery" => "jQuery",
+                                                "native" => "Native"
+                                            ),
+                                            get_setting('scrollbar'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -221,10 +234,13 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "enable_audio_recording", array(
-                                            "0" => app_lang("no"),
-                                            "1" => app_lang("yes")
-                                                ), get_setting('enable_audio_recording'), "class='select2 mini'"
+                                            "enable_audio_recording",
+                                            array(
+                                                "0" => app_lang("no"),
+                                                "1" => app_lang("yes")
+                                            ),
+                                            get_setting('enable_audio_recording'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -241,10 +257,13 @@
                                         <div class="col-md-10">
                                             <?php
                                             echo form_dropdown(
-                                                    "enable_rich_text_editor", array(
-                                                "0" => app_lang("no"),
-                                                "1" => app_lang("yes")
-                                                    ), get_setting('enable_rich_text_editor'), "class='select2 mini'"
+                                                "enable_rich_text_editor",
+                                                array(
+                                                    "0" => app_lang("no"),
+                                                    "1" => app_lang("yes")
+                                                ),
+                                                get_setting('enable_rich_text_editor'),
+                                                "class='select2 mini'"
                                             );
                                             ?>
                                         </div>
@@ -277,10 +296,13 @@
                                     <div class="col-md-10">
                                         <?php
                                         echo form_dropdown(
-                                                "show_theme_color_changer", array(
-                                            "no" => app_lang("no"),
-                                            "yes" => app_lang("yes")
-                                                ), get_setting('show_theme_color_changer'), "class='select2 mini'"
+                                            "show_theme_color_changer",
+                                            array(
+                                                "no" => app_lang("no"),
+                                                "yes" => app_lang("yes")
+                                            ),
+                                            get_setting('show_theme_color_changer'),
+                                            "class='select2 mini'"
                                         );
                                         ?>
                                     </div>
@@ -308,6 +330,7 @@
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="top-menu-settings-tab"></div>
                     <div role="tabpanel" class="tab-pane fade" id="footer-settings-tab"></div>
+                    <div role="tabpanel" class="tab-pane fade" id="pwa-settings-tab"></div>
 
                 </div>
 
@@ -320,21 +343,23 @@
 <?php echo view("includes/cropbox"); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#general-settings-form .select2").select2();
 
         $("#general-settings-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                $.each(data, function (index, obj) {
+            beforeAjaxSubmit: function(data) {
+                $.each(data, function(index, obj) {
                     if (obj.name === "site_logo" || obj.name === "favicon") {
                         var image = replaceAll(":", "~", data[index]["value"]);
                         data[index]["value"] = image;
                     }
                 });
             },
-            onSuccess: function (result) {
-                appAlert.success(result.message, {duration: 10000});
+            onSuccess: function(result) {
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
                 if ($("#site_logo").val() || $("#favicon").val() || result.reload_page) {
                     location.reload();
                 }
@@ -346,10 +371,12 @@
         var uploadUrl = "<?php echo get_uri("uploader/upload_file"); ?>";
         var validationUrl = "<?php echo get_uri("uploader/validate_file"); ?>";
 
-        var dropzone = attachDropzoneWithForm("#general-settings-form", uploadUrl, validationUrl, {maxFiles: 1});
+        var dropzone = attachDropzoneWithForm("#general-settings-form", uploadUrl, validationUrl, {
+            maxFiles: 1
+        });
 
 
-        $(".cropbox-upload").change(function () {
+        $(".cropbox-upload").change(function() {
             showCropBox(this);
         });
 
@@ -360,7 +387,7 @@
             $("#settings-color-plate").find("[data-color='" + existingColor + "']").addClass("active");
         }
 
-        $("#settings-color-plate span").click(function () {
+        $("#settings-color-plate span").click(function() {
             $("#settings-color-plate span").removeClass("active");
             $(this).addClass("active");
 
@@ -370,6 +397,11 @@
             } else {
                 $("#default-theme-color").val("F2F2F2");
             }
+        });
+
+        // any periods (.) will automatically be replaced by commas (,)
+        $("#accepted_file_formats").on("input", function() {
+            $(this).val($(this).val().replace(/\./g, ','));
         });
     });
 </script>

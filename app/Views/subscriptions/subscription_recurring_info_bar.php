@@ -10,7 +10,7 @@
     }
     ?>
 
-    <span class="badge large b-a" title="<?php echo app_lang('recurring'); ?>"><i data-feather="refresh-cw" class="icon-18 <?php echo $recurring_status_class; ?>"></i></span>
+    <span class="badge b-a" title="<?php echo app_lang('recurring'); ?>"><i data-feather="refresh-cw" class="icon-18 <?php echo $recurring_status_class; ?>"></i></span>
 
 
     <?php

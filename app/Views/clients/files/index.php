@@ -8,11 +8,11 @@ if ($page_view) {
 <?php if ($page_view) { ?>
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
-    <div class="card clearfix">
-        <ul id="client-files-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
+    <div class="clearfix">
+        <ul id="client-files-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title rounded-top-0" role="tablist">
             <li><a role="presentation" data-bs-toggle="tab" href="javascript:;" data-bs-target="#file-list-tab"><?php echo app_lang("files_list"); ?></a></li>
             <?php if (get_setting("module_file_manager") == "1") { ?>
-                <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("file_manager/explore/" . $folder_id . "/1/" . $view_from . "/" . $client_id); ?>" data-bs-target="#file-grid-tab"><?php echo app_lang('folders'); ?></a></li>
+                <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/explore/" . $folder_id . "/1/" . $view_from . "/" . $client_id); ?>" data-bs-target="#file-grid-tab"><?php echo app_lang('folders'); ?></a></li>
             <?php } ?>
             <div class="tab-title clearfix no-border">
                 <div class="title-button-group">
@@ -27,9 +27,11 @@ if ($page_view) {
 
         <div class="tab-content">
             <div role="tabpanel" class="tab-pane fade" id="file-list-tab">
-                <div class="table-responsive">
-                    <table id="client-file-table" class="display" width="100%">
-                    </table>
+                <div class="card border-top-0 rounded-top-0">
+                    <div class="table-responsive">
+                        <table id="client-file-table" class="display" width="100%">
+                        </table>
+                    </div>
                 </div>
             </div>
             <div role="tabpanel" class="tab-pane fade default-bg" id="file-grid-tab"></div>
@@ -50,7 +52,8 @@ if ($page_view) {
                     title: '<?php echo app_lang("id") ?>'
                 },
                 {
-                    title: '<?php echo app_lang("file") ?>'
+                    title: '<?php echo app_lang("file") ?>',
+                    "class": "all file-name-section"
                 },
                 {
                     title: '<?php echo app_lang("size") ?>'

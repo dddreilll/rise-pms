@@ -6,7 +6,7 @@
             <?php echo anchor(get_uri("estimate_requests/preview_estimate_form/" . $model_info->id), app_lang('preview'), array("class" => "btn btn-default round mt15 float-end", "title" => app_lang('preview'))); ?> 
         </div>
 
-        <div class="pl10 pr10"><?php echo nl2br($model_info->description ? process_images_from_content($model_info->description) : ""); ?></div>
+        <div class="pl10 pr10"><?php echo custom_nl2br($model_info->description ? process_images_from_content($model_info->description) : ""); ?></div>
         <div class="table-responsive mt20 general-form">
             <table id="estimate-form-table" class="display no-thead b-t b-b-only no-hover" cellspacing="0" width="100%">            
             </table>

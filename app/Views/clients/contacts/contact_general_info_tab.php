@@ -1,6 +1,6 @@
 <div class="tab-content">
     <?php echo form_open(get_uri("clients/save_contact/"), array("id" => "contact-form", "class" => "general-form dashed-row white", "role" => "form")); ?>
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <div class=" card-header">
             <h4> <?php echo app_lang('general_info'); ?></h4>
         </div>

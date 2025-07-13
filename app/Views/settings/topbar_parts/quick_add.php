@@ -40,13 +40,22 @@ if (get_setting("module_ticket") == "1" && ($login_user->is_admin || get_array_v
 
 if ($links) {
     ?>
-    <li class="nav-item dropdown">
+    <li id="quick-add-button" class="nav-item dropdown hidden-xs">
         <?php echo js_anchor("<i data-feather='plus-circle' class='icon'></i>", array("id" => "quick-add-icon", "class" => "nav-link dropdown-toggle", "data-bs-toggle" => "dropdown")); ?>
 
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu dropdown-menu-end quick-add-dropdown">
             <li>
                 <?php echo $links; ?></li>
         </ul>
     </li>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            if(isMobile()){
+                $("#mobile-quick-add-button").html($("#quick-add-button").html());
+            }
+        });
+    </script>
+
     <?php
 } 

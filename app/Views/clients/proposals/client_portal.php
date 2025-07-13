@@ -30,15 +30,21 @@
             showCommentOption = true;
         }
 
+        var idColumnClass = "w25p";
+
+        if (isMobile()) {
+            idColumnClass = "";
+        }
+
         $("#proposal-table").appTable({
             source: '<?php echo_uri("proposals/proposal_list_data_of_client/" . $client_id) ?>',
             order: [[0, "desc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
-                {title: "<?php echo app_lang("proposal") ?>", "class": "w25p"},
+                {title: "<?php echo app_lang("proposal") ?>", "class": idColumnClass + " all"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("proposal_date") ?>", "iDataSort": 2},
+                {title: "<?php echo app_lang("proposal_date") ?>", "class": "all", "iDataSort": 2},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("valid_until") ?>", "iDataSort": 4, "class": "w20p"},
                 {visible: false, searchable: false},

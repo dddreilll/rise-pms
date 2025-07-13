@@ -14,7 +14,7 @@ class Ci_sessions_model extends Crud_model {
     function delete_session_by_date($date) {
         $ci_sessions_table = $this->db->prefixTable("ci_sessions");
 
-        $sql = "DELETE FROM $ci_sessions_table WHERE timestamp<='$date'";
+        $sql = "DELETE FROM $ci_sessions_table WHERE DATE($ci_sessions_table.timestamp)<='$date'";
         $this->db->query($sql);
     }
 

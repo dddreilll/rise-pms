@@ -6,6 +6,7 @@ use App\Controllers\App_Controller;
 use App\Libraries\Google_calendar_events;
 use App\Libraries\Imap;
 use App\Libraries\Outlook_imap;
+use App\Libraries\Reminders;
 
 class Cron_job {
 
@@ -102,13 +103,25 @@ class Cron_job {
                 echo $e;
             }
 
+            try {
+                $this->_create_subscription_reminders();
+            } catch (\Exception $e) {
+                echo $e;
+            }
+
+            try {
+                $this->_send_available_reminders();
+            } catch (\Exception $e) {
+                echo $e;
+            }
+
             $this->ci->Settings_model->save_setting("last_hourly_job_time", $this->current_time);
         }
     }
 
     private function _is_hourly_job_runnable() {
         $last_hourly_job_time = get_setting('last_hourly_job_time');
-        if ($last_hourly_job_time == "" || ($this->current_time > ($last_hourly_job_time * 1 + 3600))) {
+        if (!$last_hourly_job_time || ($this->current_time > ($last_hourly_job_time * 1 + 3600))) {
             return true;
         }
     }
@@ -126,11 +139,11 @@ class Cron_job {
         $reminder_due_date2 = $reminder_date2 ? add_period_to_date($this->today, $reminder_date2, "days") : "";
 
         $invoices = $this->ci->Invoices_model->get_details(array(
-                    "status" => "not_paid_and_partially_paid", //find all invoices which are not paid yet but due date not expired
-                    "reminder_due_date" => $reminder_due_date,
-                    "reminder_due_date2" => $reminder_due_date2,
-                    "exclude_due_reminder_date" => $this->today //don't find invoices which reminder already sent today
-                ))->getResult();
+            "status" => "not_paid_and_partially_paid", //find all invoices which are not paid yet but due date not expired
+            "reminder_due_date" => $reminder_due_date,
+            "reminder_due_date2" => $reminder_due_date2,
+            "exclude_due_reminder_date" => $this->today //don't find invoices which reminder already sent today
+        ))->getResult();
 
         foreach ($invoices as $invoice) {
             log_notification("invoice_due_reminder_before_due_date", array("invoice_id" => $invoice->id), "0");
@@ -150,11 +163,11 @@ class Cron_job {
         $reminder_due_date2 = $reminder_date2 ? subtract_period_from_date($this->today, $reminder_date2, "days") : "";
 
         $invoices = $this->ci->Invoices_model->get_details(array(
-                    "status" => "overdue", //find all invoices where due date has expired
-                    "reminder_due_date" => $reminder_due_date,
-                    "reminder_due_date2" => $reminder_due_date2,
-                    "exclude_due_reminder_date" => $this->today //don't find invoices which reminder already sent today
-                ))->getResult();
+            "status" => "overdue", //find all invoices where due date has expired
+            "reminder_due_date" => $reminder_due_date,
+            "reminder_due_date2" => $reminder_due_date2,
+            "exclude_due_reminder_date" => $this->today //don't find invoices which reminder already sent today
+        ))->getResult();
 
         foreach ($invoices as $invoice) {
             log_notification("invoice_overdue_reminder", array("invoice_id" => $invoice->id), "0");
@@ -171,12 +184,12 @@ class Cron_job {
             $start_date = add_period_to_date($this->today, get_setting("send_recurring_invoice_reminder_before_creation"), "days");
 
             $invoices = $this->ci->Invoices_model->get_details(array(
-                        "status" => "not_paid", //non-draft invoices
-                        "recurring" => 1,
-                        "next_recurring_start_date" => $start_date,
-                        "next_recurring_end_date" => $start_date, //both should be same
-                        "exclude_recurring_reminder_date" => $this->today //don't find invoices which reminder already sent today
-                    ))->getResult();
+                "status" => "not_paid", //non-draft invoices
+                "recurring" => 1,
+                "next_recurring_start_date" => $start_date,
+                "next_recurring_end_date" => $start_date, //both should be same
+                "exclude_recurring_reminder_date" => $this->today //don't find invoices which reminder already sent today
+            ))->getResult();
 
             foreach ($invoices as $invoice) {
                 log_notification("recurring_invoice_creation_reminder", array("invoice_id" => $invoice->id), "0");
@@ -311,8 +324,6 @@ class Cron_job {
             $imap = new Outlook_imap();
             $imap->run_imap();
         }
-
-        $this->ci->Settings_model->save_setting("last_cron_job_time_of_imap", $this->current_time);
     }
 
     private function _is_imap_callable() {
@@ -322,11 +333,7 @@ class Cron_job {
             return false;
         }
 
-        //wait 10 minutes for each check
-        $last_cron_job_time_of_imap = get_setting('last_cron_job_time_of_imap');
-        if ($last_cron_job_time_of_imap == "" || ($this->current_time > ($last_cron_job_time_of_imap * 1 + 600))) {
-            return true;
-        }
+        return true;
     }
 
     private function create_recurring_tasks() {
@@ -395,7 +402,8 @@ class Cron_job {
             "assigned_to" => $task->assigned_to,
             "collaborators" => $task->collaborators,
             "created_date" => get_current_utc_time(),
-            "activity_log_created_by_app" => true
+            "activity_log_created_by_app" => true,
+            "created_by" => $task->created_by
         );
 
         $new_task_data["sort"] = $this->ci->Tasks_model->get_next_sort_value($task->project_id, $new_task_data["status_id"]);
@@ -470,6 +478,8 @@ class Cron_job {
         //send notification
         if ($context === "project") {
             $notification_option = array("project_id" => $task->project_id, "task_id" => $new_task_id);
+        } else if ($context === "general") {
+            $notification_option = array("task_id" => $new_task_id);
         } else {
             $context_id_key = $context . "_id";
             $context_id_value = $task->{$context . "_id"};
@@ -490,7 +500,7 @@ class Cron_job {
     private function close_inactive_tickets() {
 
         $inactive_ticket_closing_date = get_setting("inactive_ticket_closing_date");
-        if (!($inactive_ticket_closing_date == "" || ($inactive_ticket_closing_date != $this->today))) {
+        if (!(!$inactive_ticket_closing_date || ($inactive_ticket_closing_date != $this->today))) {
             return false;
         }
 
@@ -501,9 +511,9 @@ class Cron_job {
             $last_activity_date = subtract_period_from_date($this->today, get_setting("auto_close_ticket_after"), "days");
 
             $tickets = $this->ci->Tickets_model->get_details(array(
-                        "status" => "open", //don't find closed tickets
-                        "last_activity_date_or_before" => $last_activity_date
-                    ))->getResult();
+                "status" => "open", //don't find closed tickets
+                "last_activity_date_or_before" => $last_activity_date
+            ))->getResult();
 
             foreach ($tickets as $ticket) {
                 //make ticket closed
@@ -603,13 +613,13 @@ class Cron_job {
                 echo $e;
             }
 
-            $this->ci->Settings_model->save_setting("last_daily_job_time", $this->current_time);
+            $this->ci->Settings_model->save_setting("last_daily_cron_job_date", $this->today);
         }
     }
 
     private function _is_daily_job_runnable() {
-        $last_daily_job_time = get_setting('last_daily_job_time');
-        if ($last_daily_job_time == "" || ($this->current_time > ($last_daily_job_time * 24 * 3600))) {
+        $last_daily_cron_job_date = get_setting('last_daily_cron_job_date');
+        if (!$last_daily_cron_job_date || ($this->today > $last_daily_cron_job_date)) {
             return true;
         }
     }
@@ -619,6 +629,16 @@ class Cron_job {
         $last_weak_date = subtract_period_from_date($this->today, 7, "days");
 
         $Ci_sessions_model->delete_session_by_date($last_weak_date);
+    }
+
+    private function _create_subscription_reminders() {
+        $reminders = new Reminders();
+        $reminders->create_reminders("subscription");
+    }
+
+    private function _send_available_reminders() {
+        $reminders = new Reminders();
+        $reminders->send_available_reminders();
     }
 
 }

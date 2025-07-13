@@ -35,6 +35,12 @@
         <div id="proposal-email-view-report"></div>
     </div>
 <?php } ?>
+<?php if ($proposal_info->project_id) { ?>
+    <div class="col-md-12 mb15">
+        <strong><?php echo app_lang('project') . ": "; ?></strong>
+        <?php echo (anchor(get_uri("projects/view/" . $proposal_info->project_id), $proposal_info->project_title)); ?>
+    </div>
+<?php } ?>
 <?php if (can_access_reminders_module()) { ?>
     <div class="col-md-12 mb15" id="proposal-reminders">
         <div class="mb15"><strong><?php echo app_lang("reminders") . " (" . app_lang('private') . ")" . ": "; ?> </strong></div>

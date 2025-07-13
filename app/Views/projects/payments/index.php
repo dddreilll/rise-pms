@@ -16,9 +16,9 @@
             source: '<?php echo_uri("invoice_payments/payment_list_data_of_project/" . $project_id) ?>',
             order: [[0, "asc"]],
             columns: [
-                {title: '<?php echo app_lang("invoice_id") ?> ', "class": "w10p"},
+                {title: '<?php echo app_lang("invoice_id") ?> ', "class": "w10p all"},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("payment_date") ?> ', "class": "w15p", "iDataSort": 1},
+                {title: '<?php echo app_lang("payment_date") ?> ', "class": "w15p all", "iDataSort": 1},
                 {title: '<?php echo app_lang("payment_method") ?>', "class": "w15p"},
                 {title: '<?php echo app_lang("note") ?>'},
                 {title: '<?php echo app_lang("amount") ?>', "class": "text-right w15p"}

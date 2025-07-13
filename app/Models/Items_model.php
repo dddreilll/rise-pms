@@ -22,7 +22,7 @@ class Items_model extends Crud_model {
             $where .= " AND $items_table.id=$id";
         }
 
-        $search = get_array_value($options, "search");
+        $search = $this->_get_clean_value($options, "search");
         if ($search) {
             $search = $this->db->escapeLikeString($search);
             $where .= " AND ($items_table.title LIKE '%$search%' ESCAPE '!' OR $items_table.description LIKE '%$search%' ESCAPE '!')";

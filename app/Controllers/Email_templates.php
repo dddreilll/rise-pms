@@ -51,11 +51,11 @@ class Email_templates extends Security_Controller {
         if (get_setting("module_invoice")) {
             $templates_array["invoice"] = array(
                 "send_invoice" => array("INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "BALANCE_DUE", "DUE_DATE", "SIGNATURE", "INVOICE_URL", "LOGO_URL", "PUBLIC_PAY_INVOICE_URL", "INVOICE_FULL_ID", "RECIPIENTS_EMAIL_ADDRESS"),
-                "invoice_payment_confirmation" => array("INVOICE_ID", "PAYMENT_AMOUNT", "INVOICE_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
-                "invoice_due_reminder_before_due_date" => array("INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "BALANCE_DUE", "DUE_DATE", "SIGNATURE", "INVOICE_URL", "LOGO_URL", "RECIPIENTS_EMAIL_ADDRESS"),
-                "invoice_overdue_reminder" => array("INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "BALANCE_DUE", "DUE_DATE", "SIGNATURE", "INVOICE_URL", "LOGO_URL", "RECIPIENTS_EMAIL_ADDRESS"),
-                "recurring_invoice_creation_reminder" => array("CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "APP_TITLE", "INVOICE_URL", "NEXT_RECURRING_DATE", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
-                "invoice_manual_payment_added" => array("INVOICE_ID", "PAYMENT_AMOUNT", "INVOICE_URL", "ADDED_BY", "PAYMENT_NOTE", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
+                "invoice_payment_confirmation" => array("INVOICE_ID", "PAYMENT_AMOUNT", "INVOICE_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS", "INVOICE_FULL_ID"),
+                "invoice_due_reminder_before_due_date" => array("INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "BALANCE_DUE", "DUE_DATE", "SIGNATURE", "INVOICE_URL", "LOGO_URL", "RECIPIENTS_EMAIL_ADDRESS", "INVOICE_FULL_ID"),
+                "invoice_overdue_reminder" => array("INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "BALANCE_DUE", "DUE_DATE", "SIGNATURE", "INVOICE_URL", "LOGO_URL", "RECIPIENTS_EMAIL_ADDRESS", "INVOICE_FULL_ID"),
+                "recurring_invoice_creation_reminder" => array("CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "APP_TITLE", "INVOICE_URL", "NEXT_RECURRING_DATE", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS", "INVOICE_FULL_ID"),
+                "invoice_manual_payment_added" => array("INVOICE_ID", "PAYMENT_AMOUNT", "INVOICE_URL", "ADDED_BY", "PAYMENT_NOTE", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS", "INVOICE_FULL_ID"),
                 "send_credit_note" => array("CREDIT_NOTE_ID", "INVOICE_ID", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "PROJECT_TITLE", "SIGNATURE", "CREDIT_NOTE_URL", "LOGO_URL", "CREDIT_NOTE_FULL_ID", "INVOICE_FULL_ID", "RECIPIENTS_EMAIL_ADDRESS"),
             );
         }
@@ -93,6 +93,7 @@ class Email_templates extends Security_Controller {
                 "subscription_started" => array("SUBSCRIPTION_ID", "SUBSCRIPTION_TITLE", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "SUBSCRIPTION_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
                 "subscription_cancelled" => array("SUBSCRIPTION_ID", "SUBSCRIPTION_TITLE", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "CANCELLED_BY", "SUBSCRIPTION_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
                 "subscription_invoice_created_via_cron_job" => array("SUBSCRIPTION_TITLE", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "INVOICE_ID", "INVOICE_FULL_ID", "BALANCE_DUE", "DUE_DATE", "INVOICE_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
+                "subscription_renewal_reminder" => array("SUBSCRIPTION_ID", "SUBSCRIPTION_TITLE", "CONTACT_FIRST_NAME", "CONTACT_LAST_NAME", "SUBSCRIPTION_URL", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS", "NEXT_RENEW_DATE"),
             );
         }
 
@@ -206,6 +207,8 @@ class Email_templates extends Security_Controller {
 
     function save_template() {
         $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
         $template_name = $this->request->getPost('template_name');
         $language = $this->request->getPost('language');
 
@@ -236,6 +239,8 @@ class Email_templates extends Security_Controller {
     }
 
     function different_language_form($id = 0) {
+        validate_numeric_value($id);
+
         $view_data['model_info'] = $this->Email_templates_model->get_one_where(array("id" => $id));
         $variables_array = array_column($this->_templates(), $view_data['model_info']->template_name);
         $variables = get_array_value($variables_array, 0);
@@ -244,7 +249,6 @@ class Email_templates extends Security_Controller {
 
         return $this->template->view('email_templates/different_language_form', $view_data);
     }
-
 }
 
 /* End of file email_templates.php */

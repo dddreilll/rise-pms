@@ -4,26 +4,39 @@
 $can_chat = can_access_messages_module();
 
 if (get_setting("module_chat") && $can_chat) {
-    ?>
-    <div id="js-init-chat-icon" class="init-chat-icon">
-        <!-- data-type= open/close/unread -->
-        <span id="js-chat-min-icon" data-type="open" class="chat-min-icon"><i data-feather="message-circle" class="icon-18"></i></span>
-    </div>
+?>
+
 
     <div id="js-rise-chat-wrapper" class="rise-chat-wrapper hide"></div>
 
     <script type="text/javascript">
-        $(document).ready(function () {
+        $(document).ready(function() {
+
+
+            var $chatIconWrapper = $('<div id="js-init-chat-icon" class="init-chat-icon"></div>');
+            //allowed data-type= open/close/unread
+            $chatIconWrapper.append(' <span id="js-chat-min-icon" data-type="open" class="chat-min-icon"><i data-feather="message-circle" class="icon"></i></span>');
+
+            var $chatBoxWrapper = '<div id="js-rise-chat-wrapper" class="rise-chat-wrapper hide"></div>';
+            if (isMobile()) {
+                $('#mobile-chat-menu-button').append($chatIconWrapper).find(".init-chat-icon").removeClass("init-chat-icon");
+                $('#mobile-chat-menu-button').append($chatBoxWrapper);
+            } else {
+                $('body').append($chatIconWrapper);
+                $('body').append($chatBoxWrapper);
+            }
+
+
 
             chatIconContent = {
-                "open": "<i data-feather='message-circle' class='icon-18'></i>",
-                "close": "<span class='chat-close'>&times;</span>",
+                "open": "<i data-feather='message-circle' class='icon'></i>",
+                "close": "<i data-feather='x' class='icon'></i>",
                 "unread": ""
             };
 
             //we'll wait for 15 sec after clicking on the unread icon to see more notifications again.
 
-            setChatIcon = function (type, count) {
+            setChatIcon = function(type, count) {
 
                 //don't show count if the data-prevent-notification-count is 1
                 if ($("#js-chat-min-icon").attr("data-prevent-notification-count") === "1" && type === "unread") {
@@ -45,7 +58,7 @@ if (get_setting("module_chat") && $can_chat) {
 
             };
 
-            changeChatIconPosition = function (type) {
+            changeChatIconPosition = function(type) {
                 if (type === "close") {
                     $("#js-init-chat-icon").addClass("move-chat-icon");
                 } else if (type === "open") {
@@ -56,11 +69,11 @@ if (get_setting("module_chat") && $can_chat) {
             //is there any active chat? open the popup
             //otherwise show the chat icon only
             var activeChatId = getCookie("active_chat_id"),
-                    isChatBoxOpen = getCookie("chatbox_open"),
-                    $chatIcon = $("#js-init-chat-icon");
+                isChatBoxOpen = getCookie("chatbox_open"),
+                $chatIcon = $("#js-init-chat-icon");
 
 
-            $chatIcon.click(function () {
+            $chatIcon.click(function() {
                 $("#js-rise-chat-wrapper").html("");
 
                 window.updateLastMessageCheckingStatus();
@@ -71,7 +84,7 @@ if (get_setting("module_chat") && $can_chat) {
                     $chatIcon.attr("data-prevent-notification-count", "1");
 
                     //after clicking on the unread icon, we'll wait 11 sec to show more notifications again.
-                    setTimeout(function () {
+                    setTimeout(function() {
                         $chatIcon.attr("data-prevent-notification-count", "0");
                     }, 11000);
                 }
@@ -80,7 +93,7 @@ if (get_setting("module_chat") && $can_chat) {
 
                 if ($chatIcon.attr("data-type") !== "close") {
                     //have to reload
-                    setTimeout(function () {
+                    setTimeout(function() {
                         loadChatTabs();
                     }, 200);
                     setChatIcon("close"); //show close icon
@@ -105,7 +118,7 @@ if (get_setting("module_chat") && $can_chat) {
                 if (typeof window.placeCartBox === "function") {
                     window.placeCartBox();
                 }
-                
+
                 feather.replace();
 
             });
@@ -130,15 +143,15 @@ if (get_setting("module_chat") && $can_chat) {
 
 
 
-            $('body #js-rise-chat-wrapper').on('click', '.js-message-row', function () {
+            $('body #js-rise-chat-wrapper').on('click', '.js-message-row', function() {
                 getActiveChat($(this).attr("data-id"));
             });
 
-            $('body #js-rise-chat-wrapper').on('click', '.js-message-row-of-team-members-tab', function () {
+            $('body #js-rise-chat-wrapper').on('click', '.js-message-row-of-team-members-tab', function() {
                 getChatlistOfUser($(this).attr("data-id"), "team_members");
             });
 
-            $('body #js-rise-chat-wrapper').on('click', '.js-message-row-of-clients-tab', function () {
+            $('body #js-rise-chat-wrapper').on('click', '.js-message-row-of-clients-tab', function() {
                 getChatlistOfUser($(this).attr("data-id"), "clients");
             });
 
@@ -149,12 +162,18 @@ if (get_setting("module_chat") && $can_chat) {
 
             setChatIcon("close"); //show close icon
 
-            appLoader.show({container: "#js-rise-chat-wrapper", css: "bottom: 40%; right: 35%;"});
+            appLoader.show({
+                container: "#js-rise-chat-wrapper",
+                css: "bottom: 40%; right: 35%;"
+            });
             $.ajax({
                 url: "<?php echo get_uri("messages/get_chatlist_of_user"); ?>",
                 type: "POST",
-                data: {user_id: user_id, tab_type: tab_type},
-                success: function (response) {
+                data: {
+                    user_id: user_id,
+                    tab_type: tab_type
+                },
+                success: function(response) {
                     $("#js-rise-chat-wrapper").html(response);
                     appLoader.hide();
                 }
@@ -166,13 +185,16 @@ if (get_setting("module_chat") && $can_chat) {
             setChatIcon("close"); //show close icon
 
             setCookie("active_chat_id", "");
-            appLoader.show({container: "#js-rise-chat-wrapper", css: "bottom: 40%; right: 35%;"});
+            appLoader.show({
+                container: "#js-rise-chat-wrapper",
+                css: "bottom: 40%; right: 35%;"
+            });
             $.ajax({
                 url: "<?php echo get_uri("messages/chat_list"); ?>",
                 data: {
                     type: "inbox"
                 },
-                success: function (response) {
+                success: function(response) {
                     $("#js-rise-chat-wrapper").html(response);
 
                     if (!trigger_from_user_chat) {
@@ -192,14 +214,17 @@ if (get_setting("module_chat") && $can_chat) {
         function getActiveChat(message_id) {
             setChatIcon("close"); //show close icon
 
-            appLoader.show({container: "#js-rise-chat-wrapper", css: "bottom: 40%; right: 35%;"});
+            appLoader.show({
+                container: "#js-rise-chat-wrapper",
+                css: "bottom: 40%; right: 35%;"
+            });
             $.ajax({
                 url: "<?php echo get_uri('messages/get_active_chat'); ?>",
                 type: "POST",
                 data: {
                     message_id: message_id
                 },
-                success: function (response) {
+                success: function(response) {
                     $("#js-rise-chat-wrapper").html(response);
                     appLoader.hide();
                     setCookie("active_chat_id", message_id);
@@ -208,16 +233,15 @@ if (get_setting("module_chat") && $can_chat) {
             });
         }
 
-        window.prepareUnreadMessageChatBox = function (totalMessages) {
+        window.prepareUnreadMessageChatBox = function(totalMessages) {
             setChatIcon("unread", totalMessages); //show close icon
         };
 
 
-        window.triggerActiveChat = function (message_id) {
+        window.triggerActiveChat = function(message_id) {
             getActiveChat(message_id);
         }
-
-    </script>  
+    </script>
 
 
 <?php } ?>

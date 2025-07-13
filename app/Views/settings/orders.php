@@ -96,7 +96,10 @@
                                             "id" => "order_footer",
                                             "name" => "order_footer",
                                             "value" => process_images_from_content(get_setting('order_footer'), false),
-                                            "class" => "form-control"
+                                            "class" => "form-control",
+                                            "data-toolbar" => "pdf_friendly_toolbar",
+                                            "data-height" => 100,
+                                            "data-encode_ajax_post_data" => "1"
                                         ));
                                         ?>
                                     </div>
@@ -120,13 +123,6 @@
     $(document).ready(function () {
         $("#order-settings-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                $.each(data, function (index, obj) {
-                    if (obj.name === "order_footer") {
-                        data[index]["value"] = encodeAjaxPostData(getWYSIWYGEditorHTML("#order_footer"));
-                    }
-                });
-            },
             onSuccess: function (result) {
                 if (result.success) {
                     appAlert.success(result.message, {duration: 10000});
@@ -138,7 +134,7 @@
 
         $("#order-settings-form .select2").select2();
 
-        initWYSIWYGEditor("#order_footer", {height: 100});
+        initWYSIWYGEditor("#order_footer");
 
         $(".cropbox-upload").change(function () {
             showCropBox(this);

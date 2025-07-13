@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -17,13 +19,14 @@ use CodeIgniter\Encryption\Exceptions\EncryptionException;
  * SodiumHandler uses libsodium in encryption.
  *
  * @see https://github.com/jedisct1/libsodium/issues/392
+ * @see \CodeIgniter\Encryption\Handlers\SodiumHandlerTest
  */
 class SodiumHandler extends BaseHandler
 {
     /**
      * Starter key
      *
-     * @var string
+     * @var string|null Null is used for buffer cleanup.
      */
     protected $key = '';
 
@@ -111,6 +114,8 @@ class SodiumHandler extends BaseHandler
      * Parse the $params before doing assignment.
      *
      * @param array|string|null $params
+     *
+     * @return void
      *
      * @throws EncryptionException If key is empty
      */

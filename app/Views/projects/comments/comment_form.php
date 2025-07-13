@@ -43,8 +43,8 @@ if (isset($model_info->context) && $model_info->context != "project") {
                     "data-msg-required" => app_lang("field_required"),
                     "data-rich-text-editor" => true,
                     "data-mention" => true,
-                    "data-mention-source" => $mention_source,
-                    "data-mention-project_id" => $project_id
+                    "data-mention_source" => $mention_source,
+                    "data-mention_project_id" => $project_id
                 ));
                 ?>
                 <?php echo view("includes/dropzone_preview"); ?>

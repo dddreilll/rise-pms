@@ -13,7 +13,7 @@ class Stripe_ipn_model extends Crud_model {
 
     function get_one_payment_where($payment_verification_code) {
         $stripe_ipn_table = $this->db->prefixTable('stripe_ipn');
-        $payment_verification_code = $payment_verification_code ? $this->db->escapeString($payment_verification_code) : $payment_verification_code;
+        $payment_verification_code = $this->_get_clean_value(array("payment_verification_code" => $payment_verification_code), "payment_verification_code");
 
         $sql = "SELECT $stripe_ipn_table.*
         FROM $stripe_ipn_table
@@ -28,6 +28,8 @@ class Stripe_ipn_model extends Crud_model {
         $subscriptions_table = $this->db->prefixTable('subscriptions');
         $clients_table = $this->db->prefixTable('clients');
 
+        $subscription_id = $this->_get_clean_value($subscription_id);
+        
         $sql = "SELECT $clients_table.stripe_customer_id 
         FROM $clients_table
         WHERE $clients_table.deleted=0 AND $clients_table.id=(SELECT $subscriptions_table.client_id FROM $subscriptions_table WHERE $subscriptions_table.deleted=0 AND $subscriptions_table.id=$subscription_id)";

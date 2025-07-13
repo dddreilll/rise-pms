@@ -1,6 +1,6 @@
 <div class="tab-content">
     <?php echo form_open(get_uri("clients/save_contact_permissions/" . $user_info->id), array("id" => "contact-permissions-form", "class" => "general-form dashed-row white", "role" => "form")); ?>
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <div class=" card-header">
             <h4><?php echo app_lang('user_permissions'); ?></h4>
         </div>

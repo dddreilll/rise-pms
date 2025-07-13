@@ -9,9 +9,15 @@
     optionVisibility = true;
     }
 
+    var idColumnClass = "w10p";
+    if (isMobile()) {
+        idColumnClass = "";
+    }
+
     $("#recurring-invoice-table").appTable({
     source: '<?php echo_uri("invoices/recurring_list_data") ?>',
             order: [[0, "desc"]],
+            smartFilterIdentity: "invoices_recurring_list", //a to z and _ only. should be unique to avoid conflicts
             rangeDatepicker: [{startDate: {name: "next_recurring_start_date"}, endDate: {name: "next_recurring_end_date"}, showClearButton: true}],
 <?php if ($currencies_dropdown) { ?>
         filterDropdown: [
@@ -20,8 +26,8 @@
 <?php } ?>
     columns: [
     {visible: false, searchable: false},
-    {title: "<?php echo app_lang("invoice_id") ?>", "class": "w10p", "iDataSort": 0},
-    {title: "<?php echo app_lang("client") ?>", "class": ""},
+    {title: "<?php echo app_lang("invoice_id") ?>", "class": idColumnClass + " all", "iDataSort": 0},
+    {title: "<?php echo app_lang("client") ?>", "class": "all"},
     {title: "<?php echo app_lang("project") ?>", "class": "w15p"},
     {visible: false, searchable: false},
     {title: "<?php echo app_lang("next_recurring_date") ?>", "iDataSort": 4, "class": "w10p"},

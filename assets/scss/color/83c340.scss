@@ -3,27 +3,32 @@ $theme-color: #83c340;
 $theme-color-focus: #75ae37;
 $theme-color-dark: #689b31;
 
-.sidebar-scroll, #timeline .post-content .post-date span {
+.sidebar-scroll,
+#timeline .post-content .post-date span {
     background: $theme-color;
 }
 
 .sidebar-menu {
     li {
-        a{
-            color: rgba(255,255,255,.8);
-            &:active, &:hover, &:focus{
+        a {
+            color: rgba(255, 255, 255, .8);
+
+            &:active,
+            &:hover,
+            &:focus {
                 color: $white !important;
-                background-color: rgba(255,255,255,.1);
+                background-color: rgba(255, 255, 255, .1);
             }
         }
 
         ul {
             li {
                 a {
-                    color: rgba(255,255,255,.8);
+                    color: rgba(255, 255, 255, .8);
+
                     &:hover {
                         color: $white;
-                        background-color: rgba(255,255,255,.1);
+                        background-color: rgba(255, 255, 255, .1);
                     }
                 }
             }
@@ -31,17 +36,17 @@ $theme-color-dark: #689b31;
     }
 
     li.active {
-        > a {
+        >a {
             color: $white !important;
-            background-color: rgba(255,255,255,.2);
+            background-color: rgba(255, 255, 255, .2);
         }
     }
 }
 
-.sidebar-toggled{
-    .sidebar-menu{
-        li{
-            &:hover{
+.sidebar-toggled {
+    .sidebar-menu {
+        li {
+            &:hover {
                 background-color: $theme-color;
             }
         }
@@ -50,17 +55,21 @@ $theme-color-dark: #689b31;
 
 .nav-tabs {
     li {
-        a{
-            &:hover, &:focus, &:active {
+        a {
+
+            &:hover,
+            &:focus,
+            &:active {
                 color: $theme-color !important;
             }
         }
-        .active, &.active {
+
+        .active,
+        &.active {
             color: $theme-color !important;
-            border-color: $theme-color !important;
         }
 
-        &:not(.title-tab):after{
+        &:not(.title-tab) a::after {
             background-color: $theme-color;
         }
     }
@@ -70,7 +79,8 @@ $theme-color-dark: #689b31;
     background: $theme-color;
     border-color: $theme-color;
 
-    &:focus, &:hover {
+    &:focus,
+    &:hover {
         background: $theme-color;
         border-color: $theme-color;
     }
@@ -79,9 +89,12 @@ $theme-color-dark: #689b31;
 .btn-primary {
     background-color: $theme-color;
     border-color: $theme-color;
-    &:hover, &:active, &:focus {
-        background-color: $theme-color-focus;
-        border-color: $theme-color-focus;
+
+    &:hover,
+    &:active,
+    &:focus {
+        background-color: $theme-color-focus !important;
+        border-color: $theme-color-focus !important;
         color: $white;
     }
 }
@@ -93,12 +106,14 @@ $theme-color-dark: #689b31;
 a {
     color: $theme-color-focus;
 
-    &:hover, &:focus, &:active {
+    &:hover,
+    &:focus,
+    &:active {
         color: $theme-color-dark;
     }
 }
 
-.circle-done{
+.circle-done {
     color: $theme-color;
 }
 
@@ -114,12 +129,14 @@ a {
 }
 
 .dataTable tbody tr.active {
-    td, &:hover td {
+
+    td,
+    &:hover td {
         background: $theme-color !important;
     }
 }
 
-td{
+td {
     &.dropdown-option button {
         &:hover {
             background: $theme-color;
@@ -144,13 +161,17 @@ td{
     }
 
     span.active {
-        &.active, &:hover.active {
+
+        &.active,
+        &:hover.active {
             background: $theme-color;
             border-color: $theme-color;
         }
 
         &.disabled {
-            &.active, &:hover.active {
+
+            &.active,
+            &:hover.active {
                 background: $theme-color;
                 border-color: $theme-color;
             }
@@ -163,24 +184,60 @@ td{
     }
 }
 
-.atwho-view .cur, .note-hint-group .active, .note-hint-item:hover {
+.atwho-view .cur,
+.note-hint-group .active,
+.note-hint-item:hover {
     background-color: $theme-color !important;
 }
 
-.sidebar-scroll{
+.sidebar-scroll {
     &::-webkit-scrollbar-thumb {
         background: rgba(117, 174, 55, 0.4);
     }
+
     &::-webkit-scrollbar-thumb:hover {
         background: rgba(117, 174, 55, 0.6);
     }
+
     &::-webkit-scrollbar-thumb:active {
         background: rgba(117, 174, 55, 0.6);
     }
 }
 
 @media (min-width: 991px) {
-    .sidebar{
+    .sidebar {
         background: $theme-color;
+    }
+}
+
+.bg-primary {
+    background-color: $theme-color !important;
+}
+
+.sidebar-brand {
+    background-color: $theme-color;
+}
+
+@media (max-width: 500px) {
+    .sidebar {
+        &.sidebar-off {
+            background-color: $theme-color;
+        }
+
+        .sidebar-scroll {
+            border-top-color: #0000000f !important;
+        }
+
+        #personal-language-icon,
+        .sidebar-toggle-btn {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+    }
+}
+
+.form-check-input {
+    &:checked {
+        background-color: $theme-color !important;
+        border-color: $theme-color !important;
     }
 }

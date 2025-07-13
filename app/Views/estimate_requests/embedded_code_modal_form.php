@@ -9,8 +9,7 @@
                             "id" => "embedded-code",
                             "name" => "embedded-code",
                             "value" => $embedded,
-                            "class" => "form-control",
-                            "data-rich-text-editor" => false
+                            "class" => "form-control"
                         ));
                         ?>
                     </div>

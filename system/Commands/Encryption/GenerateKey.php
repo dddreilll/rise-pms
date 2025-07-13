@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -52,7 +54,7 @@ class GenerateKey extends BaseCommand
     /**
      * The command's options
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $options = [
         '--force'  => 'Force overwrite existing key in `.env` file.',
@@ -122,6 +124,8 @@ class GenerateKey extends BaseCommand
 
     /**
      * Sets the new encryption key in your .env file.
+     *
+     * @param array<int|string, string|null> $params
      */
     protected function setNewEncryptionKey(string $key, array $params): bool
     {
@@ -137,6 +141,8 @@ class GenerateKey extends BaseCommand
 
     /**
      * Checks whether to overwrite existing encryption key.
+     *
+     * @param array<int|string, string|null> $params
      */
     protected function confirmOverwrite(array $params): bool
     {
@@ -166,7 +172,7 @@ class GenerateKey extends BaseCommand
         $oldFileContents = (string) file_get_contents($envFile);
         $replacementKey  = "\nencryption.key = {$newKey}";
 
-        if (strpos($oldFileContents, 'encryption.key') === false) {
+        if (! str_contains($oldFileContents, 'encryption.key')) {
             return file_put_contents($envFile, $replacementKey, FILE_APPEND) !== false;
         }
 

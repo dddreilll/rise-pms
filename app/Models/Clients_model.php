@@ -138,7 +138,7 @@ class Clients_model extends Crud_model {
         }
 
 
-        $search_by = get_array_value($options, "search_by");
+        $search_by = $this->_get_clean_value($options, "search_by");
         if ($search_by) {
             $search_by = $this->db->escapeLikeString($search_by);
             $labels_table = $this->db->prefixTable("labels");
@@ -163,6 +163,7 @@ class Clients_model extends Crud_model {
 
         $sql = "SELECT SQL_CALC_FOUND_ROWS $clients_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS primary_contact, $users_table.id AS primary_contact_id, $users_table.image AS contact_avatar,  project_table.total_projects, IFNULL(invoice_details.payment_received,0) AS payment_received $select_custom_fieds,
                 IFNULL(invoice_details.invoice_value,0) AS invoice_value,
+                (SELECT $users_table.phone FROM $users_table WHERE $users_table.client_id = $clients_table.id AND $users_table.deleted=0 AND $users_table.is_primary_contact=1) AS primary_contact_phone,
                 (SELECT GROUP_CONCAT($client_groups_table.title) FROM $client_groups_table WHERE FIND_IN_SET($client_groups_table.id, $clients_table.group_ids)) AS client_groups, $lead_status_table.title AS lead_status_title,  $lead_status_table.color AS lead_status_color,
                 owner_details.owner_name, owner_details.owner_avatar, $select_labels_data_query
         FROM $clients_table
@@ -259,6 +260,7 @@ class Clients_model extends Crud_model {
 
     function get_primary_contact($client_id = 0, $info = false) {
         $users_table = $this->db->prefixTable('users');
+        $client_id = $this->_get_clean_value($client_id);
 
         $sql = "SELECT $users_table.id, $users_table.first_name, $users_table.last_name
         FROM $users_table
@@ -275,7 +277,9 @@ class Clients_model extends Crud_model {
 
     function add_remove_star($client_id, $user_id, $type = "add") {
         $clients_table = $this->db->prefixTable('clients');
-        $client_id = $client_id ? $this->db->escapeString($client_id) : $client_id;
+
+        $client_id = $this->_get_clean_value($client_id);
+        $user_id = $this->_get_clean_value($user_id);
 
         $action = " CONCAT($clients_table.starred_by,',',':$user_id:') ";
         $where = " AND FIND_IN_SET(':$user_id:',$clients_table.starred_by) = 0"; //don't add duplicate
@@ -292,6 +296,8 @@ class Clients_model extends Crud_model {
 
     function get_starred_clients($user_id, $client_groups = "") {
         $clients_table = $this->db->prefixTable('clients');
+        $user_id = $this->_get_clean_value($user_id);
+        $client_groups = $this->_get_clean_value($client_groups);
 
         $where = $this->prepare_allowed_client_groups_query($clients_table, $client_groups);
 
@@ -306,6 +312,8 @@ class Clients_model extends Crud_model {
         $clients_table = $this->db->prefixTable('clients');
         $general_files_table = $this->db->prefixTable('general_files');
         $users_table = $this->db->prefixTable('users');
+
+        $client_id = $this->_get_clean_value($client_id);
 
         //get client files info to delete the files from directory 
         $client_files_sql = "SELECT * FROM $general_files_table WHERE $general_files_table.deleted=0 AND $general_files_table.client_id=$client_id; ";
@@ -366,7 +374,7 @@ class Clients_model extends Crud_model {
             $where .= " AND $clients_table.lead_source_id='$source'";
         }
 
-        $search = get_array_value($options, "search");
+        $search = $this->_get_clean_value($options, "search");
         if ($search) {
             $search = $this->db->escapeLikeString($search);
             $where .= " AND $clients_table.company_name LIKE '%$search%' ESCAPE '!'";
@@ -416,8 +424,10 @@ class Clients_model extends Crud_model {
             $where .= " AND ($clients_table.created_by=$show_own_clients_only_user_id OR $clients_table.owner_id=$show_own_clients_only_user_id)";
         }
 
+        $search = $this->_get_clean_value($search);
         if ($search) {
             $search = $this->db->escapeLikeString($search);
+            $where .= " AND $clients_table.company_name LIKE '%$search%' ESCAPE '!' ";
         }
 
         $client_groups = $this->_get_clean_value($options, "client_groups");
@@ -425,7 +435,7 @@ class Clients_model extends Crud_model {
 
         $sql = "SELECT $clients_table.id, $clients_table.company_name AS title
         FROM $clients_table  
-        WHERE $clients_table.deleted=0 AND $clients_table.is_lead=0 AND $clients_table.company_name LIKE '%$search%' ESCAPE '!' $where
+        WHERE $clients_table.deleted=0 AND $clients_table.is_lead=0 $where
         ORDER BY $clients_table.company_name ASC
         LIMIT 0, 10";
 
@@ -496,7 +506,6 @@ class Clients_model extends Crud_model {
         try {
             $this->db->query("SET sql_mode = ''");
         } catch (\Exception $e) {
-            
         }
         $where = "";
 
@@ -524,7 +533,6 @@ class Clients_model extends Crud_model {
     }
 
     function is_currency_editable($client_id) {
-        $clients_table = $this->db->prefixTable('clients');
         $invoices_table = $this->db->prefixTable('invoices');
         $estimates_table = $this->db->prefixTable('estimates');
         $orders_table = $this->db->prefixTable('orders');
@@ -532,7 +540,7 @@ class Clients_model extends Crud_model {
         $contracts_table = $this->db->prefixTable('contracts');
         $subscriptions_table = $this->db->prefixTable('subscriptions');
 
-        $client_id = $this->db->escapeString($client_id);
+        $client_id = $this->_get_clean_value(array("client_id" => $client_id), "client_id");
 
         $invoices_sql = "SELECT $invoices_table.id
                         FROM $invoices_table
@@ -700,7 +708,7 @@ class Clients_model extends Crud_model {
 
         return $this->db->query($sql);
     }
-    
+
     function get_clients_id_and_name($options = array()) {
         $clients_table = $this->db->prefixTable('clients');
 
@@ -727,5 +735,4 @@ class Clients_model extends Crud_model {
         WHERE $clients_table.deleted=0 AND $clients_table.is_lead=0 $where $limit_offset";
         return $this->db->query($sql);
     }
-
 }

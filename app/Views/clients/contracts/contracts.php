@@ -19,9 +19,9 @@
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {title: '<?php echo app_lang("id") ?>', "class": "w50"},
-                {title: "<?php echo app_lang("title") ?>", "class": "w20p"},
+                {title: "<?php echo app_lang("title") ?>", "class": "w20p all"},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("project") ?>", "class": "w25p"},
+                {title: "<?php echo app_lang("project") ?>", "class": "w25p desktop"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("contract_date") ?>", "iDataSort": 4, "class": "w20p"},
                 {visible: false, searchable: false},

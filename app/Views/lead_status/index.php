@@ -25,7 +25,7 @@
 
                     <div role="tabpanel" class="tab-pane fade" id="lead-status-tab">
                         <div class="table-responsive">
-                            <table id="lead-status-table" class="display no-thead b-t b-b-only no-hover" cellspacing="0" width="100%">         
+                            <table id="lead-status-table" class="display no-thead b-b-only no-hover" cellspacing="0" width="100%">         
                             </table>
                         </div>
                     </div>

@@ -38,6 +38,8 @@ class Activity_logs_model extends Model {
     }
 
     function delete_where($where = array()) {
+        $where = $this->_get_clean_value($where);
+
         if (count($where)) {
             return $this->db_builder->delete($where);
         }
@@ -137,6 +139,8 @@ class Activity_logs_model extends Model {
     }
 
     function get_one_where($where = array()) {
+        $where = $this->_get_clean_value($where);
+
         $result = $this->db_builder->getWhere($where, 1);
         if (count($result->getResult())) {
             return $result->getRow();
@@ -151,19 +155,99 @@ class Activity_logs_model extends Model {
     } 
 
     function update_where($data = array(), $where = array()) {
+        $where = $this->_get_clean_value($where);
         if (count($where)) {
             return $this->db_builder->update($data, $where);
         }
     }
 
-    protected function _get_clean_value($options, $key) {
+    protected function _get_clean_value($options_or_value, $key = "") {
+        $value = $options_or_value;
 
-        $value = get_array_value($options, $key);
-        if ($value && is_string($value)) {
-            return $this->db->escapeString($value);
-        } else {
-            return $value;
+        if (is_array($options_or_value) && $key) {
+            $value = get_array_value($options_or_value, $key);
         }
+
+        if (is_string($value)) {
+           
+            $length = strlen($value);
+
+            // if ($length > 255) {
+            //     $backtrace = $this->get_backtrace();
+            //     log_message('error', 'Input is too long detected by _get_clean_value where the key: ' . $key . $backtrace);
+            //     exit();
+            // }
+
+            //check for valid date YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+            if (($length === 10 && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value))
+                || ($length === 19 && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value))
+            ) {
+
+                $date_format = (strlen($value) === 10) ? 'Y-m-d' : 'Y-m-d H:i:s';
+                $d = \DateTime::createFromFormat($date_format, $value);
+                if (!$d || $d->format($date_format) !== $value) {
+
+                    $backtrace = $this->get_backtrace();
+
+                    log_message('error', 'Invalid date detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                    exit();
+                }
+                return $value; // It's a valid date or date-time string, return as-is
+            }
+
+            // Block harmful SQL functions like ASCII, SUBSTRING, etc.
+            if (preg_match('/\b(ASCII|SUBSTRING|MID|LENGTH|DATABASE|SCHEMA|BENCHMARK|SLEEP|VERSION|CHAR|CONCAT)\b/i', $value)) {
+                $backtrace = $this->get_backtrace();
+
+                log_message('error', 'SQL function injection detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                exit();
+            }
+
+            // Protect against common SQL keywords, harmful characters, and patterns
+            if (
+                preg_match('/(?<!\w)\b(TABLE|UNION(?:\s+ALL)?|INSERT|DELETE|UPDATE|EXEC|DROP|ALTER|TRUNCATE|REPLACE|LOAD_FILE|OUTFILE|INTO|GROUP\s+BY|ORDER\s+BY|HAVING|CASE|LIKE|--|#|\/\*)\b(?!\w)/i', $value)
+                || preg_match('/["]/', $value)  // Dangerous characters (excluding semicolons)
+                || preg_match('/0x[0-9a-f]+/i', $value)  // Hexadecimal pattern
+                || preg_match('/\/\*.*\*\//', $value)  // SQL comments
+                || preg_match('/\b\d+\s*[!=<>]\s*\d+\b(?!,)/', $value)  // Detect numeric comparisons (e.g., 1=1)
+                || preg_match('/%[0-9a-f]{2}/i', $value)  // URL encoding like %27 for '
+                || preg_match('/(?<!\w)-\d+\s+(DELETE|UPDATE|INSERT|DROP|ALTER|UNION)\b/i', $value)
+            ) {
+                $backtrace = $this->get_backtrace();
+
+                log_message('error', 'Harmful injection detected by _get_clean_value where the key: ' . $key . ' and value: ' . $value . $backtrace);
+                exit();
+            }
+
+            return $this->db->escapeString($value);
+        } else if (is_int($value) || is_numeric($value)) {
+            return intval($value);
+        } else if (is_bool($value)) {
+            return $value;
+        } else if (is_array($value)) {
+            foreach ($value as $array_key => $new_value) {
+                $value[$array_key] = $this->_get_clean_value($new_value);
+            }
+            return $value;
+        } else {
+            return null;
+        }
+    }
+
+    private function get_backtrace() {
+        $backtrace_path = "\n";
+        $limited_backtrace = array_slice(debug_backtrace(), 1, 5);
+        foreach ($limited_backtrace as $trace) {
+            $backtrace_path .= "Function: " . $trace['function'] . " ";
+            if (isset($trace['file'])) {
+                $backtrace_path .= "File: " . $trace['file'] . " ";
+            }
+            if (isset($trace['line'])) {
+                $backtrace_path .= "Line: " . $trace['line'] . " ";
+            }
+            $backtrace_path .= "\n";
+        }
+        return $backtrace_path;
     }
 
 }

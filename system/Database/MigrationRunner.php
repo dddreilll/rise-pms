@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -17,7 +19,6 @@ use CodeIgniter\Exceptions\ConfigException;
 use CodeIgniter\I18n\Time;
 use Config\Database;
 use Config\Migrations as MigrationsConfig;
-use Config\Services;
 use RuntimeException;
 use stdClass;
 
@@ -122,14 +123,11 @@ class MigrationRunner
     protected $groupSkip = false;
 
     /**
-     * Constructor.
+     * The migration can manage multiple databases. So it should always use the
+     * default DB group so that it creates the `migrations` table in the default
+     * DB group. Therefore, passing $db is for testing purposes only.
      *
-     * When passing in $db, you may pass any of the following to connect:
-     * - group name
-     * - existing connection instance
-     * - array of database configuration values
-     *
-     * @param array|ConnectionInterface|string|null $db
+     * @param array|ConnectionInterface|string|null $db DB group. For testing purposes only.
      *
      * @throws ConfigException
      */
@@ -138,16 +136,12 @@ class MigrationRunner
         $this->enabled = $config->enabled ?? false;
         $this->table   = $config->table ?? 'migrations';
 
-        // Default name space is the app namespace
         $this->namespace = APP_NAMESPACE;
 
-        // get default database group
-        $config      = config('Database');
-        $this->group = $config->defaultGroup;
-        unset($config);
+        // Even if a DB connection is passed, since it is a test,
+        // it is assumed to use the default group name
+        $this->group = is_string($db) ? $db : config(Database::class)->defaultGroup;
 
-        // If no db connection passed in, use
-        // default database group.
         $this->db = db_connect($db);
     }
 
@@ -174,7 +168,7 @@ class MigrationRunner
 
         $migrations = $this->findMigrations();
 
-        if (empty($migrations)) {
+        if ($migrations === []) {
             return true;
         }
 
@@ -220,9 +214,10 @@ class MigrationRunner
      *
      * Calls each migration step required to get to the provided batch
      *
-     * @param int $targetBatch Target batch number, or negative for a relative batch, 0 for all
+     * @param int         $targetBatch Target batch number, or negative for a relative batch, 0 for all
+     * @param string|null $group       Deprecated. The designation has no effect.
      *
-     * @return mixed Current batch number on success, FALSE on failure or no migrations are found
+     * @return bool True on success, FALSE on failure or no migrations are found
      *
      * @throws ConfigException
      * @throws RuntimeException
@@ -233,11 +228,6 @@ class MigrationRunner
             throw ConfigException::forDisabledMigrations();
         }
 
-        // Set database group if not null
-        if ($group !== null) {
-            $this->setGroup($group);
-        }
-
         $this->ensureTable();
 
         $batches = $this->getBatches();
@@ -246,7 +236,7 @@ class MigrationRunner
             $targetBatch = $batches[count($batches) - 1 + $targetBatch] ?? 0;
         }
 
-        if (empty($batches) && $targetBatch === 0) {
+        if ($batches === [] && $targetBatch === 0) {
             return true;
         }
 
@@ -399,7 +389,7 @@ class MigrationRunner
      */
     public function findMigrations(): array
     {
-        $namespaces = $this->namespace ? [$this->namespace] : array_keys(Services::autoloader()->getNamespace());
+        $namespaces = $this->namespace !== null ? [$this->namespace] : array_keys(service('autoloader')->getNamespace());
         $migrations = [];
 
         foreach ($namespaces as $namespace) {
@@ -424,7 +414,7 @@ class MigrationRunner
     public function findNamespaceMigrations(string $namespace): array
     {
         $migrations = [];
-        $locator    = Services::locator(true);
+        $locator    = service('locator', true);
 
         if (! empty($this->path)) {
             helper('filesystem');
@@ -454,17 +444,17 @@ class MigrationRunner
      */
     protected function migrationFromFile(string $path, string $namespace)
     {
-        if (substr($path, -4) !== '.php') {
+        if (! str_ends_with($path, '.php')) {
             return false;
         }
 
         $filename = basename($path, '.php');
 
-        if (! preg_match($this->regex, $filename)) {
+        if (preg_match($this->regex, $filename) !== 1) {
             return false;
         }
 
-        $locator = Services::locator(true);
+        $locator = service('locator', true);
 
         $migration = new stdClass();
 
@@ -534,7 +524,7 @@ class MigrationRunner
     {
         preg_match($this->regex, $migration, $matches);
 
-        return count($matches) ? $matches[1] : '0';
+        return $matches !== [] ? $matches[1] : '0';
     }
 
     /**
@@ -549,7 +539,7 @@ class MigrationRunner
     {
         preg_match($this->regex, $migration, $matches);
 
-        return count($matches) ? $matches[2] : '';
+        return $matches !== [] ? $matches[2] : '';
     }
 
     /**
@@ -650,12 +640,12 @@ class MigrationRunner
         $builder = $this->db->table($this->table);
 
         // If group was specified then use it
-        if (! empty($group)) {
+        if ($group !== '') {
             $builder->where('group', $group);
         }
 
         // If a namespace was specified then use it
-        if ($this->namespace) {
+        if ($this->namespace !== null) {
             $builder->where('namespace', $this->namespace);
         }
 
@@ -695,7 +685,7 @@ class MigrationRunner
             ->get()
             ->getResultArray();
 
-        return array_map('intval', array_column($batches, 'batch'));
+        return array_map(intval(...), array_column($batches, 'batch'));
     }
 
     /**
@@ -710,7 +700,7 @@ class MigrationRunner
             ->get()
             ->getResultObject();
 
-        $batch = is_array($batch) && count($batch)
+        $batch = is_array($batch) && $batch !== []
             ? end($batch)->batch
             : 0;
 
@@ -735,7 +725,7 @@ class MigrationRunner
             ->get()
             ->getResultObject();
 
-        return count($migration) ? $migration[0]->version : '0';
+        return $migration !== [] ? $migration[0]->version : '0';
     }
 
     /**
@@ -756,7 +746,7 @@ class MigrationRunner
             ->get()
             ->getResultObject();
 
-        return count($migration) ? $migration[0]->version : 0;
+        return $migration === [] ? '0' : $migration[0]->version;
     }
 
     /**
@@ -843,8 +833,9 @@ class MigrationRunner
             throw new RuntimeException($message);
         }
 
-        $instance = new $class();
-        $group    = $instance->getDBGroup() ?? config('Database')->defaultGroup;
+        /** @var Migration $instance */
+        $instance = new $class(Database::forge($this->db));
+        $group    = $instance->getDBGroup() ?? $this->group;
 
         if (ENVIRONMENT !== 'testing' && $group === 'tests' && $this->groupFilter !== 'tests') {
             // @codeCoverageIgnoreStart
@@ -859,8 +850,6 @@ class MigrationRunner
 
             return true;
         }
-
-        $this->setGroup($group);
 
         if (! is_callable([$instance, $direction])) {
             $message = sprintf(lang('Migrations.missingMethod'), $direction);

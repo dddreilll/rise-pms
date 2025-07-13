@@ -13,7 +13,7 @@
         ?>
         <?php if ($login_user->is_admin || $user_info->id === $login_user->id) { ?>
             <div class="file-upload btn mt0 p0 profile-image-upload" data-bs-toggle="tooltip" title="<?php echo app_lang("upload_and_crop"); ?>" data-placement="right">
-                <span class="btn color-white"><i data-feather="camera" class="icon-16"></i></span> 
+                <span class="btn color-white"><i data-feather="camera" class="icon-16"></i></span>
                 <input id="profile_image_file" class="upload" name="profile_image_file" type="file" data-height="200" data-width="200" data-preview-container="#profile-image-preview" data-input-field="#profile_image" />
             </div>
             <div class="file-upload p0 profile-image-upload profile-image-direct-upload" data-bs-toggle="tooltip" title="<?php echo app_lang("upload"); ?> (200x200 px)" data-placement="right">
@@ -28,26 +28,26 @@
                     <span class="btn color-white"><i data-feather="upload" class="icon-16"></i></span>
                 </label>
             </div>
-            <input type="hidden" id="profile_image" name="profile_image" value=""  />
+            <input type="hidden" id="profile_image" name="profile_image" value="" />
         <?php } ?>
-        <span class="avatar avatar-lg"><img id="profile-image-preview" src="<?php echo get_avatar($user_info->image); ?>" alt="..."></span> 
+        <span class="avatar avatar-lg"><img id="profile-image-preview" src="<?php echo get_avatar($user_info->image); ?>" alt="..."></span>
         <h4 class=""><?php echo $user_info->first_name . " " . $user_info->last_name; ?></h4>
         <?php echo form_close(); ?>
-    </div> 
+    </div>
 
 
     <div class="box-content pl15">
         <?php if ($user_info->job_title) { ?>
-            <p class="p10 m0"><label class="badge bg-info large"><strong> <?php echo $user_info->job_title; ?> </strong></label></p> 
+            <p class="p10 m0"><label class="badge bg-info"><strong> <?php echo $user_info->job_title; ?> </strong></label></p>
         <?php } ?>
 
         <?php if ($show_cotact_info) { ?>
-            <p class="p10 m0"><i data-feather="mail" class="icon-16"></i> <?php echo $user_info->email ? $user_info->email : "-"; ?></p> 
+            <p class="p10 m0"><i data-feather="mail" class="icon-16"></i> <?php echo $user_info->email ? $user_info->email : "-"; ?></p>
             <?php if ($user_info->phone || $user_info->skype) { ?>
                 <p class="p10 m0">
                     <?php if ($user_info->phone) { ?>
                         <i data-feather="phone" class="icon-16"></i> <?php echo $user_info->phone; ?> <span class="mr15"></span>
-                        <?php
+                    <?php
                     }
                     if ($user_info->skype) {
                         echo view("users/svg_social_icons/skype");
@@ -56,7 +56,7 @@
                     ?>
                 </p>
             <?php } ?>
-        <?php } ?> 
+        <?php } ?>
 
         <div class="p10 m0 clearfix">
             <div class="float-start">
@@ -88,8 +88,12 @@
                 }
 
                 if (get_setting("module_message") && $show_message_button) {
-                    echo modal_anchor(get_uri("messages/modal_form/" . $user_info->id), "<i data-feather='mail' class='icon-16'></i> " . app_lang('send_message'), array("class" => "btn btn-transparent success btn-sm", "title" => app_lang('send_message')));
+                    echo modal_anchor(get_uri("messages/modal_form/" . $user_info->id), "<i data-feather='mail' class='icon-16'></i> " . app_lang('send_message'), array("class" => "btn btn-transparent", "title" => app_lang('send_message')));
                 }
+            }
+
+            if (can_access_reminders_module() && $user_info->user_type == "staff") {
+                echo modal_anchor(get_uri("events/reminders"), "<i data-feather='clock' class='icon-16'></i> " . app_lang('reminders'), array("class" => "btn btn-transparent ml10", "id" => "reminder-icon", "data-post-related_user_id" => $user_info->id, "data-post-reminder_view_type" => "related_user", "title" => app_lang('reminders') . " (" . app_lang('private') . ")"));
             }
             ?>
         </div>
@@ -98,10 +102,10 @@
 
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         //modify design for mobile devices
         if (isMobile()) {
-            $("#profile-image-section").children("div").each(function () {
+            $("#profile-image-section").children("div").each(function() {
                 $(this).addClass("p0");
                 $(this).removeClass("box-content");
             });

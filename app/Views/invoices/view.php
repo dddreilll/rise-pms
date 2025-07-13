@@ -18,8 +18,8 @@
                                 if ($invoice_info->no_of_cycles_completed > 0 && $invoice_info->no_of_cycles_completed == $invoice_info->no_of_cycles) {
                                     $recurring_status_class = "text-danger";
                                 }
-                                ?>
-                                <span class="label ml15 b-a "><span class="<?php echo $recurring_status_class; ?>"><?php echo app_lang('recurring'); ?></span></span>
+                            ?>
+                                <span class="label ml15"><span class="<?php echo $recurring_status_class; ?>"><?php echo app_lang('recurring'); ?></span></span>
                             <?php } ?>
                         </h1>
 
@@ -40,7 +40,8 @@
                                         <?php } ?>
                                     <?php } ?>
                                     <li role="presentation"><?php echo anchor(get_uri("invoices/download_pdf/" . $invoice_info->id), "<i data-feather='download' class='icon-16'></i> " . app_lang('download_pdf'), array("title" => app_lang('download_pdf'), "class" => "dropdown-item")); ?> </li>
-                                    <li role="presentation"><?php echo anchor(get_uri("invoices/download_pdf/" . $invoice_info->id . "/view"), "<i data-feather='file-text' class='icon-16'></i> " . app_lang('view_pdf'), array("title" => app_lang('view_pdf'), "target" => "_blank", "class" => "dropdown-item")); ?> </li>
+                                    <li role="presentation"><?php echo anchor(get_uri("invoices/download_pdf/" . $invoice_info->id . "/view"), "<i data-feather='file-text' class='icon-16'></i> " . app_lang('view_pdf'), array("title" => app_lang('view_pdf'), "target" => "_blank", "class" => "dropdown-item pdf-view-btn")); ?> </li>
+                                    <li role="presentation" class="d-block d-md-none"><?php echo js_anchor("<i data-feather='file-text' class='icon-16'></i> " . app_lang('view_pdf'), array('title' => app_lang('view_pdf'), "data-group" => "invoice-pdf", "data-toggle" => "app-modal", "data-sidebar" => "0", "data-url" => get_uri("invoices/download_pdf/" . $invoice_info->id . "/view/0/1"), "class" => "dropdown-item mobile-pdf-view-btn")) ?></li>
                                     <li role="presentation"><?php echo anchor(get_uri("invoices/preview/" . $invoice_info->id . "/1"), "<i data-feather='search' class='icon-16'></i> " . app_lang('preview'), array("title" => app_lang('preview'), "target" => "_blank", "class" => "dropdown-item")); ?> </li>
                                     <li role="presentation"><?php echo js_anchor("<i data-feather='printer' class='icon-16'></i> " . app_lang('print'), array('title' => app_lang('print'), 'id' => 'print-invoice-btn', "class" => "dropdown-item")); ?> </li>
 
@@ -76,7 +77,7 @@
                     </div>
 
                     <ul id="invoice-tabs" data-bs-toggle="ajax-tab" class="nav nav-pills rounded classic mb20 scrollable-tabs border-white" role="tablist">
-                        <li><a role="presentation" data-bs-toggle="tab"  href="<?php echo_uri("invoices/details/" . $invoice_info->id); ?>" data-bs-target="#invoice-details-section"><?php echo app_lang("details"); ?></a></li>
+                        <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("invoices/details/" . $invoice_info->id); ?>" data-bs-target="#invoice-details-section"><?php echo app_lang("details"); ?></a></li>
                         <?php if ($invoice_info->type == "invoice") { ?>
                             <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("invoices/payments/" . $invoice_info->id); ?>" data-bs-target="#invoice-payments-section"><?php echo app_lang('payments'); ?></a></li>
                             <?php if ($invoice_info->recurring) { ?>
@@ -98,19 +99,33 @@
                 </div>
             </div>
         </div>
-    </div>    
+    </div>
 </div>
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         //modify the delete confirmation texts
         $("#confirmationModalTitle").html("<?php echo app_lang('cancel') . "?"; ?>");
         $("#confirmDeleteButton").html("<i data-feather='x' class='icon-16'></i> <?php echo app_lang("cancel"); ?>");
+
+        if (isMobile()) {
+            $(".pdf-view-btn").addClass("d-none");
+
+            $(".mobile-pdf-view-btn").on('click', function(e) {
+                setTimeout(function() {
+                    $(".app-modal-content-area").css({
+                        "height": "100%",
+                        "width": "100%"
+                    });
+                })
+            })
+        }
+
     });
 
-    updateInvoiceStatusBar = function (invoiceId) {
+    updateInvoiceStatusBar = function(invoiceId) {
         $.ajax({
             url: "<?php echo get_uri("invoices/get_invoice_status_bar"); ?>/" + invoiceId,
-            success: function (result) {
+            success: function(result) {
                 if (result) {
                     $("#invoice-status-bar").html(result);
                 }
@@ -119,18 +134,20 @@
     };
 
     //print invoice
-    $("#print-invoice-btn").click(function () {
+    $("#print-invoice-btn").click(function() {
         appLoader.show();
 
         $.ajax({
             url: "<?php echo get_uri('invoices/print_invoice/' . $invoice_info->id) ?>",
             dataType: 'json',
-            success: function (result) {
+            success: function(result) {
                 if (result.success) {
                     document.body.innerHTML = result.print_view; //add invoice's print view to the page
-                    $("html").css({"overflow": "visible"});
+                    $("html").css({
+                        "overflow": "visible"
+                    });
 
-                    setTimeout(function () {
+                    setTimeout(function() {
                         window.print();
                     }, 200);
                 } else {
@@ -143,19 +160,7 @@
     });
 
     //reload page after finishing print action
-    window.onafterprint = function () {
+    window.onafterprint = function() {
         location.reload();
     };
-
 </script>
-
-<?php
-//required to send email 
-
-load_css(array(
-    "assets/js/summernote/summernote.css",
-));
-load_js(array(
-    "assets/js/summernote/summernote.min.js",
-));
-?>

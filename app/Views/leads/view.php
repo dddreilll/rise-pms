@@ -1,5 +1,5 @@
-<div id="page-content" class="clearfix page-content">
-    <div class="container-fluid leads-details-view">
+<div id="page-content" class="clearfix page-wrapper">
+    <div class="clearfix leads-details-view">
         <div class="row">
             <div class="col-md-12">
                 <div class="page-title clearfix no-border no-border-top-radius no-bg leads-page-title">
@@ -9,7 +9,7 @@
                     <div class="title-button-group mr0">
                         <?php
                         if (can_access_reminders_module()) {
-                            echo modal_anchor(get_uri("events/reminders"), "<i data-feather='clock' class='icon-16'></i> " . app_lang('reminders'), array("class" => "btn btn-default mr10", "id" => "reminder-icon", "data-post-lead_id" => $lead_info->id, "data-post-reminder_view_type" => "client", "lead" => app_lang('reminders') . " (" . app_lang('private') . ")"));
+                            echo modal_anchor(get_uri("events/reminders"), "<i data-feather='clock' class='icon-16'></i> " . app_lang('reminders'), array("class" => "btn btn-default mr10", "id" => "reminder-icon", "data-post-lead_id" => $lead_info->id, "data-post-reminder_view_type" => "lead", "title" => app_lang('reminders') . " (" . app_lang('private') . ")"));
                         }
                         ?>
                         <?php echo modal_anchor(get_uri("leads/make_client_modal_form/") . $lead_info->id, "<i data-feather='briefcase' class='icon-16'></i> " . app_lang('make_client'), array("class" => "btn btn-primary float-end mr15", "title" => app_lang('make_client'))); ?>
@@ -58,7 +58,7 @@
                     }
                     ?>
                 </ul>
-                <div class="tab-content">
+                <div class="tab-content lead-tab-content">
                     <div role="tabpanel" class="tab-pane fade" id="lead-projects"></div>
                     <div role="tabpanel" class="tab-pane fade" id="lead-files"></div>
                     <div role="tabpanel" class="tab-pane fade" id="lead-info"></div>

@@ -3,7 +3,7 @@
         <h6 class="float-start"><?php echo app_lang('client_contacts'); ?></h6>
         <?php
         if ($can_add_remove_project_members && $can_access_clients) {
-            echo modal_anchor(get_uri("projects/project_member_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_contact'), array("class" => "btn btn-outline-light float-end add-member-button", "title" => app_lang('add_contact'), "data-post-project_id" => $project_id, "data-post-add_user_type" => "client_contacts"));
+            echo modal_anchor(get_uri("projects/project_member_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_contact'), array("class" => "btn btn-default float-end add-member-button", "title" => app_lang('add_contact'), "data-post-project_id" => $project_id, "data-post-add_user_type" => "client_contacts"));
         }
         ?>
     </div>

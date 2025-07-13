@@ -31,6 +31,8 @@ class Announcements extends Security_Controller {
 
     //show add/edit announcement form
     function form($id = 0) {
+        validate_numeric_value($id);
+
         $this->access_only_allowed_members();
 
         $view_data['model_info'] = $this->Announcements_model->get_one($id);
@@ -51,7 +53,9 @@ class Announcements extends Security_Controller {
     }
 
     //show a specific announcement
-    function view($id = "") {
+    function view($id = 0) {
+        validate_numeric_value($id);
+
         if ($id) {
             if ($this->login_user->user_type === "client") {
                 if (!$this->can_client_access("announcement")) {
@@ -97,6 +101,8 @@ class Announcements extends Security_Controller {
 
     //mark the announcement as read for loged in user
     function mark_as_read($id) {
+        validate_numeric_value($id);
+
         $this->Announcements_model->mark_as_read($id, $this->login_user->id);
     }
 
@@ -135,6 +141,9 @@ class Announcements extends Security_Controller {
             array_push($share_with, $share_with_specific_client_groups);
         }
 
+        $share_with = $share_with ? implode(",", $share_with) : "";
+        validate_share_with_value($share_with);
+
         $data = array(
             "title" => $this->request->getPost('title'),
             "description" => decode_ajax_post_data($this->request->getPost('description')),
@@ -142,7 +151,7 @@ class Announcements extends Security_Controller {
             "end_date" => $this->request->getPost('end_date'),
             "created_by" => $this->login_user->id,
             "created_at" => get_current_utc_time(),
-            "share_with" => $share_with ? implode(",", $share_with) : ""
+            "share_with" => $share_with
         );
 
         //is editing? update the files if required
@@ -238,7 +247,7 @@ class Announcements extends Security_Controller {
         $option = "";
         if ($this->access_type === "all") {
             $option = anchor(get_uri("announcements/form/" . $data->id), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_announcement')))
-                    . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_announcement'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("announcements/delete"), "data-action" => "delete"));
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_announcement'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("announcements/delete"), "data-action" => "delete"));
         }
         return array(
             anchor(get_uri("announcements/view/" . $data->id), $data->title, array("class" => "", "title" => app_lang('view'))),
@@ -250,7 +259,6 @@ class Announcements extends Security_Controller {
             $option
         );
     }
-
 }
 
 /* End of file announcements.php */

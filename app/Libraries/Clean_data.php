@@ -665,4 +665,14 @@ class Clean_data {
         return $matches[0];
     }
 
+    public function html_escape($data) {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->html_escape($value);
+            }
+        } else {
+            $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+        }
+        return $data;
+    }
 }

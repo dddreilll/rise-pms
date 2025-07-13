@@ -2,7 +2,7 @@
 
 <div id="page-content" class="page-wrapper clearfix grid-button">
     <div class="card clearfix">
-        <ul id="payment-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner" role="tablist">
+        <ul id="payment-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner scrollable-tabs" role="tablist">
             <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("payments_summary"); ?></h4></li>
             <li><a id="yearly-summary-button"  role="presentation" data-bs-toggle="tab"  href="javascript:;" data-bs-target="#yearly-payment-summary"><?php echo app_lang("monthly_summary"); ?></a></li>
             <?php if ($can_access_clients) { ?>

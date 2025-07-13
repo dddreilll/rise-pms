@@ -8,8 +8,10 @@
     }
     ?>
     <a class="sidebar-toggle-btn hide" href="#">
-        <i data-feather="menu" class="icon mt-1 text-off"></i>
+        <i data-feather="x" class="icon mt0"></i>
     </a>
+    <div id="left-menu-language-dropdown" class="d-block d-sm-none dropdown float-end">
+    </div>
 
     <a class="sidebar-brand brand-logo" href="<?php echo $dashboard_link; ?>"><img class="dashboard-image" src="<?php echo get_logo_url(); ?>" /></a>
     <a class="sidebar-brand brand-logo-mini" href="<?php echo $dashboard_link; ?>"><img class="dashboard-image" src="<?php echo get_favicon_url(); ?>" /></a>
@@ -124,4 +126,10 @@
 
 <script type='text/javascript'>
     feather.replace();
+
+    $(document).ready(function () {
+        $("#sidebar-menu li").click(function(){
+            $("#sidebar-menu li.active").removeClass("active");
+        });
+    });
 </script>

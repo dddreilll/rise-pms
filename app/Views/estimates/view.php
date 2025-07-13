@@ -63,7 +63,7 @@
                                     <?php if ($estimate_status == "accepted") { ?>
                                         <li role="presentation" class="dropdown-divider"></li>
                                         <?php if ($can_create_projects && !$estimate_info->project_id) { ?>
-                                            <li role="presentation"><?php echo modal_anchor(get_uri("projects/modal_form"), "<i data-feather='plus' class='icon-16'></i> " . app_lang('create_project'), array("data-post-estimate_id" => $estimate_info->id, "title" => app_lang('create_project'), "data-post-client_id" => $estimate_info->client_id, "class" => "dropdown-item")); ?> </li>
+                                            <li role="presentation"><?php echo modal_anchor(get_uri("projects/modal_form"), "<i data-feather='command' class='icon-16'></i> " . app_lang('create_project'), array("data-post-context" => "estimate", "data-post-context_id" => $estimate_info->id, "title" => app_lang('create_project'), "data-post-client_id" => $estimate_info->client_id, "class" => "dropdown-item")); ?> </li>
                                         <?php } ?>
                                         <?php if ($show_invoice_option) { ?>
                                             <li role="presentation"><?php echo modal_anchor(get_uri("invoices/modal_form"), "<i data-feather='refresh-cw' class='icon-16'></i> " . app_lang('create_invoice'), array("title" => app_lang("create_invoice"), "data-post-estimate_id" => $estimate_info->id, "class" => "dropdown-item")); ?> </li>
@@ -106,10 +106,10 @@
             stateSave: false,
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("item") ?> ", sortable: false},
+                {title: "<?php echo app_lang("item") ?> ", sortable: false, "class": "all"},
                 {title: "<?php echo app_lang("quantity") ?>", "class": "text-right w15p", sortable: false},
                 {title: "<?php echo app_lang("rate") ?>", "class": "text-right w15p", sortable: false},
-                {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p", sortable: false},
+                {title: "<?php echo app_lang("total") ?>", "class": "text-right w15p all", sortable: false},
                 {title: "<i data-feather='menu' class='icon-16'></i>", "class": "text-center option w100", sortable: false, visible: optionVisibility}
             ],
 
@@ -208,14 +208,3 @@
     };
 
 </script>
-
-<?php
-//required to send email 
-
-load_css(array(
-    "assets/js/summernote/summernote.css",
-));
-load_js(array(
-    "assets/js/summernote/summernote.min.js",
-));
-?>

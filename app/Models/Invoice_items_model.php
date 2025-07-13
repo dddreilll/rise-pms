@@ -41,18 +41,21 @@ class Invoice_items_model extends Crud_model {
     function get_item_suggestion($keyword = "", $user_type = "") {
         $items_table = $this->db->prefixTable('items');
 
+        $keyword = $this->_get_clean_value($keyword);
+        $where = "";
+
         if ($keyword) {
             $keyword = $this->db->escapeLikeString($keyword);
+            $where .= " AND $items_table.title LIKE '%$keyword%' ESCAPE '!' ";
         }
 
-        $where = "";
         if ($user_type && $user_type === "client") {
-            $where = " AND $items_table.show_in_client_portal=1";
+            $where .= " AND $items_table.show_in_client_portal=1";
         }
 
         $sql = "SELECT $items_table.id, $items_table.title
         FROM $items_table
-        WHERE $items_table.deleted=0  AND $items_table.title LIKE '%$keyword%' ESCAPE '!' $where
+        WHERE $items_table.deleted=0 $where
         LIMIT 10 
         ";
         return $this->db->query($sql)->getResult();
@@ -63,20 +66,20 @@ class Invoice_items_model extends Crud_model {
         $items_table = $this->db->prefixTable('items');
 
         $where = "";
-        $item_name = get_array_value($options, "item_name");
+        $item_name = $this->_get_clean_value($options, "item_name");
         if ($item_name) {
             $item_name = $this->db->escapeLikeString($item_name);
-            $where .= " AND $items_table.title LIKE '%$item_name%' ESCAPE '!'";
+            $where .= " AND $items_table.title LIKE '%$item_name%' ESCAPE '!' ";
         }
 
         $item_id = $this->_get_clean_value($options, "item_id");
         if ($item_id) {
-            $where .= " AND $items_table.id=$item_id";
+            $where .= " AND $items_table.id=$item_id ";
         }
 
         $user_type = $this->_get_clean_value($options, "user_type");
         if ($user_type && $user_type === "client") {
-            $where = " AND $items_table.show_in_client_portal=1";
+            $where = " AND $items_table.show_in_client_portal=1 ";
         }
 
         $sql = "SELECT $items_table.*

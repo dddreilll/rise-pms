@@ -143,7 +143,7 @@ class Project_comments_model extends Crud_model {
         $task_id = $this->_get_clean_value($data, "task_id");
         $customer_feedback_id = $this->_get_clean_value($data, "customer_feedback_id");
 
-        if ($this->_get_clean_value($data, "description")) {
+        if (get_array_value($data, "description")) {
             parent::init_activity_log("project_comment", "description", "project", "project_id");
         }
 
@@ -178,7 +178,7 @@ class Project_comments_model extends Crud_model {
             $task_info = $this->Tasks_model->get_one($task_id);
             $data["project_id"] = $task_info->project_id;
 
-            if ($this->_get_clean_value($data, "description")) {
+            if (get_array_value($data, "description")) {
                 parent::init_activity_log("task_comment", "description", "project", "project_id", "task", "task_id");
             }
         } else if ($customer_feedback_id) {

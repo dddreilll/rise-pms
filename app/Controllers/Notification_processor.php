@@ -46,6 +46,7 @@ class Notification_processor extends App_Controller {
 
         $user_id = get_array_value($data, "user_id");
         $activity_log_id = get_array_value($data, "activity_log_id");
+        $invoice_id = get_array_value($data, "invoice_id");
 
         $options = array(
             "project_id" => get_array_value($data, "project_id"),
@@ -60,7 +61,7 @@ class Notification_processor extends App_Controller {
             "activity_log_id" => get_array_value($data, "activity_log_id"),
             "client_id" => get_array_value($data, "client_id"),
             "invoice_payment_id" => get_array_value($data, "invoice_payment_id"),
-            "invoice_id" => get_array_value($data, "invoice_id"),
+            "invoice_id" => $invoice_id,
             "estimate_id" => get_array_value($data, "estimate_id"),
             "order_id" => get_array_value($data, "order_id"),
             "estimate_request_id" => get_array_value($data, "estimate_request_id"),
@@ -76,7 +77,8 @@ class Notification_processor extends App_Controller {
             "estimate_comment_id" => get_array_value($data, "estimate_comment_id"),
             "subscription_id" => get_array_value($data, "subscription_id"),
             "expense_id" => get_array_value($data, "expense_id"),
-            "proposal_comment_id" => get_array_value($data, "proposal_comment_id")
+            "proposal_comment_id" => get_array_value($data, "proposal_comment_id"),
+            "reminder_log_id" => get_array_value($data, "reminder_log_id")
         );
 
         //get data from plugin by persing 'plugin_'
@@ -105,18 +107,24 @@ class Notification_processor extends App_Controller {
         }
 
         //get reminder tasks
+        $reminder_tasks = null;
         if (get_array_value($options, "notification_multiple_tasks")) {
             $reminder_tasks = $this->get_reminder_tasks($event);
-            if ($reminder_tasks) {
-                $options["notification_multiple_tasks"] = $reminder_tasks;
-            } else {
+            if (!$reminder_tasks) {
                 //if no tasks to remind, exit for reminder tasks notifications
                 return;
             }
+
+            $notification_multiple_tasks_data = get_notification_multiple_tasks_data($reminder_tasks, $event);
+            $notification_multiple_tasks_notify_to_user_ids = get_array_value($notification_multiple_tasks_data, "notify_to_user_ids");
+            $options["multiple_tasks_notify_to_user_ids"] = $notification_multiple_tasks_notify_to_user_ids ? implode(',', $notification_multiple_tasks_notify_to_user_ids) : "";
+            $options["multiple_tasks_user_wise"] = get_array_value($notification_multiple_tasks_data, "user_wise_tasks");
         }
 
         //save reminder date
-        $this->_save_reminder_date($event, $options);
+        $this->_save_reminder_date($event, $invoice_id, $reminder_tasks);
+
+        $this->_update_notification_status_of_reminder($event, $options);
 
         //error_log("announcement_id: " . $options["announcement_id"] . PHP_EOL, 3, "notification.txt");
         //error_log("announcement_share_with: " . $options["announcement_share_with"] . PHP_EOL, 3, "notification.txt");
@@ -139,13 +147,13 @@ class Notification_processor extends App_Controller {
             }
 
             return $this->Tasks_model->get_details(array(
-                        "exclude_status_id" => $todo_status_id->id, //find all tasks which are not done yet
-                        "start_date" => $start_date,
-                        "deadline" => $start_date, //both should be same
-                        "exclude_reminder_date" => $date, //don't find tasks which reminder already sent today
-                        "context" => "project", //find project tasks only
-                        "sort_by_project" => true
-                    ))->getResult();
+                "exclude_status_id" => $todo_status_id->id, //find all tasks which are not done yet
+                "start_date" => $start_date,
+                "deadline" => $start_date, //both should be same
+                "exclude_reminder_date" => $date, //don't find tasks which reminder already sent today
+                "context" => "project", //find project tasks only
+                "sort_by_project" => true
+            ))->getResult();
         }
     }
 
@@ -218,9 +226,8 @@ class Notification_processor extends App_Controller {
     }
 
     //to prevent multiple reminder, we'll save the reminder date
-    private function _save_reminder_date(&$event, &$options) {
+    private function _save_reminder_date(&$event, $invoice_id = 0, $notification_multiple_tasks = array()) {
         //save invoices reminder dates 
-        $invoice_id = get_array_value($options, "invoice_id");
         if ($invoice_id) {
             $invoice_reminder_date = array();
             if ($event == "invoice_due_reminder_before_due_date" || $event == "invoice_overdue_reminder") {
@@ -235,15 +242,31 @@ class Notification_processor extends App_Controller {
         }
 
         //save tasks reminder dates
-        $notification_multiple_tasks = get_array_value($options, "notification_multiple_tasks");
         if ($notification_multiple_tasks) {
-
             foreach ($notification_multiple_tasks as $task_info) {
                 //don't create activity logs for this
                 $data["reminder_date"] = get_my_local_time();
                 $this->Tasks_model->save_reminder_date($data, $task_info->id);
             }
         }
+    }
+
+
+    // update notification status of reminder logs to `completed`
+    private function _update_notification_status_of_reminder($event, $options) {
+        if ($event !== "subscription_renewal_reminder") {
+            return false;
+        }
+
+        $reminder_log_id = get_array_value($options, "reminder_log_id");
+        if (!$reminder_log_id) {
+            return false;
+        }
+
+        //Change the reminder log status to completed
+        $reminder_status_data["notification_status"] = "completed";
+
+        $this->Reminder_logs_model->ci_save($reminder_status_data, $reminder_log_id);
     }
 
 }

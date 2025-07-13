@@ -18,6 +18,22 @@ try {
 
         $purchase_code = $_POST["purchase_code"];
 
+
+        /*
+         * check the db config file
+         * if db already configured, we'll assume that the installation has completed
+         */
+
+
+        $db_file_path = "../app/Config/Database.php";
+        $db_file = file_get_contents($db_file_path);
+        $is_installed = strpos($db_file, "enter_hostname");
+
+        if (!$is_installed) {
+            echo json_encode(array("success" => false, "message" => "Seems this app is already installed! You can't reinstall it again."));
+            exit();
+        }
+
         //check required fields
         if (!($host && $dbuser && $dbname && $first_name && $last_name && $email && $login_password && $purchase_code && $dbprefix)) {
             echo json_encode(array("success" => false, "message" => "Please input all fields."));
@@ -59,23 +75,6 @@ try {
             exit();
         }
 
-
-        /*
-         * check the db config file
-         * if db already configured, we'll assume that the installation has completed
-         */
-
-
-        $db_file_path = "../app/Config/Database.php";
-        $db_file = file_get_contents($db_file_path);
-        $is_installed = strpos($db_file, "enter_hostname");
-
-        if (!$is_installed) {
-            echo json_encode(array("success" => false, "message" => "Seems this app is already installed! You can't reinstall it again."));
-            exit();
-        }
-
-
         //start installation
 
         $sql = file_get_contents("database.sql");
@@ -98,7 +97,6 @@ try {
 
         $mysqli->multi_query($sql);
         do {
-            
         } while (mysqli_more_results($mysqli) && mysqli_next_result($mysqli));
 
         $mysqli->close();
@@ -136,7 +134,7 @@ try {
     }
 } catch (\Exception $ex) {
     error_log(date('[Y-m-d H:i:s e] ') . $ex->getMessage() . PHP_EOL, 3, "../writable/logs/install.log");
-    echo json_encode(array("success" => false, "message" => "Something went wrong. Please check the error log for more details."));
+    echo json_encode(array("success" => false, "message" => "Something went wrong. Please check the error log (/writable/logs/install.log) for more details."));
 }
 
 function verify_rise_purchase_code($code) {
@@ -152,7 +150,7 @@ function verify_rise_purchase_code($code) {
     curl_setopt($ch, CURLOPT_HTTPGET, TRUE);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
     curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
-    curl_setopt($ch, CURLOPT_HTTPHEADER, Array('Content-type: text/plain'));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/plain'));
 
     $data = curl_exec($ch);
     curl_close($ch);

@@ -19,6 +19,11 @@ class Paytm_redirect extends App_Controller {
             show_404();
         }
 
+        // verification code should be 10 characters
+        if (strlen($payment_verification_code) !== 10) {
+            show_404();
+        }
+
         $paytm = new Paytm();
 
         //get verification data

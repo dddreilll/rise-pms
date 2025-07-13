@@ -11,8 +11,8 @@
             source: '<?php echo_uri("projects/clients_summary_data") ?>',
             rangeDatepicker: [{startDate: {name: "start_date_from", value: ""}, endDate: {name: "start_date_to", value: ""}, showClearButton: true, label: "<?php echo app_lang('project_start_date'); ?>", ranges: ['this_month', 'last_month', 'this_year', 'last_year', 'last_30_days', 'last_7_days']}],
             columns: [
-                {title: '<?php echo app_lang("client") ?> '},
-                {title: '<?php echo $project_status_text_info->open . " " . app_lang("projects") ?>', class: "text-right"},
+                {title: '<?php echo app_lang("client") ?>', "class": "all"},
+                {title: '<?php echo $project_status_text_info->open . " " . app_lang("projects") ?>', class: "text-right all"},
                 {title: '<?php echo $project_status_text_info->completed . " " . app_lang("projects") ?>', class: "text-right"},
                 {title: '<?php echo $project_status_text_info->hold . " " . app_lang("projects") ?>', class: "text-right"},
                 {title: '<?php echo app_lang("open_tasks") ?>', class: "text-right"},

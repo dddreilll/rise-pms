@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -18,6 +20,8 @@ use Throwable;
 
 /**
  * File system cache handler
+ *
+ * @see \CodeIgniter\Cache\Handlers\FileHandlerTest
  */
 class FileHandler extends BaseHandler
 {
@@ -44,6 +48,8 @@ class FileHandler extends BaseHandler
     protected $mode;
 
     /**
+     * Note: Use `CacheFactory::getHandler()` to instantiate.
+     *
      * @throws CacheException
      */
     public function __construct(Cache $config)
@@ -125,6 +131,8 @@ class FileHandler extends BaseHandler
 
     /**
      * {@inheritDoc}
+     *
+     * @return int
      */
     public function deleteMatching(string $pattern)
     {
@@ -144,21 +152,22 @@ class FileHandler extends BaseHandler
      */
     public function increment(string $key, int $offset = 1)
     {
-        $key  = static::validateKey($key, $this->prefix);
-        $data = $this->getItem($key);
+        $prefixedKey = static::validateKey($key, $this->prefix);
+        $tmp         = $this->getItem($prefixedKey);
 
-        if ($data === false) {
-            $data = [
-                'data' => 0,
-                'ttl'  => 60,
-            ];
-        } elseif (! is_int($data['data'])) {
+        if ($tmp === false) {
+            $tmp = ['data' => 0, 'ttl' => 60];
+        }
+
+        ['data' => $value, 'ttl' => $ttl] = $tmp;
+
+        if (! is_int($value)) {
             return false;
         }
 
-        $newValue = $data['data'] + $offset;
+        $value += $offset;
 
-        return $this->save($key, $newValue, $data['ttl']) ? $newValue : false;
+        return $this->save($key, $value, $ttl) ? $value : false;
     }
 
     /**
@@ -166,21 +175,7 @@ class FileHandler extends BaseHandler
      */
     public function decrement(string $key, int $offset = 1)
     {
-        $key  = static::validateKey($key, $this->prefix);
-        $data = $this->getItem($key);
-
-        if ($data === false) {
-            $data = [
-                'data' => 0,
-                'ttl'  => 60,
-            ];
-        } elseif (! is_int($data['data'])) {
-            return false;
-        }
-
-        $newValue = $data['data'] - $offset;
-
-        return $this->save($key, $newValue, $data['ttl']) ? $newValue : false;
+        return $this->increment($key, -$offset);
     }
 
     /**
@@ -229,7 +224,7 @@ class FileHandler extends BaseHandler
      * Does the heavy lifting of actually retrieving the file and
      * verifying it's age.
      *
-     * @return array|bool|float|int|object|string|null
+     * @return array{data: mixed, ttl: int, time: int}|false
      */
     protected function getItem(string $filename)
     {
@@ -238,15 +233,21 @@ class FileHandler extends BaseHandler
         }
 
         $data = @unserialize(file_get_contents($this->path . $filename));
-        if (! is_array($data) || ! isset($data['ttl'])) {
+
+        if (! is_array($data)) {
+            return false;
+        }
+
+        if (! isset($data['ttl']) || ! is_int($data['ttl'])) {
+            return false;
+        }
+
+        if (! isset($data['time']) || ! is_int($data['time'])) {
             return false;
         }
 
         if ($data['ttl'] > 0 && Time::now()->getTimestamp() > $data['time'] + $data['ttl']) {
-            // If the file is still there then try to remove it
-            if (is_file($this->path . $filename)) {
-                @unlink($this->path . $filename);
-            }
+            @unlink($this->path . $filename);
 
             return false;
         }
@@ -307,7 +308,7 @@ class FileHandler extends BaseHandler
             if ($filename !== '.' && $filename !== '..') {
                 if (is_dir($path . DIRECTORY_SEPARATOR . $filename) && $filename[0] !== '.') {
                     $this->deleteFiles($path . DIRECTORY_SEPARATOR . $filename, $delDir, $htdocs, $_level + 1);
-                } elseif ($htdocs !== true || ! preg_match('/^(\.htaccess|index\.(html|htm|php)|web\.config)$/i', $filename)) {
+                } elseif (! $htdocs || preg_match('/^(\.htaccess|index\.(html|htm|php)|web\.config)$/i', $filename) !== 1) {
                     @unlink($path . DIRECTORY_SEPARATOR . $filename);
                 }
             }
@@ -315,7 +316,7 @@ class FileHandler extends BaseHandler
 
         closedir($currentDir);
 
-        return ($delDir === true && $_level > 0) ? @rmdir($path) : true;
+        return ($delDir && $_level > 0) ? @rmdir($path) : true;
     }
 
     /**
@@ -336,13 +337,13 @@ class FileHandler extends BaseHandler
         $relativePath     = $sourceDir;
 
         if ($fp = @opendir($sourceDir)) {
-            // reset the array and make sure $source_dir has a trailing slash on the initial call
+            // reset the array and make sure $sourceDir has a trailing slash on the initial call
             if ($_recursion === false) {
                 $_filedata = [];
                 $sourceDir = rtrim(realpath($sourceDir) ?: $sourceDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
             }
 
-            // Used to be foreach (scandir($source_dir, 1) as $file), but scandir() is simply not as fast
+            // Used to be foreach (scandir($sourceDir, 1) as $file), but scandir() is simply not as fast
             while (false !== ($file = readdir($fp))) {
                 if (is_dir($sourceDir . $file) && $file[0] !== '.' && $topLevelOnly === false) {
                     $this->getDirFileInfo($sourceDir . $file . DIRECTORY_SEPARATOR, $topLevelOnly, true);

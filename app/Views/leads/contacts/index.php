@@ -1,4 +1,4 @@
-<div class="card no-border-top-radius">
+<div class="card border-top-0 rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('contacts'); ?></h4>
         <div class="title-button-group">
@@ -21,8 +21,8 @@
             order: [[1, "asc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
-                {title: '', "class": "w50 text-center"},
-                {title: "<?php echo app_lang("name") ?>"},
+                {title: '', "class": "w50 text-center ll"},
+                {title: "<?php echo app_lang("name") ?>", "class": "all"},
                 {title: "<?php echo app_lang("job_title") ?>", "class": "w15p"},
                 {title: "<?php echo app_lang("email") ?>", "class": "w20p"},
                 {title: "<?php echo app_lang("phone") ?>", "class": "w15p"},

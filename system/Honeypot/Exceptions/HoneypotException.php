@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -16,21 +18,41 @@ use CodeIgniter\Exceptions\ExceptionInterface;
 
 class HoneypotException extends ConfigException implements ExceptionInterface
 {
+    /**
+     * Thrown when the template value of config is empty.
+     *
+     * @return static
+     */
     public static function forNoTemplate()
     {
         return new static(lang('Honeypot.noTemplate'));
     }
 
+    /**
+     * Thrown when the name value of config is empty.
+     *
+     * @return static
+     */
     public static function forNoNameField()
     {
         return new static(lang('Honeypot.noNameField'));
     }
 
+    /**
+     * Thrown when the hidden value of config is false.
+     *
+     * @return static
+     */
     public static function forNoHiddenValue()
     {
         return new static(lang('Honeypot.noHiddenValue'));
     }
 
+    /**
+     * Thrown when there are no data in the request of honeypot field.
+     *
+     * @return static
+     */
     public static function isBot()
     {
         return new static(lang('Honeypot.theClientIsABot'));

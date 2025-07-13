@@ -57,7 +57,7 @@ foreach ($comments as $comment) {
                                     <?php if ($type === "task") { ?>
                                         <li role="presentation"><a href="javascript:;" title="<?php echo app_lang('copy_comment_link') ?>" class="copy-comment-link-button dropdown-item" data-comment-id="<?php echo $comment->id; ?>" data-task-id="<?php echo $comment->task_id; ?>"><span data-feather="copy" class="icon-16"></span> <?php echo app_lang('copy_link'); ?></a></li>
 
-                                        <li role="presentation"><?php echo ajax_anchor(get_uri("projects/pin_comment/" . $comment->id), "<i data-feather='map-pin' class='icon-16'></i> " . app_lang('unpin_comment'), array("id" => "unpin-comment-button-$comment->id", "class" => "dropdown-item unpin-comment-button $unpin_status", 'title' => app_lang('unpin_comment'), "data-pin-comment-id" => $comment->id, "data-fade-out-on-success" => "#pinned-comment-$comment->id")); ?> </li>
+                                        <li role="presentation"><?php echo ajax_anchor(get_uri("projects/pin_comment/" . $comment->id . "/" . $comment->task_id), "<i data-feather='map-pin' class='icon-16'></i> " . app_lang('unpin_comment'), array("id" => "unpin-comment-button-$comment->id", "class" => "dropdown-item unpin-comment-button $unpin_status", 'title' => app_lang('unpin_comment'), "data-pin-comment-id" => $comment->id, "data-fade-out-on-success" => "#pinned-comment-$comment->id")); ?> </li>
                                         <li role="presentation"><?php echo js_anchor("<i data-feather='map-pin' class='icon-16'></i> " . app_lang('pin_comment'), array("id" => "pin-comment-button-$comment->id", "class" => "dropdown-item pin-comment-button $pin_status", 'title' => app_lang('pin_comment'), "data-action-url" => get_uri("projects/pin_comment/" . $comment->id), "data-pin-comment-id" => $comment->id)); ?> </li>
                                     <?php } ?>
 
@@ -177,9 +177,11 @@ foreach ($comments as $comment) {
 
         $(".pin-comment-button").click(function() {
             var comment_id = $(this).attr('data-pin-comment-id');
+            var taskId = "<?php echo $task_id; ?>";
+
             appLoader.show();
             $.ajax({
-                url: "<?php echo get_uri("projects/pin_comment/"); ?>/" + comment_id,
+                url: "<?php echo get_uri("projects/pin_comment/"); ?>/" + comment_id + "/" + taskId,
                 type: 'POST',
                 dataType: "json",
                 success: function(result) {
