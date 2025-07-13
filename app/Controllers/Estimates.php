@@ -49,11 +49,6 @@ class Estimates extends Security_Controller {
         }
     }
 
-    //load the yearly view of estimate list
-    function yearly() {
-        return $this->template->view("estimates/yearly_estimates");
-    }
-
     /* load new estimate modal */
 
     function modal_form() {
@@ -453,9 +448,9 @@ class Estimates extends Security_Controller {
             $estimate_url = anchor(get_uri("estimates/preview/" . $data->id), get_estimate_id($data->id));
         }
 
-        $client = anchor(get_uri("clients/view/" . $data->client_id), $data->company_name);
+        $client = anchor(get_uri("clients/view/" . $data->client_id), $data->company_name ? $data->company_name : "");
         if ($data->is_lead) {
-            $client = anchor(get_uri("leads/view/" . $data->client_id), $data->company_name);
+            $client = anchor(get_uri("leads/view/" . $data->client_id), $data->company_name ? $data->company_name : "");
         }
 
         $row_data = array(
@@ -485,8 +480,8 @@ class Estimates extends Security_Controller {
         }
 
         $row_data[] = anchor(get_uri("estimate/preview/" . $data->id . "/" . $data->public_key), "<i data-feather='external-link' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('estimate') . " " . app_lang("url"), "target" => "_blank"))
-                . $edit
-                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimates/delete"), "data-action" => "delete-confirmation"));
+            . $edit
+            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimates/delete"), "data-action" => "delete-confirmation"));
 
         return $row_data;
     }
@@ -499,10 +494,10 @@ class Estimates extends Security_Controller {
     /* load estimate details view */
 
     function view($estimate_id = 0) {
+        validate_numeric_value($estimate_id);
         $this->validate_estimate_access($estimate_id);
 
         if ($estimate_id) {
-            validate_numeric_value($estimate_id);
 
             $sort_as_decending = get_setting("show_most_recent_estimate_comments_at_the_top");
             $view_data = get_estimate_making_data($estimate_id);
@@ -523,7 +518,7 @@ class Estimates extends Security_Controller {
 
                 $view_data["can_create_projects"] = $this->can_create_projects();
 
-                $view_data["estimate_id"] = clean_data($estimate_id);
+                $view_data["estimate_id"] = $estimate_id;
                 $view_data["is_estimate_editable"] = $this->_is_estimate_editable($estimate_id);
 
                 return $this->template->rander("estimates/view", $view_data);
@@ -738,7 +733,7 @@ class Estimates extends Security_Controller {
 
         $item = "<div class='item-row strong mb5' data-id='$data->id'>$move_icon $data->title</div>";
         if ($data->description) {
-            $item .= "<div class='text-wrap' $desc_style>" . nl2br($data->description) . "</div>";
+            $item .= "<div class='text-wrap' $desc_style>" . custom_nl2br($data->description) . "</div>";
         }
         $type = $data->unit_type ? $data->unit_type : "";
 
@@ -749,7 +744,7 @@ class Estimates extends Security_Controller {
             to_currency($data->rate, $data->currency_symbol),
             to_currency($data->total, $data->currency_symbol),
             modal_anchor(get_uri("estimates/item_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_estimate'), "data-post-id" => $data->id, "data-post-estimate_id" => $data->estimate_id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimates/delete_item"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimates/delete_item"), "data-action" => "delete"))
         );
     }
 
@@ -880,10 +875,10 @@ class Estimates extends Security_Controller {
     }
 
     function send_estimate_modal_form($estimate_id) {
+        validate_numeric_value($estimate_id);
         $this->validate_estimate_access($estimate_id);
 
         if ($estimate_id) {
-            validate_numeric_value($estimate_id);
             $options = array("id" => $estimate_id);
             $estimate_info = $this->Estimates_model->get_details($options)->getRow();
             $view_data['estimate_info'] = $estimate_info;
@@ -1053,7 +1048,10 @@ class Estimates extends Security_Controller {
                 $sort_item = explode("-", $value); //extract id and sort value
 
                 $id = get_array_value($sort_item, 0);
+                validate_numeric_value($id);
+
                 $sort = get_array_value($sort_item, 1);
+                validate_numeric_value($id);
 
                 $data = array("sort" => $sort);
                 $this->Estimate_items_model->ci_save($data, $id);
@@ -1065,6 +1063,8 @@ class Estimates extends Security_Controller {
 
     function save_comment() {
         $estimate_id = $this->request->getPost('estimate_id');
+        validate_numeric_value($estimate_id);
+
         $now = get_current_utc_time();
 
         $target_path = get_setting("timeline_file_path");
@@ -1102,7 +1102,7 @@ class Estimates extends Security_Controller {
     /* delete estimate comments */
 
     function delete_comment($id = 0) {
-
+        validate_numeric_value($id);
         if (!$id) {
             exit();
         }
@@ -1132,7 +1132,7 @@ class Estimates extends Security_Controller {
     /* download files by zip */
 
     function download_comment_files($id) {
-
+        validate_numeric_value($id);
         $files = $this->Estimate_comments_model->get_one($id)->files;
         return $this->download_app_files(get_setting("timeline_file_path"), $files);
     }
@@ -1194,6 +1194,7 @@ class Estimates extends Security_Controller {
     /* load tasks tab  */
 
     function tasks($estimate_id) {
+        validate_numeric_value($estimate_id);
         $this->validate_estimate_access($estimate_id);
 
         $view_data["estimate_id"] = $estimate_id;
@@ -1217,8 +1218,7 @@ class Estimates extends Security_Controller {
             return true;
         }
     }
-
 }
 
 /* End of file estimates.php */
-    /* Location: ./app/controllers/estimates.php */    
+    /* Location: ./app/controllers/estimates.php */

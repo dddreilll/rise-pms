@@ -18,7 +18,7 @@
             source: '<?php echo_uri("projects/timesheet_summary_list_data/"); ?>',
             filterParams: {project_id: "<?php echo $project_id; ?>"},
             filterDropdown: filterDrpdown,
-            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, showClearButton: true}],
+            rangeDatepicker: [{startDate: {name: "start_date", value: ""}, endDate: {name: "end_date", value: ""}, showClearButton: true, showClearButton: true, label: "<?php echo app_lang('date'); ?>", ranges: ['today', 'yesterday', 'last_7_days', 'last_30_days', 'this_month', 'last_month', 'this_year', 'last_year' ]}],
             columns: [
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},

@@ -2,26 +2,26 @@
 
 namespace App\Controllers;
 
-class Contract extends Security_Controller
-{
+class Contract extends Security_Controller {
 
-    function __construct()
-    {
+    function __construct() {
         parent::__construct(false);
     }
 
-    function index()
-    {
+    function index() {
         app_redirect("forbidden");
     }
 
-    function preview($contract_id = 0, $public_key = "")
-    {
+    function preview($contract_id = 0, $public_key = "") {
         if (!($contract_id && $public_key)) {
             show_404();
         }
 
         validate_numeric_value($contract_id);
+
+        if (strlen($public_key) !== 10) {
+            show_404();
+        }
 
         //check public key
         $contract_info = $this->Contracts_model->get_one($contract_id);
@@ -41,13 +41,13 @@ class Contract extends Security_Controller
         $view_data['contract_id'] = $contract_id;
         $view_data['contract_type'] = "public";
         $view_data['public_key'] = clean_data($public_key);
+        $view_data['has_pdf_access'] = $this->check_contract_pdf_access_for_clients();
 
         return view("contracts/contract_public_preview", $view_data);
     }
 
     //update contract status
-    function update_contract_status($contract_id, $public_key, $status)
-    {
+    function update_contract_status($contract_id, $public_key, $status) {
         validate_numeric_value($contract_id);
         if (!($contract_id && $public_key && $status)) {
             show_404();
@@ -75,8 +75,7 @@ class Contract extends Security_Controller
     }
 
     //print contract
-    function print_contract($contract_id = 0, $public_key = "")
-    {
+    function print_contract($contract_id = 0, $public_key = "") {
         validate_numeric_value($contract_id);
         if ($contract_id && $public_key) {
             $view_data = get_contract_making_data($contract_id);
@@ -95,8 +94,7 @@ class Contract extends Security_Controller
         }
     }
 
-    function accept_contract_modal_form($contract_id = 0, $public_key = "")
-    {
+    function accept_contract_modal_form($contract_id = 0, $public_key = "") {
         validate_numeric_value($contract_id);
         if (!$contract_id) {
             show_404();
@@ -129,11 +127,11 @@ class Contract extends Security_Controller
         return $this->template->view('contracts/accept_contract_modal_form', $view_data);
     }
 
-    function accept_contract()
-    {
+    function accept_contract() {
         $validation_array = array(
             "id" => "numeric|required",
-            "public_key" => "required"
+            "public_key" => "required",
+            "email" => "valid_email"
         );
 
         if (get_setting("add_signature_option_on_accepting_contract") || get_setting("add_signature_option_for_team_members")) {
@@ -181,8 +179,8 @@ class Contract extends Security_Controller
                 show_404();
             }
 
-            $meta_data["name"] = $name;
-            $meta_data["email"] = $email;
+            $meta_data["name"] = clean_data($name);
+            $meta_data["email"] = clean_data($email);
         } else {
             //from preview, should be logged in client contact/team member
             $this->init_permission_checker("contract");
@@ -209,8 +207,9 @@ class Contract extends Security_Controller
         }
     }
 
-    function file_preview($id = "", $key = "", $public_key = "")
-    {
+    function file_preview($id = "", $key = "", $public_key = "") {
+        validate_numeric_value($id);
+
         if (!$id) {
             show_404();
         }
@@ -238,10 +237,13 @@ class Contract extends Security_Controller
         return $this->template->view("contracts/file_preview", $view_data);
     }
 
-    function download_pdf($contract_id = 0, $public_key = "")
-    {
+    function download_pdf($contract_id = 0, $public_key = "") {
         validate_numeric_value($contract_id);
         if (!$contract_id) {
+            show_404();
+        }
+
+        if (!$this->check_contract_pdf_access_for_clients()) {
             show_404();
         }
 

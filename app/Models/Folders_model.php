@@ -2,19 +2,16 @@
 
 namespace App\Models;
 
-class Folders_model extends Crud_model
-{
+class Folders_model extends Crud_model {
 
     protected $table = null;
 
-    function __construct()
-    {
+    function __construct() {
         $this->table = 'folders';
         parent::__construct($this->table);
     }
 
-    function get_folder_details($options = array())
-    {
+    function get_folder_details($options = array()) {
         $context = $this->_get_clean_value($options, "context");
         $info = new \stdClass();
 
@@ -24,12 +21,19 @@ class Folders_model extends Crud_model
 
         $has_full_access = get_array_value($options, "has_full_access");
 
-        $folder_id = $this->_get_clean_value($options, "folder_id");
         $id = $this->_get_clean_value($options, "id");
+        $folder_id = $this->_get_clean_value($options, "folder_id");
 
         $login_client_id = $this->_get_clean_value($options, "login_client_id");
+        $project_id = $this->_get_clean_value($options, "project_id");
 
-        $folder_info = $this->_get_folder_info($context, $folder_id, $id, $login_client_id);
+        if ($context == "project") {
+            $context_id = $project_id;
+        } else {
+            $context_id = $login_client_id;
+        }
+
+        $folder_info = $this->_get_folder_info($context, $folder_id, $id, $context_id);
 
         $current_folder_id = $folder_info ? $folder_info->id : 0;
 
@@ -37,7 +41,7 @@ class Folders_model extends Crud_model
         $authorized_folder_ids = get_array_value($authorized_folders_info, "root_folder_ids");
         $accessable_folder_ids = get_array_value($authorized_folders_info, "accessable_folder_ids");
 
-        if (($context == "client" && $login_client_id && $folder_id && !$folder_info) || $current_folder_id && !$has_full_access && !$this->_is_authorized_folder($authorized_folder_ids, $current_folder_id, $folder_info->level)) {
+        if ((($context == "client" || $context == "project") && $context_id && $folder_id && !$folder_info) || $current_folder_id && !$has_full_access && !$this->_is_authorized_folder($authorized_folder_ids, $current_folder_id, $folder_info->level)) {
             $info->not_authorized = true;
             return $info;
         }
@@ -83,8 +87,7 @@ class Folders_model extends Crud_model
         return $info;
     }
 
-    private function _get_folder_permission_rank($authorized_folders_info, $folder_info, $options)
-    {
+    private function _get_folder_permission_rank($authorized_folders_info, $folder_info, $options) {
 
         $info = new \stdClass();
 
@@ -116,8 +119,7 @@ class Folders_model extends Crud_model
         return $info;
     }
 
-    private function _is_authorized_folder($root_folder_ids, $current_folder_id, $level)
-    {
+    private function _is_authorized_folder($root_folder_ids, $current_folder_id, $level) {
         $current_folder_array = array();
 
         if ($level) {
@@ -130,21 +132,19 @@ class Folders_model extends Crud_model
         return array_intersect($current_folder_array, $root_folder_ids);
     }
 
-    private function _has_parent_id($folder_info)
-    {
+    private function _has_parent_id($folder_info) {
         return $folder_info ? $folder_info->parent_id : 0;
     }
 
-    private function _is_a_root_folder($current_folder_id, $authorized_folder_ids)
-    {
+    private function _is_a_root_folder($current_folder_id, $authorized_folder_ids) {
         //$ids = $this->_get_authorized_root_folder_ids($authorized_folder_ids);
         return in_array($current_folder_id, $authorized_folder_ids);
     }
 
-    private function _get_folders_list($parent_id, $context, $root_folder_ids, $options)
-    {
+    private function _get_folders_list($parent_id, $context, $root_folder_ids, $options) {
         $folders_table = $this->db->prefixTable('folders');
         $general_files_table = $this->db->prefixTable('general_files');
+        $project_files_table = $this->db->prefixTable('project_files');
 
         $has_full_access = get_array_value($options, "has_full_access");
 
@@ -207,9 +207,14 @@ class Folders_model extends Crud_model
 
         $authorized_folders_info = $this->_get_all_authorized_folders_info($context, $options);
 
+        if ($context == "project") {
+            $subfile_count_sql = "(SELECT COUNT(1) FROM $project_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count";
+        } else {
+            $subfile_count_sql = "(SELECT COUNT(1) FROM $general_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count";
+        }
+
         $folders_sql = "SELECT $folders_table.*,  
-                       (SELECT COUNT(1) FROM $folders_table sub_folders WHERE sub_folders.deleted=0 AND $subfolder_context_where AND sub_folders.parent_id = $folders_table.id) AS subfolder_count,
-                       (SELECT COUNT(1) FROM $general_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count
+                       (SELECT COUNT(1) FROM $folders_table sub_folders WHERE sub_folders.deleted=0 AND $subfolder_context_where AND sub_folders.parent_id = $folders_table.id) AS subfolder_count, $subfile_count_sql
                        FROM $folders_table
                        WHERE $folders_table.deleted=0 AND $context_where $where 
                        ORDER BY $folders_table.title ASC ";
@@ -225,8 +230,7 @@ class Folders_model extends Crud_model
         return $folders_result;
     }
 
-    private function _get_all_authorized_folders_info($context, $options)
-    {
+    private function _get_all_authorized_folders_info($context, $options) {
 
         $folders_table = $this->db->prefixTable('folders');
 
@@ -261,7 +265,7 @@ class Folders_model extends Crud_model
         if ($login_client_id) {
             $where_any .= " $folders_table.permissions LIKE '%all_clients,%' OR $folders_table.permissions LIKE '%client:$login_client_id,%' OR $folders_table.context_id=$login_client_id ";
 
-            $client_group_ids = get_array_value($options, "client_group_ids");
+            $client_group_ids = $this->_get_clean_value($options, "client_group_ids");
             if ($client_group_ids) {
                 $client_groups = explode(",", $client_group_ids);
                 foreach ($client_groups as $client_group_id) {
@@ -269,6 +273,9 @@ class Folders_model extends Crud_model
                 }
             }
         }
+
+        // it's a project
+        $project_id = $this->_get_clean_value($options, "project_id");
 
         if (trim($where_any)) {
             $where_any = " AND (" . $where_any . ")";
@@ -281,7 +288,11 @@ class Folders_model extends Crud_model
             $where .= " AND $folders_table.context_id=$context_id ";
         }
 
-        $context_where = ($context == "client_portal") ? "(($folders_table.context='client' AND $folders_table.context_id=$login_client_id) OR $folders_table.context='file_manager')" : "$folders_table.context='$context'";
+        if ($context == "project" && $project_id) {
+            $context_where = "$folders_table.context='project' AND $folders_table.context_id=$project_id";
+        } else {
+            $context_where = ($context == "client_portal") ? "(($folders_table.context='client' AND $folders_table.context_id=$login_client_id) OR $folders_table.context='file_manager')" : "$folders_table.context='$context'";
+        }
 
         $folders_sql = "SELECT $folders_table.id, $folders_table.permissions, $folders_table.level, $folders_table.context, $folders_table.context_id
                        FROM $folders_table
@@ -292,8 +303,7 @@ class Folders_model extends Crud_model
         return $this->_get_permission_rank_wise_folders($results, $options);
     }
 
-    private function _get_permission_rank_wise_folders($authorized_folders_data, $options)
-    {
+    private function _get_permission_rank_wise_folders($authorized_folders_data, $options) {
 
         $full_access_folders = array();
         $upload_and_organize_folders = array();
@@ -369,8 +379,7 @@ class Folders_model extends Crud_model
         return $result;
     }
 
-    private function _get_higher_rank_of_folder($folder_info, $options)
-    {
+    private function _get_higher_rank_of_folder($folder_info, $options) {
         $login_member_id = get_array_value($options, "member_id");
         $login_client_id = get_array_value($options, "login_client_id");
         $is_a_project_member = get_array_value($options, "is_a_project_member");
@@ -436,8 +445,7 @@ class Folders_model extends Crud_model
     }
 
 
-    private function _parent_folder_permissions($folder_info)
-    {
+    private function _parent_folder_permissions($folder_info) {
         $folders_table = $this->db->prefixTable('folders');
         $permissions = array();
 
@@ -464,11 +472,11 @@ class Folders_model extends Crud_model
     }
 
 
-    private function _get_folder_info($context, $folder_id, $id = 0, $login_client_id = 0)
-    {
+    private function _get_folder_info($context, $folder_id, $id = 0, $context_id = 0) {
         $folders_table = $this->db->prefixTable('folders');
         $users_table = $this->db->prefixTable('users');
         $general_files_table = $this->db->prefixTable('general_files');
+        $project_files_table = $this->db->prefixTable('project_files');
 
         $where = "";
 
@@ -485,19 +493,24 @@ class Folders_model extends Crud_model
         }
 
         $context_where = "";
-        if ($context == "client") {
-            $context_where = "$folders_table.context='client' AND $folders_table.context_id=$login_client_id";
+        if ($context == "client" || $context == "project") {
+            $context_where = "$folders_table.context='$context' AND $folders_table.context_id=$context_id";
         } else if ($context == "client_portal") {
             $context_where = "($folders_table.context='client' OR $folders_table.context='file_manager')";
         } else {
             $context_where = "$folders_table.context='$context'";
         }
 
-        $subfolder_context_where = ($context == "client_portal") ? "((sub_folders.context='client' AND sub_folders.context_id=$login_client_id) OR sub_folders.context='file_manager')" : "sub_folders.context='$context'";
+        $subfolder_context_where = ($context == "client_portal") ? "((sub_folders.context='client' AND sub_folders.context_id=$context_id) OR sub_folders.context='file_manager')" : "sub_folders.context='$context'";
+
+        if ($context == "project") {
+            $subfile_count_sql = "(SELECT COUNT(1) FROM $project_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count";
+        } else {
+            $subfile_count_sql = "(SELECT COUNT(1) FROM $general_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count";
+        }
 
         $info_sql = "SELECT $folders_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS created_by_user_name, $users_table.image AS created_by_user_image, $users_table.user_type AS created_by_user_type,
-        (SELECT COUNT(1) FROM $folders_table sub_folders WHERE sub_folders.deleted=0 AND $subfolder_context_where AND sub_folders.parent_id = $folders_table.id) AS subfolder_count,
-        (SELECT COUNT(1) FROM $general_files_table sub_files WHERE sub_files.deleted=0 AND sub_files.folder_id = $folders_table.id) AS subfile_count
+        (SELECT COUNT(1) FROM $folders_table sub_folders WHERE sub_folders.deleted=0 AND $subfolder_context_where AND sub_folders.parent_id = $folders_table.id) AS subfolder_count, $subfile_count_sql
         FROM $folders_table
         LEFT JOIN $users_table ON $users_table.id= $folders_table.created_by
         WHERE $folders_table.deleted=0 AND $context_where $where";
@@ -505,8 +518,7 @@ class Folders_model extends Crud_model
         return $this->db->query($info_sql)->getRow();
     }
 
-    private function _get_parent_folder_info($context, $parent_id)
-    {
+    private function _get_parent_folder_info($context, $parent_id) {
 
         $folders_table = $this->db->prefixTable('folders');
         $parent_folder_info = null;
@@ -522,9 +534,11 @@ class Folders_model extends Crud_model
         return $parent_folder_info;
     }
 
-    function add_remove_favorites($folder_id, $user_id, $type = "add")
-    {
+    function add_remove_favorites($folder_id, $user_id, $type = "add") {
         $folders_table = $this->db->prefixTable('folders');
+
+        $folder_id = $this->_get_clean_value($folder_id);
+        $user_id = $this->_get_clean_value($user_id);
 
         $action = " CONCAT($folders_table.starred_by,',',':$user_id:') ";
         $where = " AND FIND_IN_SET(':$user_id:',$folders_table.starred_by) = 0"; //don't add duplicate
@@ -539,10 +553,10 @@ class Folders_model extends Crud_model
         return $this->db->query($sql);
     }
 
-    function get_favourite_folders($user_id, $options = array())
-    {
+    function get_favourite_folders($user_id, $options = array()) {
         $folders_table = $this->db->prefixTable('folders');
-
+        $user_id = $this->_get_clean_value($user_id);
+        
         $where = "";
         $context = $this->_get_clean_value($options, "context");
         if ($context == "client_portal") {
@@ -553,15 +567,24 @@ class Folders_model extends Crud_model
 
         $authorized_folders_info = $this->_get_all_authorized_folders_info($context, $options);
         $all_folder_ids = get_array_value($authorized_folders_info, "all_folder_ids");
-        $all_folder_ids_str = implode(',', $all_folder_ids);
 
-        if (!$all_folder_ids_str) {
-            $all_folder_ids_str = "0";
+        $all_folder_ids_list = implode(',', $all_folder_ids);
+        if (!$all_folder_ids_list) {
+            $all_folder_ids_list = "0";
+        }
+
+
+        //check the sub folders of the authorized folders.
+        $find_sub_folders = " ";
+        $all_folder_ids_REGEXP = implode('|', $all_folder_ids);
+
+        if ($all_folder_ids_REGEXP) {
+            $find_sub_folders = " OR $folders_table.level REGEXP ',($all_folder_ids_REGEXP),' ";
         }
 
         $sql = "SELECT $folders_table.*
         FROM $folders_table
-        WHERE $folders_table.deleted=0 AND FIND_IN_SET(':$user_id:', $folders_table.starred_by) AND $folders_table.id IN ($all_folder_ids_str) $where
+        WHERE $folders_table.deleted=0 AND FIND_IN_SET(':$user_id:', $folders_table.starred_by) AND ($folders_table.id IN ($all_folder_ids_list) $find_sub_folders) $where
         ORDER BY $folders_table.title ASC";
 
         return $this->db->query($sql);

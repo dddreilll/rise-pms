@@ -5,7 +5,7 @@ if (!isset($contexts)) {
 ?>
 
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         var relatedToDropdowns = <?php echo json_encode($related_to_dropdowns); ?>;
 
@@ -17,21 +17,25 @@ if (!isset($contexts)) {
         dropdowns.statuses_dropdown = <?php echo json_encode($statuses_dropdown); ?>;
 
 
-        showHideRelatedToDropdowns = function (selectedContext) {
+        showHideRelatedToDropdowns = function(selectedContext) {
             var contexts = <?php echo json_encode($contexts); ?>;
 
-            $.each(contexts, function (index, context) {
+            $.each(contexts, function(index, context) {
                 var $element = $("#" + context + "-dropdown");
-                var $select2Element = $("#" + context + "_id");
+                var $dropdownElement = $("#" + context + "_id");
 
                 if (selectedContext === context) {
                     $element.removeClass("hide");
                     $element.find(".task-context-options").addClass("validate-hidden").attr("data-rule-required", true);
-                    if (context !== "project") { //define the projec differntly since there is a change event. Define only once.
-                        $select2Element.select2({data: relatedToDropdowns[context]});
+                    if (context !== "project") { //define the project differntly since there is a change event. Define only once.
+
+                        $dropdownElement.appDropdown({
+                            list_data: relatedToDropdowns[context]
+                        });
+
                     }
                 } else {
-                    $select2Element.val(""); //reset selected value
+                    $dropdownElement.val(""); //reset selected value
                     $element.addClass("hide");
                     $element.find(".task-context-options").removeClass("validate-hidden").removeAttr("data-rule-required");
                 }
@@ -40,31 +44,44 @@ if (!isset($contexts)) {
 
 
 
-        function resetRequiredTaskModalDropdowns(url, context, reload_context) {
-            $('#milestone_id').select2("destroy");
+        function resetRequiredTaskModalDropdowns(url, context, reload_context, keep_context) {
+
+            $("#milestone_id").appDropdown("destroy");
             $("#milestone_id").hide();
-            $('#assigned_to').select2("destroy");
+            $("#assigned_to").appDropdown("destroy");
             $("#assigned_to").hide();
-            $('#collaborators').select2("destroy");
+            $('#collaborators').appDropdown("destroy");
             $("#collaborators").hide();
-            $('#project_labels').select2("destroy");
+            $('#project_labels').appDropdown("destroy");
             $("#project_labels").hide();
-            $('#task_status_id').select2("destroy");
+            $("#task_status_id").appDropdown("destroy");
             $("#task_status_id").hide();
+
             if (context && reload_context) {
-                $("#" + context + "_id").select2("destroy");
+                $("#" + context + "_id").appDropdown({
+                    destroy: true
+                });
             }
 
-            appLoader.show({container: "#dropdown-apploader-section", zIndex: 1});
+            appLoader.show({
+                container: "#dropdown-apploader-section",
+                zIndex: 1
+            });
             $.ajax({
                 url: url,
                 dataType: "json",
-                success: function (result) {
+                success: function(result) {
 
-                    initializeTaskModalCommonDropdowns(result, true);
+                    initializeTaskModalCommonDropdowns(result, true, keep_context);
                     if (context && reload_context) {
-                        $("#" + context + "_id").show().val("");
-                        $("#" + context + "_id").select2({data: result[context + "s_dropdown"]});
+                        if (keep_context) {
+                            $("#" + context + "_id").show();
+                        } else {
+                            $("#" + context + "_id").show().val("");
+                        }
+                        $("#" + context + "_id").appDropdown({
+                            list_data: result[context + "s_dropdown"]
+                        });
                     }
 
                     appLoader.hide();
@@ -72,12 +89,12 @@ if (!isset($contexts)) {
             });
         }
 
-        function showRelatedDropdowns(context, reload_context) {
+        function showRelatedDropdowns(context, reload_context, keep_context = false) {
 
             var contextId = $("#" + context + "_id").val();
             if (context) {
                 var findContext = reload_context ? 0 : 1;
-                resetRequiredTaskModalDropdowns("<?php echo get_uri('tasks/get_dropdowns') ?>" + "/" + context + "/" + contextId + "/" + findContext, context, reload_context);
+                resetRequiredTaskModalDropdowns("<?php echo get_uri('tasks/get_dropdowns') ?>" + "/" + context + "/" + contextId + "/" + findContext, context, reload_context, keep_context);
                 if (context === "project") {
                     $("#milestones-dropdown").removeClass("hide");
                 } else {
@@ -100,8 +117,16 @@ if (!isset($contexts)) {
             }
         }
 
-        function initializeTaskModalCommonDropdowns(result, resetValue) {
-            if (resetValue) {
+        function initializeTaskModalCommonDropdowns(result, resetValue, keepContext) {
+            if (keepContext) {
+                $("#milestone_id").show();
+                $("#assigned_to").show();
+                $("#collaborators").show();
+                $("#project_labels").show();
+                $("#task_status_id").show();
+            }
+
+            if (resetValue && !keepContext) {
                 $("#milestone_id").show().val("");
                 $("#assigned_to").show().val("");
                 $("#collaborators").show().val("");
@@ -109,37 +134,64 @@ if (!isset($contexts)) {
                 $("#task_status_id").show().val(result.statuses_dropdown[0].id);
             }
 
-            $('#milestone_id').select2({data: result.milestones_dropdown});
-            $('#assigned_to').select2({data: result.assign_to_dropdown});
-            $('#collaborators').select2({multiple: true, data: result.collaborators_dropdown});
-            $('#project_labels').select2({multiple: true, data: result.label_suggestions});
-            $('#task_status_id').select2({data: result.statuses_dropdown});
+            $("#milestone_id").appDropdown({
+                list_data: result.milestones_dropdown
+            });
+
+            $("#assigned_to").appDropdown({
+                list_data: result.assign_to_dropdown
+            });
+
+            $("#collaborators").appDropdown({
+                multiple: true,
+                list_data: result.collaborators_dropdown
+            });
+
+            $("#project_labels").appDropdown({
+                multiple: true,
+                list_data: result.label_suggestions
+            });
+
+            $('#task_status_id').appDropdown({
+                list_data: result.statuses_dropdown
+            });
         }
 
 
         var context = $("#task-context").val();
         showHideDropdowns(context, dropdowns);
 
-        $('#priority_id').select2({data: <?php echo json_encode($priorities_dropdown); ?>});
+        $('#priority_id').appDropdown({
+            list_data: <?php echo json_encode($priorities_dropdown); ?>
+        });
 
-
-
-        //load all related data of the selected context
-        if ($("#task-context").hasClass("select2")) {
-            $("#task-context").select2().on("change", function () {
-                var context = $(this).val();
-                showRelatedDropdowns(context, true);
+        if ($("#task-context").is("select")) {
+            $('#task-context').appDropdown({
+                onChangeCallback: function(context, instance) {
+                    showRelatedDropdowns(context, true);
+                }
             });
         }
 
         if ($("#project_id").length) {
-            $("#project_id").select2({data: relatedToDropdowns[context]}).on("change", function () {
-                showRelatedDropdowns("project", false);
+            // initialize project dropdown if there is only project dropdown available and context dropdown is not available
+            $('#project_id').appDropdown({
+                list_data: relatedToDropdowns[context],
+                onChangeCallback: function(value, instance) {
+                    showRelatedDropdowns("project", false, false);
+                }
             });
         }
 
+        var taskId = "<?php echo isset($model_info->id) ? $model_info->id : ''; ?>",
+            selectedContext = $("#task-context").val(),
+            projectId = "<?php echo isset($project_id) ? $project_id : ''; ?>",
+            showOnlyProjects = "<?php echo get_setting("support_only_project_related_tasks_globally"); ?>";
 
-
+        if ((taskId && selectedContext === "project") || (showOnlyProjects && selectedContext === "project" && !projectId)) {
+            console.log("showOnlyProjects", showOnlyProjects);
+            showRelatedDropdowns("project", true, true);
+        }
 
     });
 </script>

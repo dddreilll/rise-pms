@@ -6,7 +6,6 @@ if (!function_exists('app_hooks')) {
         global $hooks;
         return $hooks;
     }
-
 }
 
 if (!function_exists('get_plugin_meta_data')) {
@@ -60,7 +59,6 @@ if (!function_exists('get_plugin_meta_data')) {
 
         return $plugin_info_array;
     }
-
 }
 
 if (!function_exists('register_installation_hook')) {
@@ -68,7 +66,6 @@ if (!function_exists('register_installation_hook')) {
     function register_installation_hook($plugin_name, $function) {
         app_hooks()->add_action("app_hook_install_plugin_$plugin_name", $function);
     }
-
 }
 
 if (!function_exists('register_uninstallation_hook')) {
@@ -76,7 +73,6 @@ if (!function_exists('register_uninstallation_hook')) {
     function register_uninstallation_hook($plugin_name, $function) {
         app_hooks()->add_action("app_hook_uninstall_plugin_$plugin_name", $function);
     }
-
 }
 
 if (!function_exists('register_activation_hook')) {
@@ -85,7 +81,6 @@ if (!function_exists('register_activation_hook')) {
 
         app_hooks()->add_action("app_hook_activate_plugin_$plugin_name", $function);
     }
-
 }
 
 if (!function_exists('register_deactivation_hook')) {
@@ -93,7 +88,6 @@ if (!function_exists('register_deactivation_hook')) {
     function register_deactivation_hook($plugin_name, $function) {
         app_hooks()->add_action("app_hook_deactivate_plugin_$plugin_name", $function);
     }
-
 }
 
 if (!function_exists('is_unsupported_plugin')) {
@@ -109,7 +103,6 @@ if (!function_exists('is_unsupported_plugin')) {
 
         return $error;
     }
-
 }
 
 //save activated plugins to a config file as data
@@ -126,7 +119,6 @@ if (!function_exists('save_plugins_config')) {
         $contents = json_encode($activated_plugins);
         file_put_contents(APPPATH . "Config/activated_plugins.json", $contents);
     }
-
 }
 
 if (!function_exists('register_update_hook')) {
@@ -134,7 +126,6 @@ if (!function_exists('register_update_hook')) {
     function register_update_hook($plugin_name, $function) {
         app_hooks()->add_action("app_hook_update_plugin_$plugin_name", $function);
     }
-
 }
 
 if (!function_exists('register_data_insert_hook')) {
@@ -142,7 +133,6 @@ if (!function_exists('register_data_insert_hook')) {
     function register_data_insert_hook($function) {
         app_hooks()->add_action("app_hook_data_insert", $function);
     }
-
 }
 
 if (!function_exists('register_data_update_hook')) {
@@ -150,7 +140,6 @@ if (!function_exists('register_data_update_hook')) {
     function register_data_update_hook($function) {
         app_hooks()->add_action("app_hook_data_update", $function);
     }
-
 }
 
 if (!function_exists('register_data_delete_hook')) {
@@ -158,5 +147,11 @@ if (!function_exists('register_data_delete_hook')) {
     function register_data_delete_hook($function) {
         app_hooks()->add_action("app_hook_data_delete", $function);
     }
+}
 
+if (!function_exists('register_before_insert_filter_hook')) {
+
+    function register_before_insert_filter_hook($function) {
+        app_hooks()->add_action("app_filter_data_before_insert", $function);
+    }
 }

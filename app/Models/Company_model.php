@@ -33,6 +33,7 @@ class Company_model extends Crud_model {
 
     function remove_other_default_company($except_id) {
         $company_table = $this->db->prefixTable('company');
+        $except_id = $this->_get_clean_value($except_id);
 
         $sql = "UPDATE $company_table SET $company_table.is_default=0 WHERE $company_table.id!=$except_id AND $company_table.is_default=1; ";
         $this->db->query($sql);

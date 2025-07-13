@@ -1,123 +1,66 @@
-<?php $user_id = $login_user->id; ?>
+<?php
+$user_id = $login_user->id;
+?>
 
-<?php if ($view_type != "modal_view") { ?>
-    <div class="page-content ticket-details-view clearfix">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="ticket-titlep-section">
-                        <div class="page-title no-bg clearfix mb5 no-border">
-                            <h1 class="pl0">
-                                <span><i data-feather="life-buoy" class='icon'></i></span>
-                                <?php echo get_ticket_id($ticket_info->id) . " - " . $ticket_info->title ?>
-                            </h1>
+<?php
+echo view("includes/back_button", array("button_url" => "", "button_text" => app_lang("tickets")));
+?>
 
-                            <div class="title-button-group mr0">
-                                <span class="dropdown inline-block">
-                                    <button class="btn btn-info text-white dropdown-toggle caret" type="button" data-bs-toggle="dropdown" aria-expanded="true">
-                                        <i data-feather="tool" class="icon-16"></i> <?php echo app_lang('actions'); ?>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <?php if ($login_user->user_type == "staff") { ?>
-                                            <li role="presentation"><?php echo modal_anchor(get_uri("tickets/modal_form"), "<i data-feather='edit-2' class='icon-16'></i> " . app_lang('edit'), array("title" => app_lang('ticket'), "data-post-view" => "details", "data-post-id" => $ticket_info->id, "class" => "dropdown-item")); ?></li>
-                                            <?php if ($can_create_tasks && !$ticket_info->task_id) { ?> 
-                                                <li role="presentation"><?php echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_task_in_project'), array("title" => app_lang('create_new_task'), "data-post-project_id" => $ticket_info->project_id, "data-post-ticket_id" => $ticket_info->id, "class" => "dropdown-item")); ?></li>
-                                            <?php } ?>
-                                            <li role="presentation"><?php echo modal_anchor(get_uri("tickets/merge_ticket_modal_form"), "<i data-feather='git-merge' class='icon-16'></i> " . app_lang('merge'), array("title" => app_lang('merge'), "data-post-ticket_id" => $ticket_info->id, "class" => "dropdown-item")); ?></li>
-                                        <?php } ?>
-
-                                        <?php if ($ticket_info->status === "closed") { ?>
-                                            <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/save_ticket_status/$ticket_info->id/open"), "<i data-feather='check-circle' class='icon-16'></i> " . app_lang('mark_as_open'), array("class" => "dropdown-item", "title" => app_lang('mark_as_open'), "data-reload-on-success" => "1")); ?> </li>
-                                        <?php } else { ?>
-                                            <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/save_ticket_status/$ticket_info->id/closed"), "<i data-feather='check-circle' class='icon-16'></i> " . app_lang('mark_as_closed'), array("class" => "dropdown-item", "title" => app_lang('mark_as_closed'), "data-reload-on-success" => "1")); ?> </li>
-                                        <?php } ?>
-                                        <?php if ($ticket_info->assigned_to === "0" && $login_user->user_type == "staff") { ?>
-                                            <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/assign_to_me/$ticket_info->id"), "<i data-feather='user' class='icon-16'></i> " . app_lang('assign_to_me'), array("class" => "dropdown-item", "title" => app_lang('assign_myself_in_this_ticket'), "data-reload-on-success" => "1")); ?></li>
-                                        <?php } ?>
-                                        <?php if ($ticket_info->client_id === "0" && $login_user->user_type == "staff") { ?>
-                                            <?php if ($can_create_client) { ?>
-                                                <li role="presentation"><?php echo modal_anchor(get_uri("clients/modal_form"), "<i data-feather='plus' class='icon-16'></i> " . app_lang('link_to_new_client'), array("title" => app_lang('link_to_new_client'), "data-post-ticket_id" => $ticket_info->id, "class" => "dropdown-item")); ?></li>
-                                            <?php } ?>
-                                            <li role="presentation"><?php echo modal_anchor(get_uri("tickets/add_client_modal_form/$ticket_info->id"), "<i data-feather='link' class='icon-16'></i> " . app_lang('link_to_existing_client'), array("title" => app_lang('link_to_existing_client'), "class" => "dropdown-item")); ?></li>
-                                        <?php } ?>
-                                    </ul>
-                                </span>
-                            </div>
-                        </div>
-                        <?php if ($login_user->user_type === "staff") { ?>
-                            <ul id="ticket-tabs" data-bs-toggle="ajax-tab" class="nav nav-pills rounded classic mb20 scrollable-tabs border-white" role="tablist">
-                                <li><a role="presentation" data-bs-toggle="tab" href="javascript:;" data-bs-target="#ticket-details-section"><?php echo app_lang("details"); ?></a></li>
-                                <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("tickets/tasks/" . $ticket_info->id); ?>" data-bs-target="#ticket-tasks-section"><?php echo app_lang('tasks'); ?></a></li>
-                            </ul>
-                        <?php } ?>
-                    </div>
-
-                    <?php if ($login_user->user_type === "staff") { ?>
-                        <div class="tab-content">
-                            <div role="tabpanel" class="tab-pane fade"id="ticket-details-section">
-                                <?php echo view("tickets/details"); ?>
-                            </div>
-                            <div role="tabpanel" class="tab-pane fade grid-button" id="ticket-tasks-section"></div>
-                        </div>
-                    <?php } else { ?>
-                        <?php echo view("tickets/details"); ?>
-                    <?php } ?>
-
-                </div>
+<div class="page-content ticket-details-view xs-full-width clearfix hide-under-modal">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div id="ticket-details-top-bar"><?php echo view("tickets/top_bar"); ?></div>
+                <?php echo view("tickets/details"); ?>
             </div>
         </div>
     </div>
-<?php } else { ?>
-    <div class="modal-body clearfix general-form">
-        <div class="container-fluid">
-            <div class="clearfix">
-                <div class="row">
-                    <div class="col-md-12">
-                        <ul id="ticket-tabs" data-bs-toggle="ajax-tab" class="nav nav-pills rounded classic mb20 scrollable-tabs border-white" role="tablist">
-                            <li><a role="presentation" data-bs-toggle="tab" class="active" href="javascript:;" data-bs-target="#ticket-details-section"><?php echo app_lang("details"); ?></a></li>
-                            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("tickets/tasks/" . $ticket_info->id); ?>" data-bs-target="#ticket-tasks-section"><?php echo app_lang('tasks'); ?></a></li>
-                        </ul>
-                    </div>
-                    <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane fade active show" id="ticket-details-section">
-                            <?php echo view("tickets/details"); ?>
-                        </div>
-                        <div role="tabpanel" class="tab-pane fade grid-button" id="ticket-tasks-section"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
 
-    <div class="modal-footer">
-        <?php if ($ticket_info->assigned_to === "0" && $login_user->user_type == "staff") { ?>
-            <?php echo ajax_anchor(get_uri("tickets/assign_to_me/$ticket_info->id"), "<i data-feather='user' class='icon-16'></i> " . app_lang('assign_to_me'), array("class" => "btn btn-info text-white", "title" => app_lang('assign_myself_in_this_ticket'), "data-reload-on-success" => "1")); ?>
-        <?php } ?>
-        <?php if ($ticket_info->status === "closed") { ?>
-            <?php echo ajax_anchor(get_uri("tickets/save_ticket_status/$ticket_info->id/open"), "<i data-feather='check-circle' class='icon-16'></i> " . app_lang('mark_as_open'), array("class" => "btn btn-danger", "title" => app_lang('mark_as_open'), "data-reload-on-success" => "1")); ?>
-        <?php } else { ?>
-            <?php echo ajax_anchor(get_uri("tickets/save_ticket_status/$ticket_info->id/closed"), "<i data-feather='check-circle' class='icon-16'></i> " . app_lang('mark_as_closed'), array("class" => "btn btn-success", "title" => app_lang('mark_as_closed'), "data-reload-on-success" => "1")); ?>
-        <?php } ?>
-        <?php if ($login_user->user_type == "staff") { ?>
-            <?php if ($can_create_tasks && !$ticket_info->task_id) { ?> 
-                <?php echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('create_new_task'), array("title" => app_lang('create_new_task'), "data-post-project_id" => $ticket_info->project_id, "data-post-ticket_id" => $ticket_info->id, "class" => "btn btn-default")); ?>
-            <?php } ?>
-            <?php echo modal_anchor(get_uri("tickets/modal_form"), "<i data-feather='edit-2' class='icon-16'></i> " . app_lang('edit'), array("title" => app_lang('ticket'), "data-post-view" => "details", "data-post-id" => $ticket_info->id, "class" => "btn btn-default")); ?>
-        <?php } ?>
-
-        <button type="button" class="btn btn-default" data-bs-dismiss="modal"><span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?></button>
-    </div>
-<?php } ?>
+<textarea id="signature-text" class="hide"><?php echo get_setting('user_' . $user_id . '_signature'); ?></textarea>
 
 <script type="text/javascript">
-    $(document).ready(function () {
-     
+    $(document).ready(function() {
+
+        appContentBuilder.init("<?php echo get_uri('tickets/view/' . $ticket_info->id); ?>", {
+            id: "ticket-details-page-builder",
+            data: {
+                view_type: "ticket_meta"
+            },
+            reloadHooks: [{
+                    type: "app_form",
+                    id: "ticket-form"
+                },
+                {
+                    type: "app_form",
+                    id: "comment-form"
+                },
+                {
+                    type: "ajax_request",
+                    group: "ticket_status"
+                },
+                {
+                    type: "app_modifier",
+                    group: "ticket_info"
+                },
+                {
+                    type: "app_table_row_update",
+                    tableId: "ticket-table"
+                }
+            ],
+            reload: function(bind, result) {
+                bind("#ticket-details-top-bar", result.top_bar);
+                bind("#ticket-details-ticket-info", result.ticket_info);
+            }
+        });
+
+
+
         var decending = "<?php echo $sort_as_decending; ?>";
 
         $("#comment-form").appForm({
             isModal: false,
-            onSuccess: function (result) {
-                $("#description").val("");
+            onSuccess: function(result) {
 
                 if (decending) {
                     $(result.data).insertAfter("#comment-form-container");
@@ -125,55 +68,58 @@
                     $(result.data).insertBefore("#comment-form-container");
                 }
 
-                appAlert.success(result.message, {duration: 10000});
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
+
+                if (result.validation_error) {
+                    appAlert.error(result.message, {
+                        duration: 10000
+                    });
+                }
 
                 if (window.formDropzone) {
                     window.formDropzone['ticket-comment-dropzone'].removeAllFiles();
                 }
 
+                if (AppHelper.settings.enableRichTextEditor === "1") {
+                    setTimeout(function() {
+                        $("#description").val($("#signature-text").val());
+                        initWYSIWYGEditor("#description");
+                    }, 200);
+                } else {
+                    $("#description").val($("#signature-text").val() || "");
+                }
             }
         });
 
-        if ("<?php echo!get_setting('user_' . $user_id . '_signature') == '' ?>") {
-            $("#description").text("\n" + $("#description").text());
+        if (!$("#signature-text").val()) {
+            $("#description").text() ? $("#description").text("\n" + $("#description").text()) : "";
             $("#description").focus();
         }
 
-        window.refreshAfterAddTask = true;
-
-        var $inputField = $("#description"), $lastFocused;
-
-        function saveCursorPositionOfRichEditor() {
-            $inputField.summernote('saveRange');
-            $lastFocused = "rich-editor";
-        }
-
-        //store the cursor position
         if (AppHelper.settings.enableRichTextEditor === "1") {
-            $inputField.on("summernote.change", function (e) {
-                saveCursorPositionOfRichEditor();
-            });
-
-            //it'll grab only cursor clicks
-            $("body").on("click", ".note-editable", function () {
-                saveCursorPositionOfRichEditor();
-            });
-        } else {
-            $inputField.focus(function () {
-                $lastFocused = document.activeElement;
-            });
+            initWYSIWYGEditor("#description");
         }
+
+        var $inputField = $("#description"),
+            $lastFocused;
+
+
+        $inputField.focus(function() {
+            $lastFocused = document.activeElement;
+        });
 
         function insertTemplate(text) {
-            if ($lastFocused === undefined) {
-                return;
-            }
+
 
             if (AppHelper.settings.enableRichTextEditor === "1") {
-                $inputField.summernote('restoreRange');
-                $inputField.summernote('focus');
-                $inputField.summernote('pasteHTML', text);
+                insertHTMLintoWYSIWYGEditor($inputField, text);
             } else {
+                if ($lastFocused === undefined) {
+                    return;
+                }
+
                 var scrollPos = $lastFocused.scrollTop;
                 var pos = 0;
                 var browser = (($lastFocused.selectionStart || $lastFocused.selectionStart === "0") ? "ff" : (document.selection ? "ie" : false));
@@ -194,45 +140,125 @@
             $("#close-template-modal-btn").trigger("click");
         }
 
-        //init uninitialized rich editor to insert template 
-        $("#insert-template-btn").click(function () {
-            setSummernote($("#description"));
-        });
-
-        //insert ticket template
-        $("body").on("click", "#ticket-template-table tr", function () {
-            var template = $(this).find(".js-description").html();
+        // Common function for inserting template
+        function insertTemplateIntoEditor(template) {
             if (AppHelper.settings.enableRichTextEditor !== "1") {
                 //insert only text when rich editor isn't enabled
-                var template = $(this).find(".js-description").text();
+                template = $("<div>").html(template).text();
             }
 
             if ($lastFocused === undefined) {
                 if (AppHelper.settings.enableRichTextEditor === "1") {
-                    $("#description").summernote("code", template);
+                    insertTemplate(template);
                 } else {
                     $("#description").text(template);
                 }
-
-                //close the modal
-                $("#close-template-modal-btn").trigger("click");
             } else {
                 insertTemplate(template);
             }
 
+            // Close modal if exists
+            $("#close-template-modal-btn").trigger("click");
+        }
+
+        // When clicking on the ticket template table row
+        $("body").on("click", "#ticket-template-table tr", function() {
+            var template = $(this).find(".js-description").html();
+            insertTemplateIntoEditor(template);
+        });
+
+        $("body").on("click", ".insert-into-editor-button", function() {
+            var template = $(this).closest(".ticket-comment-container").find("#ticket-comment-description").val();
+            insertTemplateIntoEditor(template);
         });
 
         //set value 1, when click save as button
-        $("#save-as-note-button").click(function () {
+        $("#save-as-note-button").click(function() {
             $("#is-note").val('1');
             $(this).trigger("submit");
         });
 
         //set value 0, when click post comment button
-        $("#save-ticket-comment-button").click(function () {
+        $("#save-ticket-comment-button").click(function() {
             $("#is-note").val('0');
         });
 
         $('[data-bs-toggle="tooltip"]').tooltip();
+
+        $(".pin-comment-button").click(function() {
+            var comment_id = $(this).attr('data-pin-comment-id');
+            var ticketId = "<?php echo $ticket_info->id; ?>";
+
+            appLoader.show();
+            $.ajax({
+                url: "<?php echo get_uri("tickets/pin_comment/"); ?>/" + comment_id + "/" + ticketId,
+                type: 'POST',
+                dataType: "json",
+                success: function(result) {
+                    if (result.success) {
+                        $("#ticket-pinned-comments").find(".card-body").append(result.data);
+                        appLoader.hide();
+                    } else {
+                        appAlert.error(result.message);
+                    }
+
+                    if (result.status) {
+                        $("#pin-comment-button-" + comment_id).addClass("hide");
+                        $("#unpin-comment-button-" + comment_id).removeClass("hide");
+                        $("#ticket-pinned-comments").removeClass("hide");
+                    }
+                }
+            });
+        });
+
+        $(".unpin-comment-button").click(function() {
+            var comment_id = $(this).attr('data-pin-comment-id');
+            $("#pin-comment-button-" + comment_id).removeClass("hide");
+            $("#unpin-comment-button-" + comment_id).addClass("hide");
+        });
+
+        //remove comment link from url
+        var commentHash = window.location.hash;
+        if (commentHash.indexOf('#ticket-comment') > -1) {
+            history.replaceState("", "", window.location.pathname);
+        }
+
+        function highlightSpecificComment(commentId) {
+            $(".comment-highlight-section").removeClass("comment-highlight");
+            $("#ticket-comment-" + commentId).addClass("comment-highlight");
+            window.location.hash = ""; //remove first to scroll with main link
+            window.location.hash = "#ticket-comment-" + commentId;
+        }
+
+        $(".pinned-comment-highlight-link").click(function(e) {
+            var comment_id = $(this).attr('data-original-comment-link-id');
+            highlightSpecificComment(comment_id);
+        });
+
+
+        $(".navigate-back").on("click", function() {
+            if (!$(".tickets-list-section").length) {
+                window.location.href = "<?php echo get_uri('tickets/index'); ?>"
+            }
+            $(".tickets-list-section").removeClass("hide");
+            $(".navbar").removeClass("hide");
+            $(".navbar-custom").removeClass("hide");
+            $("#compact-details-page").addClass("hide").html("");
+        });
+
+        <?php if ($can_edit_ticket) { ?>
+
+            $('body').on('click', '[data-act=ticket-modifier]', function(e) {
+                $(this).appModifier({
+                    dropdownData: {
+                        labels: <?php echo json_encode($label_suggestions); ?>,
+                        assigned_to: <?php echo json_encode($assign_to_dropdown); ?>
+                    }
+                });
+                return false;
+            });
+
+        <?php } ?>
+
     });
 </script>

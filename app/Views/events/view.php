@@ -45,7 +45,7 @@
 
             <?php if ($model_info->description) { ?>
                 <div class="col-md-12">
-                    <blockquote class="font-14 text-justify" style="<?php echo "border-color:" . $model_info->color; ?>"><?php echo nl2br(process_images_from_content($model_info->description)); ?></blockquote>
+                    <blockquote class="font-14 text-justify" style="<?php echo "border-color:" . $model_info->color; ?>"><?php echo custom_nl2br(process_images_from_content($model_info->description)); ?></blockquote>
                 </div>
             <?php } ?>
 
@@ -60,7 +60,7 @@
 
             <?php if ($model_info->location) { ?>
                 <div class="col-md-12 mt5">
-                    <div class="font-14"><i data-feather="map-pin" class="icon-16"></i> <?php echo nl2br($model_info->location); ?></div>
+                    <div class="font-14"><i data-feather="map-pin" class="icon-16"></i> <?php echo custom_nl2br($model_info->location); ?></div>
                 </div>
             <?php }
             ?>

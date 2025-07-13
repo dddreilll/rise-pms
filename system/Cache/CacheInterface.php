@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -18,6 +20,8 @@ interface CacheInterface
 {
     /**
      * Takes care of any handler-specific setup that must be done.
+     *
+     * @return void
      */
     public function initialize();
 

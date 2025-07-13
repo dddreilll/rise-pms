@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -16,6 +18,8 @@ use Config\Format as FormatConfig;
 
 /**
  * The Format class is a convenient place to create Formatters.
+ *
+ * @see \CodeIgniter\Format\FormatTest
  */
 class Format
 {

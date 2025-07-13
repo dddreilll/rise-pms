@@ -108,7 +108,7 @@ class Pages extends Security_Controller {
             $status_class = "bg-danger";
         } 
 
-        $status = "<span class='badge $status_class large'>" . app_lang($data->status) . "</span> ";
+        $status = "<span class='badge $status_class'>" . app_lang($data->status) . "</span> ";
 
         
         

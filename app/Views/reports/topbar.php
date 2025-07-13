@@ -1,5 +1,5 @@
 <div class="reports-tabs">
-    <div class="page-wrapper pb-0">
+    <div class="page-wrapper pb-0 scrollable-tabs">
         <?php
         foreach ($reports_menu as $report_menu) {
             $button_name = get_array_value($report_menu, "name");

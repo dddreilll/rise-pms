@@ -6,9 +6,11 @@ $(window).on('load', function () {
 });
 
 $(document).ready(function () {
+    $.ajaxSetup({ cache: false });
 
+    setThemeColor();
 
-    $.ajaxSetup({cache: false});
+    $("#theme-color-meta-tag").attr("content", $("body").css("background-color"));
 
     //clicked on toggle button
     $('.sidebar-toggle-btn').on('click', function () {
@@ -129,6 +131,15 @@ $(document).ready(function () {
     });
 
 
+    //convert buttons to dropdown in mobive view
+    convertTabButtonsToDropdownOnMobileView();
+    convertTabButtonsToDropdownOnMobileView(".convert-to-dropdown-on-mobile");
+    //show home button if there is no dropdown to show
+    if (!$("#mobile-function-button").html()) {
+        var dashboardLink = $("#dashboard-link").attr("href");
+        $("#mobile-function-button").html("<a class='nav-link home-btn' href='" + dashboardLink + "'><i data-feather='home' class='icon'></i></a>");
+    }
+
     //replace icon on row collapsing in responsive state of datatable
     $('body').on('click', '.dataTable tr', function () {
         if ($(this).hasClass("parent")) {
@@ -146,14 +157,61 @@ $(document).ready(function () {
 
     //apply summernote on textarea after click
     $('body').on('focus', 'textarea', function () {
-        setSummernote($(this));
+        initOnDemandWYSIWYGEditor($(this));
     });
+
+
+
+    //show/hide summernote dropdown
+    $('body').on('click', ".note-editor [data-toggle='dropdown']", function (e) {
+        $(this).closest("div").find("ul.dropdown-menu").toggleClass("show");
+    });
+
+    //hide dropdown on clicking outside of the content
+    $('body').on('click', function (e) {
+        if (!($(e.target).hasClass("dropdown-toggle") || $(e.target).closest(".dropdown-toggle").length)) {
+            $(".note-editor [data-toggle='dropdown']").each(function () {
+                $(this).closest("div").find("ul.dropdown-menu").removeClass("show");
+            });
+        }
+    });
+
+    setTimeout(function () {
+        $('body').on('click', '.note-btn', function () {
+            var $noteBtn = $(this);
+            setTimeout(function () {
+                if ($noteBtn.hasClass("note-icon-link")
+                    || $noteBtn.find(".note-icon-link").length
+                    || $noteBtn.hasClass("note-icon-picture")
+                    || $noteBtn.find(".note-icon-picture").length
+                    || $noteBtn.hasClass("note-icon-video")
+                    || $noteBtn.find(".note-icon-video").length
+                ) {
+                    var $modals = $('.modal');
+                    $modals.each(function () {
+                        var $modalEl = $(this);
+                        if ($modalEl.hasClass("note-modal")) {
+                            var modalInstance = bootstrap.Modal.getInstance($modalEl[0]);
+                            if (modalInstance) {
+                                modalInstance.dispose();
+                            }
+                        }
+                    });
+                }
+            }, 300);
+
+            $(".note-modal .btn-close, .note-link-btn, .note-image-btn, .note-video-btn").click(function () {
+                $(".note-modal").remove();
+            });
+        });
+    }, 1000);
+
 
     //show dropdowns of navbar like a collapse panel in mobile devices
     $("#personal-language-icon, #web-notification-icon, #message-notification-icon, #user-dropdown-icon, #project-timer-icon, #quick-add-icon").click(function () {
         if (isMobile()) {
             var $dropdown = $(this).closest("li").find('.dropdown-menu'),
-                    handlerId = $(this).attr("id");
+                handlerId = $(this).attr("id");
 
             $("#navbar").find('.dropdown-menu').addClass("hide");
 
@@ -193,7 +251,7 @@ $(document).ready(function () {
                     if (data.url_attributes) {
                         var appAlertText = "<a class='color-white' " + data.url_attributes + ">" + appAlertText + "</a>";
                     }
-                    appAlert.info(appAlertText, {duration: 10000});
+                    appAlert.info(appAlertText, { duration: 10000 });
                 }
 
                 //check web notifications
@@ -221,7 +279,7 @@ $(document).ready(function () {
     //save the selected tab of ajax-tab list to cookie user-wise
     $('body').on('click', '[data-bs-toggle="ajax-tab"] li a', function () {
         var tab = $(this).attr("data-bs-target"),
-                tabList = $(this).closest("ul").attr("id");
+            tabList = $(this).closest("ul").attr("id");
 
         setCookie("user_" + AppHelper.userId + "_" + tabList, tab);
     });
@@ -273,44 +331,101 @@ $(document).ready(function () {
         }
     });
 
-    //show/hide summernote dropdown
-    $('body').on('click', ".note-editor [data-toggle='dropdown']", function (e) {
-        $(this).closest("div").find("ul.dropdown-menu").toggleClass("show");
-    });
-
-    //hide dropdown on clicking outside of the content
-    $('body').on('click', function (e) {
-        if (!($(e.target).hasClass("dropdown-toggle") || $(e.target).closest(".dropdown-toggle").length)) {
-            $(".note-editor [data-toggle='dropdown']").each(function () {
-                $(this).closest("div").find("ul.dropdown-menu").removeClass("show");
-            });
-        }
-    });
 
     var color = getCookie("theme_color");
     if (color == "1E202D") {
         $(".g-recaptcha").attr("data-theme", "dark");
     }
 
+    var addCommentLink = function (event) {
+        //modify comment link copied text on pasting
+        var clipboardData = event.originalEvent.clipboardData.getData('text/plain');
+        if (clipboardData.indexOf('/#comment') > -1) {
+            //pasted comment link
+            event.preventDefault();
 
-    setTimeout(function () {
-        $('body').on('click', '.note-btn', function () {
-            var $noteBtn = $(this);
-            setTimeout(function () {
-                if ($noteBtn.hasClass("note-icon-link") || $noteBtn.find(".note-icon-link").length) {
-                    bootstrap.Modal.getInstance($(".note-modal")).dispose();
-                }
-            }, 300);
+            var splitClipboardData = clipboardData.split("/"),
+                splitClipboardDataCount = splitClipboardData.length,
+                commentId = splitClipboardData[splitClipboardDataCount - 1];
 
-            $(".note-modal .btn-close, .note-link-btn").click(function () {
-                $(".note-modal").remove();
-            });
-        });
-    }, 1000);
+            if (!commentId) {
+                //there has an extra / at last
+                splitClipboardDataCount = splitClipboardDataCount - 1;
+                commentId = splitClipboardData[splitClipboardDataCount - 1];
+            }
+
+            var splitCommentId = commentId.split("-");
+            commentId = splitCommentId[1];
+
+            var taskId = splitClipboardData[splitClipboardDataCount - 2];
+
+            var newClipboardData = "#[" + taskId + "-" + commentId + "] (" + AppLanugage.comment + ") ";
+
+            document.execCommand('insertText', false, newClipboardData);
+        }
+    };
+
+    //normal input/textarea
+    $('body').on('paste', 'input, textarea', function (e) {
+        addCommentLink(e);
+    });
+
+    //summernote
+    $('body').on('summernote.paste', function (e, ne) {
+        addCommentLink(ne);
+    });
 
 });
 
-toggleLeftMenu = function (keyPressed) {
+function convertTabButtonsToDropdownOnMobileView(element = ".title-button-group", mobileMirror = false) {
+    if (isMobile() || mobileMirror) {
+
+        var $dropdownMenu = $('<div class="dropdown-menu mt-1 mobile-function-button-dropdown" x-placement="top-start" role="menu"></div>');
+
+        if (!element) {
+            element = ".title-button-group"
+        }
+        $(element + ':not(.skip-dropdown-migration)').children().each(function () {
+            var $listItem = $('<div role="presentation"></div>');
+            var $it = $(this);
+            if ($it.is('a')) {
+                $it.addClass("dropdown-item").removeClass("btn");
+                $listItem.append($it);
+            } else if ($it.hasClass('dropdown')) {
+
+                $dropdownMenu.prepend("<div class='dropdown-divider'></div>")
+                $it.find(".dropdown-menu").children().each(function () {
+                    $listItem.append($(this).find("a"));
+                })
+                $it.remove();
+            }
+            $dropdownMenu.prepend($listItem);
+        });
+
+        if ($dropdownMenu.children().length) {
+
+            var icon = "grid",
+                iconClass = "";
+            if (mobileMirror) {
+                icon = "more-vertical";
+                iconClass = "icon-16";
+            }
+
+            var $dropdown = $('<div class="dropdown"></div>');
+            var $dropdownToggle = $('<div class="dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false"><i data-feather="' + icon + '" class="icon ' + iconClass + '"></i></div>');
+            $dropdown.append($dropdownToggle);
+            $dropdown.append($dropdownMenu);
+            $("#mobile-function-button").html($dropdown);
+        }
+    }
+
+    $(element).addClass("skip-dropdown-migration");
+    if (!$(element).children().length) {
+        $(element).remove();
+    }
+}
+
+function toggleLeftMenu(keyPressed) {
     if (keyPressed) {
         $("body").toggleClass('sidebar-toggled');
 
@@ -340,7 +455,7 @@ toggleLeftMenu = function (keyPressed) {
 
     if ($("body").hasClass('sidebar-toggled')) {
         if ($(window).width() >= 990) {
-            $("body").find("div#left-menu-toggle-mask").find("div.sidebar").css({"height": $("body").find("div#left-menu-toggle-mask")[0].scrollHeight});
+            $("body").find("div#left-menu-toggle-mask").find("div.sidebar").css({ "height": $("body").find("div#left-menu-toggle-mask")[0].scrollHeight });
         }
 
         if (typeof window.fullCalendar !== 'undefined') {
@@ -356,7 +471,7 @@ toggleLeftMenu = function (keyPressed) {
     setPageScrollable();
 };
 
-keyboardShortcuts = function (keyupCode) {
+function keyboardShortcuts(keyupCode) {
     var shortcuts = {
         "84": "#js-quick-add-task",
         "77": "#js-quick-add-multiple-task",
@@ -373,38 +488,35 @@ keyboardShortcuts = function (keyupCode) {
     return shortcuts[keyupCode];
 };
 
-//apply summernote to all textarea, if those have any values
-setSummernoteToAll = function (notFocus) {
-    $("textarea").each(function () {
-        var $instance = $(this);
-        if ($instance.val()) {
-            setTimeout(function () {
-                setSummernote($instance, notFocus);
-            }, 100);
-        }
-    });
-};
-
-
 //apply scrollbar on modal
-setModalScrollbar = function () {
+function setModalScrollbar() {
     var $scroll = $("#ajaxModalContent").find(".modal-body"),
-            height = $scroll.height(),
-            maxHeight = $(window).height() - 200;
+        height = $scroll.height(),
+        maxHeight = $(window).height() - 200;
 
     if (isMobile()) {
         //show full screen in mobile devices
-        maxHeight = $(window).height() - 123;
+        maxHeight = $(window).height() - 130;
     }
 
     if (height > maxHeight) {
         height = maxHeight;
-        initScrollbar($scroll, {setHeight: height});
+        initScrollbar($scroll, { setHeight: height });
+    } else {
+        if (isMobile()) {
+            var lessHeight = 130;
+            if (!$("#ajaxModalContent").find(".modal-footer").length) {
+                lessHeight = 60;
+            } else if ($("#ajaxModalContent").find(".modal-footer").closest(".modal-body").length) {
+                lessHeight = 60;
+            }
+            $scroll.css({ "min-height": $(window).height() - lessHeight });
+        };
     }
 };
 
 //show browser notification
-showBrowserNotification = function (data) {
+function showBrowserNotification(data) {
     var notificationData = {
         icon: data.icon,
         body: data.message,
@@ -414,16 +526,21 @@ showBrowserNotification = function (data) {
     if (isMobile()) {
         //use service worker for mobile devices
         try {
-            navigator.serviceWorker.register(AppHelper.serviceWorkerUrl);
-            Notification.requestPermission(function (result) {
-                if (result === 'granted') {
-                    navigator.serviceWorker.ready.then(function (registration) {
 
-                        notificationData.vibrate = [100, 50, 100];
-                        notificationData.data = {baseUrl: AppHelper.baseUrl};
-                        registration.showNotification(data.title, notificationData);
-                    });
-                }
+            navigator.serviceWorker.register(AppHelper.serviceWorkerUrl).then(function (registration) {
+                Notification.requestPermission(function (result) {
+                    if (result === 'granted') {
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                                if (registrations.length > 0) {
+                                    notificationData.vibrate = [100, 50, 100];
+                                    notificationData.data = { baseUrl: AppHelper.baseUrl };
+                                    registration.showNotification(data.title, notificationData);
+                                }
+                            });
+                        }
+                    }
+                });
             });
         } catch (err) {
             console.log(err);
@@ -447,7 +564,8 @@ showBrowserNotification = function (data) {
 
                     //mark the notification as read
                     if (!data.isReminder) {
-                        $.ajax({url: AppHelper.settings.pushNotficationMarkAsReadUrl + '/' + data.notification_id
+                        $.ajax({
+                            url: AppHelper.settings.pushNotficationMarkAsReadUrl + '/' + data.notification_id
                         });
                     }
 
@@ -475,7 +593,7 @@ showBrowserNotification = function (data) {
 };
 
 //upload pasted image in server for summernote input box and return reference as image element
-uploadPastedImage = function (file, $instance) {
+function uploadPastedImage(file, $instance) {
     appLoader.show();
 
     var data = new FormData();
@@ -488,9 +606,9 @@ uploadPastedImage = function (file, $instance) {
         contentType: false,
         processData: false,
         type: 'POST',
-        success: function (data) {
-            if (data) {
-                $instance.summernote("pasteHTML", data);
+        success: function (imageHtml) {
+            if (imageHtml) {
+                insertHTMLintoWYSIWYGEditor($instance, imageHtml);
             }
 
             appLoader.hide();
@@ -498,90 +616,24 @@ uploadPastedImage = function (file, $instance) {
     });
 };
 
-//initialize summernote
-setSummernote = function ($instance, notFocus) {
-    if (AppHelper.settings.enableRichTextEditor === "1" && $instance.attr("data-rich-text-editor") != undefined) {
-        var focus = true;
-        if (notFocus) {
-            focus = false;
-        }
-
-        $instance.fadeOut(100, function () {
-            var settings = {
-                height: 150,
-                focus: focus,
-                toolbar: [
-                    ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'clear']],
-                    ['fontname', ['fontname']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['table', ['table']],
-                    ['insert', ['hr']],
-                    ['view', ['fullscreen', 'codeview']]
-                ],
-                disableDragAndDrop: true,
-                callbacks: {
-                    onImageUpload: function (files, editor, $editable) {
-                        uploadPastedImage(files[0], $instance);
-                    }
-                }
-            };
-
-
-            if ($instance.attr("data-mention") != undefined) {
-                //generate mention data for summernote
-                var source = $instance.attr("data-mention-source"), project_id = $instance.attr("data-mention-project_id");
-                $.ajax({
-                    url: source,
-                    data: {project_id: project_id},
-                    dataType: "json",
-                    method: "POST",
-                    success: function (result) {
-                        if (result.success && result.data) {
-                            settings.hint = {
-                                mentions: result.data,
-                                match: /\B@(\w*)$/,
-                                search: function (keyword, callback) {
-                                    callback($.grep(this.mentions, function (item) {
-                                        return item.name.toLowerCase().indexOf(keyword.toLowerCase()) === 0;
-                                    }));
-                                },
-                                template: function (item) {
-                                    return item.name;
-                                },
-                                content: function (item) {
-                                    return $('<span>' + item.content + '&nbsp;</span>')[0];
-                                }
-                            };
-                        }
-
-                        $instance.summernote(settings);
-                    }
-                });
-            } else {
-                $instance.summernote(settings);
-            }
-        });
-    }
-};
 
 //append dropdown clone to the topbar
 function appendDropdownClone($dropdown, handlerId) {
     var $dropdownClone = $dropdown.clone();
-    $dropdownClone.attr({"is-clone": "1", "data-clone-id": handlerId}); //add attributes to grab later
-    $dropdownClone.css({"display": "block", "width": "100%", "min-width": "100%", "margin-top": "0"});
+    $dropdownClone.attr({ "is-clone": "1", "data-clone-id": handlerId }); //add attributes to grab later
+    $dropdownClone.css({ "display": "block", "width": "100%", "min-width": "100%", "margin-top": "0" });
     $dropdownClone.removeClass("hide");
     $("#navbar").append($dropdownClone);
 }
 
 //set scrollbar on page
-setPageScrollable = function () {
+function setPageScrollable() {
 
     $("#page-content").css("min-height", $(window).height() - 115);
 
     if ($(window).width() <= 640) {
-        $('html').css({"overflow": "initial"});
-        $('body').css({"overflow": "initial"});
+        $('html').css({ "overflow": "initial" });
+        $('body').css({ "overflow": "initial" });
     } else {
         if ($("body").find("div.footer").length) {
             //has footer
@@ -605,13 +657,13 @@ setPageScrollable = function () {
     }
 };
 //set scrollbar on left menu
-setMenuScrollable = function () {
+function setMenuScrollable() {
     initScrollbar('.sidebar-scroll', {
         setHeight: $(window).height() - 65
     });
 };
 
-initScrollbar = function (selector, options) {
+function initScrollbar(selector, options) {
     if (!options) {
         options = {};
     }
@@ -630,25 +682,27 @@ initScrollbar = function (selector, options) {
     var defaults = {
         wheelPropagation: true
     },
-            settings = $.extend({}, defaults, options);
+        settings = $.extend({}, defaults, options);
 
 
     if (options.setHeight) {
-        $(selector).css({"height": settings.setHeight + "px", position: "relative"})
+        $(selector).css({ "height": settings.setHeight + "px", position: "relative" })
     }
 
     if (AppHelper.settings.scrollbar == "native") {
-        $(selector).css({"overflow-y": "scroll"});
+        $(selector).css({ "overflow-y": "scroll" });
     } else {
         var ps = new PerfectScrollbar(selector);
     }
 
+    $(selector).data("scrollbar-added", "1");
+
 };
 
 // generate reandom string 
-getRndomString = function (length) {
+function getRndomString(length) {
     var result = '',
-            chars = '!-().0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        chars = '!-().0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     for (var i = length; i > 0; --i)
         result += chars[Math.round(Math.random() * (chars.length - 1))];
     return result;
@@ -656,25 +710,25 @@ getRndomString = function (length) {
 
 
 // getnerat random small alphabet 
-getRandomAlphabet = function (length) {
+function getRandomAlphabet(length) {
     var result = '',
-            chars = 'abcdefghijklmnopqrstuvwxyz';
+        chars = 'abcdefghijklmnopqrstuvwxyz';
     for (var i = length; i > 0; --i)
         result += chars[Math.round(Math.random() * (chars.length - 1))];
     return result;
 };
 
 
-attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, options) {
+function attachDropzoneWithForm(dropzoneTarget, uploadUrl, validationUrl, options) {
     var $dropzonePreviewArea = $(dropzoneTarget),
-            $dropzonePreviewScrollbar = $dropzonePreviewArea.find(".post-file-dropzone-scrollbar"),
-            $previews = $dropzonePreviewArea.find(".post-file-previews"),
-            $postFileUploadRow = $dropzonePreviewArea.find(".post-file-upload-row"),
-            $uploadFileButton = $dropzonePreviewArea.find(".upload-file-button"),
-            $submitButton = $dropzonePreviewArea.find("button[type=submit]"),
-            previewsContainer = getRandomAlphabet(15),
-            postFileUploadRowId = getRandomAlphabet(15),
-            uploadFileButtonId = getRandomAlphabet(15);
+        $dropzonePreviewScrollbar = $dropzonePreviewArea.find(".post-file-dropzone-scrollbar"),
+        $previews = $dropzonePreviewArea.find(".post-file-previews"),
+        $postFileUploadRow = $dropzonePreviewArea.find(".post-file-upload-row"),
+        $uploadFileButton = $dropzonePreviewArea.find(".upload-file-button"),
+        $submitButton = $dropzonePreviewArea.find("button[type=submit]"),
+        previewsContainer = getRandomAlphabet(15),
+        postFileUploadRowId = getRandomAlphabet(15),
+        uploadFileButtonId = getRandomAlphabet(15);
 
     //set random id with the previws 
     $previews.attr("id", previewsContainer);
@@ -724,12 +778,12 @@ attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, opt
             }
 
             $dropzonePreviewScrollbar.removeClass("hide");
-            initScrollbar($dropzonePreviewScrollbar, {setHeight: 90});
+            initScrollbar($dropzonePreviewScrollbar, { setHeight: 90 });
 
             $dropzonePreviewScrollbar.parent().removeClass("hide");
             $dropzonePreviewArea.find("textarea").focus();
 
-            var postData = {file_name: file.name, file_size: file.size};
+            var postData = { file_name: file.name, file_size: file.size };
 
             //validate the file
             $.ajax({
@@ -773,7 +827,7 @@ attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, opt
                 $(this).html("<i data-feather='camera' class='icon-16'></i> Add more");
 
                 $dropzonePreviewScrollbar.removeClass("hide");
-                initScrollbar($dropzonePreviewScrollbar, {setHeight: 90});
+                initScrollbar($dropzonePreviewScrollbar, { setHeight: 90 });
 
                 $dropzonePreviewScrollbar.parent().removeClass("hide");
                 $previews.prepend("<div class='clearfix p5 file-row'><button type='button' class='btn btn-xs btn-danger pull-left mr10 remove-file'><i data-feather='x' class='icon-16'></i></button> <input class='pull-left' type='file' name='manualFiles[]' /></div>");
@@ -785,7 +839,7 @@ attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, opt
         },
         success: function (file) {
             setTimeout(function () {
-                $(file.previewElement).find(".progress-bar-striped").removeClass("progress-bar-striped progress-bar-animated");
+                $(file.previewElement).find(".progress-bar-striped").addClass("progress-bar-success").removeClass("progress-bar-striped progress-bar-animated bg-warning");
             }, 1000);
         }
     });
@@ -806,9 +860,9 @@ attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, opt
 
                             //so, pasted item is an image
                             var image = items[i].getAsFile(),
-                                    imageName = "image_" + getRandomAlphabet(5) + ".png", //add random string to upload multiple images
-                                    blob = image.slice(0, image.size, image.type),
-                                    newImage = new File([blob], imageName, {type: image.type});
+                                imageName = "image_" + getRandomAlphabet(5) + ".png", //add random string to upload multiple images
+                                blob = image.slice(0, image.size, image.type),
+                                newImage = new File([blob], imageName, { type: image.type });
 
                             postFilesDropzone.addFile(newImage);
                         }
@@ -823,7 +877,7 @@ attachDropzoneWithForm = function (dropzoneTarget, uploadUrl, validationUrl, opt
     return postFilesDropzone;
 };
 
-teamAndMemberSelect2Format = function (option) {
+function teamAndMemberSelect2Format(option) {
     if (option.type === "team") {
         return "<i data-feather='users' class='icon-16 info'></i> " + option.text;
     } else {
@@ -831,7 +885,7 @@ teamAndMemberSelect2Format = function (option) {
     }
 };
 
-setDatePicker = function (element, options) {
+function setDatePicker(element, options) {
     if (!options) {
         options = {};
     }
@@ -858,9 +912,9 @@ setDatePicker = function (element, options) {
 
         if (value) {
             var dateArray = value.split("-"),
-                    year = dateArray[0],
-                    month = dateArray[1],
-                    day = dateArray[2];
+                year = dateArray[0],
+                month = dateArray[1],
+                day = dateArray[2];
 
             if (year && month && day) {
                 value = dateFormat.replace("yyyy", year).replace("mm", month).replace("dd", day);
@@ -882,7 +936,7 @@ setDatePicker = function (element, options) {
 };
 
 
-getJsDateFormat = function () {
+function getJsDateFormat() {
     var formats = {
         "d-m-Y": "dd-mm-yyyy",
         "m-d-Y": "mm-dd-yyyy",
@@ -898,7 +952,7 @@ getJsDateFormat = function () {
     return formats[AppHelper.settings.dateFormat] || "yyyy-mm-dd";
 };
 
-setTimePicker = function (element, options) {
+function setTimePicker(element, options) {
     if (!options) {
         options = {};
     }
@@ -925,43 +979,375 @@ setTimePicker = function (element, options) {
 };
 
 
-initWYSIWYGEditor = function (element, options) {
-    if (!options) {
-        options = {};
+function getSummernoteToolbarConfig(toolbar_type) {
+
+    var summernoteTollbarConfig = [];
+    summernoteTollbarConfig["no_toolbar"] = [];
+
+    summernoteTollbarConfig["mini_toolbar"] = [
+        ['style', ['style']],
+        ['font', ['bold', 'italic', 'underline', 'clear']],
+        ['para', ['ul', 'ol']],
+        ['table', ['table']],
+        ['insert', ['link', 'hr']],
+        ['view', ['fullscreen', 'codeview']]
+    ];
+
+    summernoteTollbarConfig["pdf_friendly_toolbar"] = [
+        ['style', ['style']],
+        ['font', ['bold', 'italic', 'underline', 'clear']],
+        ['fontname', ['fontname']],
+        ['color', ['color']],
+        ['para', ['ul', 'ol', 'paragraph']],
+        ['table', ['table']],
+        ['insert', ['link', 'hr', 'picture']],
+        ['view', ['fullscreen', 'codeview']]
+    ];
+
+    summernoteTollbarConfig["page_builder_toolbar"] = [
+        ['style', ['style']],
+        ['font', ['bold', 'italic', 'underline', 'clear']],
+        ['fontname', ['fontname']],
+        ['color', ['color']],
+        ['para', ['ul', 'ol', 'paragraph']],
+        ['height', ['height']],
+        ['table', ['table']],
+        ['insert', ['link', 'hr', 'picture', 'video']],
+        ['view', ['fullscreen', 'codeview']]
+    ];
+
+    if (summernoteTollbarConfig[toolbar_type]) {
+        return summernoteTollbarConfig[toolbar_type];
+    } else {
+        return summernoteTollbarConfig["mini_toolbar"];
     }
+}
+
+function getTinyMceToolbarConfig(toolbar_type) {
+
+    var tinyMceTollbarConfig = [];
+    tinyMceTollbarConfig["no_toolbar"] = [];
+    tinyMceTollbarConfig["mini_toolbar"] = 'blocks bold italic underline strikethrough link  table  checklist numlist bullist code';
+    tinyMceTollbarConfig["pdf_friendly_toolbar"] = 'blocks bold italic underline strikethrough forecolor fontsize link image table checklist numlist bullist align code';
+    tinyMceTollbarConfig["page_builder_toolbar"] = 'blocks bold italic underline strikethrough fontfamily forecolor fontsize link image media table checklist numlist bullist indent outdent align lineheight code';
+
+    if (tinyMceTollbarConfig[toolbar_type]) {
+        return tinyMceTollbarConfig[toolbar_type];
+    } else {
+        return tinyMceTollbarConfig["mini_toolbar"];
+    }
+}
+
+//apply richTextEditor to all textarea, if those have any values
+function initAllNotEmptyWYSIWYGEditors(notFocus, $area) {
+
+    var $element = $("textarea");
+    if ($area) {
+        $element = $area.find("textarea");
+    }
+
+    $element.each(function () {
+        var $instance = $(this);
+        if ($instance.val()) {
+
+            setTimeout(function () {
+                initOnDemandWYSIWYGEditor($instance, notFocus);
+            }, 100);
+        }
+    });
+};
+
+
+function initOnDemandWYSIWYGEditor($instance, notFocus) {
+
+    if (AppHelper.settings.enableRichTextEditor != "1") {
+        return false;
+    }
+
+    if ($instance.attr("data-rich-text-editor") != undefined) {
+
+        // $instance.fadeOut(100, function () {
+        if (notFocus) {
+            $instance.attr("data-no_focus", "1");
+        }
+
+        if (!$instance.attr("data-height")) {
+            $instance.attr("data-height", 150);
+        }
+
+
+        if (!$instance.attr("data-toolbar")) {
+            $instance.attr("data-toolbar", "mini_toolbar");
+        }
+
+        initWYSIWYGEditor($instance);
+        // });
+
+
+    }
+};
+
+var initSummernote = function ($instance) {
+
+    var editorData = $instance.data() || {};
+    var options = {};
+    options.toolbar = getSummernoteToolbarConfig(editorData.toolbar);
+    options.height = editorData.height;
+    options.lang = AppLanugage.localeLong;
+    options.focus = editorData.no_focus == "1" ? false : true;
 
     var settings = $.extend({}, {
         height: 250,
-        toolbar: [
-            ['style', ['style']],
-            ['font', ['bold', 'italic', 'underline', 'clear']],
-            ['fontname', ['fontname']],
-            ['color', ['color']],
-            ['para', ['ul', 'ol', 'paragraph']],
-            ['height', ['height']],
-            ['table', ['table']],
-            ['insert', ['hr']],
-            ['view', ['fullscreen', 'codeview']]
-        ],
         disableDragAndDrop: true,
         callbacks: {
             onImageUpload: function (files, editor, $editable) {
                 for (var i = 0; i < files.length; i++) {
-                    uploadPastedImage(files[i], $(element));
+                    uploadPastedImage(files[i], $instance);
                 }
-
+                $(".note-modal").remove();
             }
         }
     }, options);
 
-    $(element).summernote(settings);
+    if (editorData.mention != undefined) {
+        //generate mention data for summernote
+        $.ajax({
+            url: editorData.mention_source,
+            data: { project_id: editorData.mention_project_id },
+            dataType: "json",
+            method: "POST",
+            success: function (result) {
+                if (result.success && result.data) {
+                    settings.hint = {
+                        mentions: result.data,
+                        match: /\B@(\w*)$/,
+                        search: function (keyword, callback) {
+                            callback($.grep(this.mentions, function (item) {
+                                return item.name.toLowerCase().indexOf(keyword.toLowerCase()) === 0;
+                            }));
+                        },
+                        template: function (item) {
+                            return item.name;
+                        },
+                        content: function (item) {
+                            return $('<span>' + item.content + '&nbsp;</span>')[0];
+                        }
+                    };
+                }
+
+                $instance.summernote(settings);
+            }
+        });
+    } else {
+        $instance.summernote(settings);
+    }
+}
+
+var getTinyMceSelector = function ($instance) {
+    var id = $instance.data("tinymce_selector");
+    var tagname = $instance.get(0) ? $instance.get(0).tagName : "";
+    if (tagname) {
+        return tagname.toLowerCase() + "[data-tinymce_selector='" + id + "']";
+    } else {
+        return "textarea[data-tinymce_selector='" + id + "']";
+    }
+}
+
+
+var initTinyMCE = function ($instance) {
+
+    if (!$instance.attr("data-tinymce_selector")) {
+        $instance.attr("data-tinymce_selector", getRandomAlphabet(8));
+    }
+
+    var selector = getTinyMceSelector($instance);
+
+    destroyWYSIWYGEditor(selector, true);
+
+    var editorData = $instance.data() || {};
+    var options = {};
+    options.toolbar = getTinyMceToolbarConfig(editorData.toolbar);
+    options.height = editorData.height + 100;
+    options.lang = AppLanugage.localeLong;
+    options.directionality = $(document).attr("dir") == "rtl" ? "rtl" : "ltr";
+
+    var contentStyle = 'body { color: #4e5e6a; }';
+    if ($("body").attr("data-color") == "1E202D") {
+        contentStyle = 'body { color: #898fa9; }';
+    }
+
+    var settings = $.extend({}, {
+        selector: selector,
+        menubar: false,
+        //statusbar: false,
+        branding: false,
+        plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount linkchecker code',
+        toolbar_mode: "wrap",  //'floating', 'sliding', 'scrolling', 'wrap'
+        content_style: contentStyle,
+        relative_urls: false,
+        remove_script_host: false,
+        convert_urls: false,
+        images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+
+            appLoader.show();
+
+            var data = new FormData();
+            data.append("file", blobInfo.blob(), blobInfo.filename());
+
+            $.ajax({
+                url: AppHelper.uploadPastedImageLink,
+                data: data,
+                cache: false,
+                contentType: false,
+                processData: false,
+                type: 'POST',
+                success: function (imageHtml) {
+                    if (imageHtml) {
+
+                        tinymce.activeEditor.insertContent(imageHtml);
+
+                        var imageUrl = imageHtml.match(/<img[^>]+src=['"]([^'"]+)['"]/i);
+
+                        var finalImageUrl = "";
+                        if (imageUrl && imageUrl[1]) {
+                            finalImageUrl = imageUrl[1];
+                        }
+
+                        resolve(finalImageUrl);
+
+                        $('[data-mce-name="close"]').click();
+
+                        var content = tinymce.activeEditor.getContent();
+
+                        // Find the <img> tag with the data-mce-src attribute
+                        content = content.replace(/<img\s+[[^>]*data-mce-src=['"][^'"]+['"][^>]*>/gi, imageHtml);
+
+                        //remove image tag which is using the data:base64
+                        content = content.replace(/<img\s+[^>]*src="data:[^"]*"[^>]*>/gi, '');
+                        tinymce.activeEditor.setContent(content);
+                    }
+
+                    appLoader.hide();
+                },
+                onerror: function () {
+                    reject('HTTP Error');
+                }
+            });
+
+        }),
+        init_instance_callback: function (editor) {
+            if (editorData.mention_source) {
+                $(editor.contentDocument.activeElement).appMention({
+                    source: editorData.mention_source,
+                    data: { project_id: editorData.mention_project_id }
+                });
+            }
+
+            if ($instance.attr("data-move-cursor-to-first") == "1") {
+                tinymce.activeEditor.selection.setCursorLocation(
+                    tinymce.activeEditor.dom.select("p")[0],
+                    0
+                );
+            }
+
+        },
+        setup: (editor) => {
+            editor.on('init', function (e) {
+                if (editorData.no_focus != "1") {
+                    editor.selection.select(editor.getBody(), true);
+                    editor.selection.collapse(false);
+                    editor.focus();
+                }
+            }),
+                editor.on('change', function () {
+                    editor.save();
+                })
+        }
+    }, options);
+
+    tinymce.init(settings);
+
+}
+
+function destroyWYSIWYGEditor(selector, intialLoad) {
+    $instance = selector;
+    if (!($instance instanceof jQuery)) {
+        $instance = $(selector);
+    }
+
+    if (AppHelper.settings.wysiwygEditor == "tinymce") {
+        var tinySelector = getTinyMceSelector($instance);
+        tinymce.remove(tinySelector);
+        if (!intialLoad) {
+            $instance.val("");
+        }
+    } else {
+        $instance.summernote('destroy');
+    }
 };
 
-getWYSIWYGEditorHTML = function (element) {
-    return $(element).summernote('code');
+
+function initWYSIWYGEditor(selector) {
+    var $instance = selector;
+
+    if (!($instance instanceof jQuery)) {
+        $instance = $(selector);
+    }
+
+    if (AppHelper.settings.wysiwygEditor == "tinymce") {
+        initTinyMCE($instance);
+    } else {
+        initSummernote($instance);
+    }
 };
 
-combineCustomFieldsColumns = function (defaultFields, customFieldString) {
+function getWYSIWYGEditorHTML(selector) {
+    var $instance = selector;
+    if (!($instance instanceof jQuery)) {
+        $instance = $(selector);
+    }
+
+    if (AppHelper.settings.wysiwygEditor == "tinymce") {
+        return tinymce.get(getTinyMceSelector($instance)).getContent();
+    } else {
+        return $instance.summernote('code');
+    }
+};
+
+function setWYSIWYGEditorHTML(selector, html) {
+    var $instance = selector;
+    if (!($instance instanceof jQuery)) {
+        $instance = $(selector);
+    }
+
+    if (AppHelper.settings.wysiwygEditor == "tinymce") {
+        if ($instance.attr("id") && tinymce.get($instance.attr("id"))) {
+            tinymce.get($instance.attr("id")).setContent(html);
+        }
+    } else {
+        $instance.summernote('code', html);
+    }
+};
+
+function insertHTMLintoWYSIWYGEditor(selector, html) {
+    var $instance = selector;
+    if (!($instance instanceof jQuery)) {
+        $instance = $(selector);
+    }
+
+    if (AppHelper.settings.wysiwygEditor == "tinymce") {
+        if ($instance.attr("id") && tinymce.get($instance.attr("id"))) {
+            tinymce.get($instance.attr("id")).insertContent(html);
+        }
+    } else {
+        $instance.summernote('restoreRange');
+        $instance.summernote('pasteHTML', html);
+    }
+
+};
+
+
+function combineCustomFieldsColumns(defaultFields, customFieldString) {
     if (defaultFields && customFieldString) {
 
         var startAfter = defaultFields.slice(-1)[0];
@@ -978,7 +1364,7 @@ combineCustomFieldsColumns = function (defaultFields, customFieldString) {
 
 
 function setCookie(cname, cvalue, exdays) {
-    if (!exdays){
+    if (!exdays) {
         exdays = 1000;
     }
 
@@ -1007,12 +1393,16 @@ function setThemeColor() {
     var color = getCookie("theme_color") || AppHelper.settings.defaultThemeColor;
     if (color && color !== "F2F2F2") {
         var href = AppHelper.assetsDirectory + "css/color/" + color + ".css";
+        $("#custom-theme-color").remove();
         $('head').append('<link id="custom-theme-color" class="custom-theme-color" rel="stylesheet" href="' + href + '" type="text/css" />');
     }
+
+    $("body").addClass("color-" + color).removeClass("color-" + $("body").attr("data-color")).attr("data-color", color);
+
 }
 
 function isMobile() {
-    return window.outerWidth < 800 ? true : false;
+    return window.matchMedia("(max-width: 800px)").matches;
 }
 
 
@@ -1023,7 +1413,7 @@ function getUniqueArray(array) {
     return array.filter(returnUique);
 }
 
-initSignature = function (element, options) {
+function initSignature(element, options) {
     if (!options) {
         options = {};
     }

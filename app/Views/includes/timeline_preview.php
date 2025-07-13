@@ -28,7 +28,7 @@ if ($files && count($files)) {
     // Separate webm files containing "recording" from other files
     foreach ($files as $file) {
 
-        $file_name = $file['file_name'];
+        $file_name = get_array_value($file, "file_name");
         $file_id = get_array_value($file, "file_id");
         $service_type = get_array_value($file, "service_type");
 

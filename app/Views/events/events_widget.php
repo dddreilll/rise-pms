@@ -29,8 +29,10 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        initScrollbar('#upcoming-event-container', {
-            setHeight: 280
-        });
+        if(!isMobile()){
+            initScrollbar('#upcoming-event-container', {
+                setHeight: 280
+            });
+        }
     });
 </script> 

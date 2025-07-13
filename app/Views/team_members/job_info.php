@@ -2,7 +2,7 @@
     <?php echo form_open(get_uri("team_members/save_job_info/"), array("id" => "job-info-form", "class" => "general-form dashed-row white", "role" => "form")); ?>
 
     <input name="user_id" type="hidden" value="<?php echo $user_id; ?>" />
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <div class=" card-header">
             <h4><?php echo app_lang('job_info'); ?></h4>
         </div>

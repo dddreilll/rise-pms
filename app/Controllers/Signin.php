@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\ReCAPTCHA;
+
 class Signin extends App_Controller {
 
     private $signin_validation_errors;
@@ -22,38 +24,24 @@ class Signin extends App_Controller {
                 $view_data["redirect"] = $_REQUEST["redirect"];
             }
 
+            $this->validate_submitted_data(array(
+                "redirect" => "valid_url_strict"
+            ), false, false);
+
             return $this->template->view('signin/index', $view_data);
         }
     }
 
     private function has_recaptcha_error() {
-        $recaptcha_post_data = $this->request->getPost("g-recaptcha-response");
-        $response = $this->is_valid_recaptcha($recaptcha_post_data);
+
+        $ReCAPTCHA = new ReCAPTCHA();
+        $response = $ReCAPTCHA->validate_recaptcha(false);
 
         if ($response === true) {
             return true;
         } else {
-            array_push($this->signin_validation_errors, app_lang("re_captcha_error-" . $response));
+            array_push($this->signin_validation_errors, $response);
             return false;
-        }
-    }
-
-    private function is_valid_recaptcha($recaptcha_post_data) {
-        //load recaptcha lib
-        require_once(APPPATH . "ThirdParty/recaptcha/autoload.php");
-        $recaptcha = new \ReCaptcha\ReCaptcha(get_setting("re_captcha_secret_key"));
-        $resp = $recaptcha->verify($recaptcha_post_data, $_SERVER['REMOTE_ADDR']);
-
-        if ($resp->isSuccess()) {
-            return true;
-        } else {
-
-            $error = "";
-            foreach ($resp->getErrorCodes() as $code) {
-                $error = $code;
-            }
-
-            return $error;
         }
     }
 
@@ -62,7 +50,7 @@ class Signin extends App_Controller {
         $validation = $this->validate_submitted_data(array(
             "email" => "required|valid_email",
             "password" => "required"
-                ), true);
+        ), true);
 
         $email = $this->request->getPost("email");
         $password = $this->request->getPost("password");
@@ -125,23 +113,8 @@ class Signin extends App_Controller {
 
         //check if there reCaptcha is enabled
         //if reCaptcha is enabled, check the validation
-        if (get_setting("re_captcha_secret_key")) {
-
-            $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-            if ($response !== true) {
-
-                if ($response) {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                } else {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                }
-
-                return false;
-            }
-        }
-
-
+        $ReCAPTCHA = new ReCAPTCHA();
+        $ReCAPTCHA->validate_recaptcha();
 
         $email = $this->request->getPost("email");
 
@@ -157,21 +130,19 @@ class Signin extends App_Controller {
             $parser_data["LOGO_URL"] = get_logo_url();
             $parser_data["SITE_URL"] = get_uri();
             $parser_data["RECIPIENTS_EMAIL_ADDRESS"] = $existing_user->email;
+            $code = make_random_string();
 
             $verification_data = array(
                 "type" => "reset_password",
-                "code" => make_random_string(),
+                "code" => $code,
                 "params" => serialize(array(
                     "email" => $existing_user->email,
                     "expire_time" => time() + (24 * 60 * 60)
                 ))
             );
 
-            $save_id = $this->Verification_model->ci_save($verification_data);
-
-            $verification_info = $this->Verification_model->get_one($save_id);
-
-            $parser_data['RESET_PASSWORD_URL'] = get_uri("signin/new_password/" . $verification_info->code);
+            $this->Verification_model->ci_save($verification_data);
+            $parser_data['RESET_PASSWORD_URL'] = get_uri("signin/new_password/" . $code);
 
             $message = get_array_value($email_template, "message_$user_language") ? get_array_value($email_template, "message_$user_language") : get_array_value($email_template, "message_default");
             $subject = get_array_value($email_template, "subject_$user_language") ? get_array_value($email_template, "subject_$user_language") : get_array_value($email_template, "subject_default");
@@ -224,6 +195,10 @@ class Signin extends App_Controller {
         ));
 
         $key = $this->request->getPost("key");
+        if (strlen($key) !== 10) {
+            show_404();
+        }
+
         $password = $this->request->getPost("password");
         $valid_key = $this->is_valid_reset_password_key($key);
 
@@ -232,11 +207,8 @@ class Signin extends App_Controller {
             $this->Users_model->update_password($email, password_hash($password, PASSWORD_DEFAULT));
 
             //user can't reset password two times with the same code
-            $options = array("code" => $key, "type" => "reset_password");
-            $verification_info = $this->Verification_model->get_details($options)->getRow();
-            if ($verification_info->id) {
-                $this->Verification_model->delete_permanently($verification_info->id);
-            }
+            $verification_id = get_array_value($valid_key, "verification_id");
+            $this->Verification_model->delete_permanently($verification_id);
 
             echo json_encode(array("success" => true, 'message' => app_lang("password_reset_successfully") . " " . anchor("signin", app_lang("signin"))));
             return true;
@@ -259,10 +231,9 @@ class Signin extends App_Controller {
                 $expire_time = get_array_value($reset_password_info, "expire_time");
 
                 if ($email && filter_var($email, FILTER_VALIDATE_EMAIL) && $expire_time && $expire_time > time()) {
-                    return array("email" => $email);
+                    return array("email" => $email, "verification_id" => $verification_info->id);
                 }
             }
         }
     }
-
 }

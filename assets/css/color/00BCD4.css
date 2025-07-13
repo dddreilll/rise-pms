@@ -1,6 +1,8 @@
-.sidebar-scroll, #timeline .post-content .post-date span {
+.sidebar-scroll,
+#timeline .post-content .post-date span {
   background: #00bcd4;
 }
+
 .sidebar-menu li a {
   color: rgba(255, 255, 255, 0.8);
 }
@@ -19,19 +21,21 @@
   color: #FFF !important;
   background-color: rgba(255, 255, 255, 0.2);
 }
+
 .sidebar-toggled .sidebar-menu li:hover {
   background-color: #00bcd4;
 }
+
 .nav-tabs li a:hover, .nav-tabs li a:focus, .nav-tabs li a:active {
   color: #00bcd4 !important;
 }
 .nav-tabs li .active, .nav-tabs li.active {
   color: #00bcd4 !important;
-  border-color: #00bcd4 !important;
 }
-.nav-tabs li:not(.title-tab):after {
+.nav-tabs li:not(.title-tab) a::after {
   background-color: #00bcd4;
 }
+
 .list-group-item.active {
   background: #00bcd4;
   border-color: #00bcd4;
@@ -40,40 +44,49 @@
   background: #00bcd4;
   border-color: #00bcd4;
 }
+
 .btn-primary {
   background-color: #00bcd4;
   border-color: #00bcd4;
 }
 .btn-primary:hover, .btn-primary:active, .btn-primary:focus {
-  background-color: #00acc1;
-  border-color: #00acc1;
+  background-color: #00acc1 !important;
+  border-color: #00acc1 !important;
   color: #FFF;
 }
+
 .bg-success {
   background-color: #00acc1 !important;
 }
+
 a {
   color: #00acc1;
 }
 a:hover, a:focus, a:active {
   color: #00838f;
 }
+
 .circle-done {
   color: #00bcd4;
 }
+
 .app-alert.alert-success {
   background-color: #00acc1;
   color: #fff;
 }
+
 .bg-dark-success {
   background: #00838f;
 }
+
 .dataTable tbody tr.active td, .dataTable tbody tr.active:hover td {
   background: #00bcd4 !important;
 }
+
 .select2-results .select2-highlighted {
   background-color: #00bcd4;
 }
+
 .datepicker table tr td.active.active {
   background: #00bcd4;
   border-color: #00bcd4;
@@ -94,9 +107,13 @@ a:hover, a:focus, a:active {
   background: #00bcd4;
   border-color: #00bcd4;
 }
-.atwho-view .cur, .note-hint-group .active, .note-hint-item:hover {
+
+.atwho-view .cur,
+.note-hint-group .active,
+.note-hint-item:hover {
   background-color: #00bcd4 !important;
 }
+
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background: rgba(0, 159, 179, 0.4);
 }
@@ -106,8 +123,34 @@ a:hover, a:focus, a:active {
 .sidebar-scroll::-webkit-scrollbar-thumb:active {
   background: rgba(0, 159, 179, 0.6);
 }
+
 @media (min-width: 991px) {
   .sidebar {
     background: #00bcd4;
   }
+}
+.bg-primary {
+  background-color: #00bcd4 !important;
+}
+
+.sidebar-brand {
+  background-color: #00bcd4;
+  border-bottom-color: rgba(0, 0, 0, 0.0509803922);
+}
+
+@media (max-width: 500px) {
+  .sidebar.sidebar-off {
+    background-color: #00bcd4;
+  }
+  .sidebar .sidebar-scroll {
+    border-top-color: rgba(0, 0, 0, 0.0509803922) !important;
+  }
+  .sidebar #personal-language-icon,
+  .sidebar .sidebar-toggle-btn {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+}
+.form-check-input:checked {
+  background-color: #00bcd4 !important;
+  border-color: #00bcd4 !important;
 }

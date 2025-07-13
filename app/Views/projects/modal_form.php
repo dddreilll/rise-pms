@@ -2,8 +2,8 @@
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <input type="hidden" name="id" value="<?php echo $model_info->id; ?>" />
-        <input type="hidden" name="estimate_id" value="<?php echo $model_info->estimate_id; ?>" />
-        <input type="hidden" name="order_id" value="<?php echo $model_info->order_id; ?>" />
+        <input type="hidden" name="context" value="<?php echo $context; ?>" />
+        <input type="hidden" name="context_id" value="<?php echo $context_id; ?>" />
         <div class="form-group">
             <div class="row">
                 <label for="title" class=" col-md-3"><?php echo app_lang('title'); ?></label>

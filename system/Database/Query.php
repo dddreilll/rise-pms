@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -11,10 +13,12 @@
 
 namespace CodeIgniter\Database;
 
+use Stringable;
+
 /**
  * Query builder
  */
-class Query implements QueryInterface
+class Query implements QueryInterface, Stringable
 {
     /**
      * The query string, as provided by the user.
@@ -114,7 +118,7 @@ class Query implements QueryInterface
             }
 
             if ($setEscape) {
-                array_walk($binds, static function (&$item) {
+                array_walk($binds, static function (&$item): void {
                     $item = [
                         $item,
                         true,
@@ -137,7 +141,7 @@ class Query implements QueryInterface
     public function setBinds(array $binds, bool $setEscape = true)
     {
         if ($setEscape) {
-            array_walk($binds, static function (&$item) {
+            array_walk($binds, static function (&$item): void {
                 $item = [$item, true];
             });
         }
@@ -166,8 +170,6 @@ class Query implements QueryInterface
      * Records the execution time of the statement using microtime(true)
      * for it's start and end values. If no end value is present, will
      * use the current time to determine total duration.
-     *
-     * @param float $end
      *
      * @return $this
      */
@@ -359,7 +361,7 @@ class Query implements QueryInterface
                 $escapedValue = '(' . implode(',', $escapedValue) . ')';
             }
 
-            $sql = substr_replace($sql, $escapedValue, $matches[0][$c][1], $ml);
+            $sql = substr_replace($sql, (string) $escapedValue, $matches[0][$c][1], $ml);
         } while ($c !== 0);
 
         return $sql;
@@ -416,7 +418,7 @@ class Query implements QueryInterface
          */
         $search = '/\b(?:' . implode('|', $highlight) . ')\b(?![^(&#039;)]*&#039;(?:(?:[^(&#039;)]*&#039;){2})*[^(&#039;)]*$)/';
 
-        return preg_replace_callback($search, static fn ($matches) => '<strong>' . str_replace(' ', '&nbsp;', $matches[0]) . '</strong>', $sql);
+        return preg_replace_callback($search, static fn ($matches): string => '<strong>' . str_replace(' ', '&nbsp;', $matches[0]) . '</strong>', $sql);
     }
 
     /**

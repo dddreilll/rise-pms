@@ -1,4 +1,4 @@
-<div class="card mb0">
+<div>
     <div class="page-title clearfix notificatio-plate-title-area">
         <span class="float-start"><strong><?php echo app_lang('messages'); ?></strong></span>
     </div>
@@ -14,7 +14,7 @@
                     $notification_class = "unread-notification";
                 }
                 ?>
-                <a class="list-group-item d-flex <?php echo $notification_class; ?>" href="<?php echo get_uri("messages/inbox/" . $notification->main_message_id); ?>">
+                <a class="list-group-item d-flex <?php echo $notification_class; ?> dropdown-item" href="<?php echo get_uri("messages/inbox/" . $notification->main_message_id); ?>">
                     <div class="flex-shrink-0">
                         <span class="avatar avatar-xs">
                             <img src="<?php echo get_avatar($notification->user_image); ?>" alt="..." />

@@ -3,7 +3,7 @@
 <input type="hidden" name="data" id="items-data" value=""/>
 <input type="hidden" name="type" value="user"/>
 
-<div class="card">
+<div class="card border-top-0 rounded-top-0">
     <div class="page-title clearfix">
         <h4> <?php echo app_lang('left_menu'); ?></h4>
         <div class="title-button-group">

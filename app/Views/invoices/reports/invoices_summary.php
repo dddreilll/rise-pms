@@ -2,7 +2,7 @@
 
 <div id="page-content" class="page-wrapper clearfix grid-button">
     <div class="card clearfix">
-        <ul id="invoices-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner" role="tablist">
+        <ul id="invoices-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner scrollable-tabs" role="tablist">
             <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("invoices_summary"); ?></h4></li>
             <li><a role="presentation" data-bs-toggle="tab"  href="javascript:;" data-bs-target="#yearly-invoices-summary"><?php echo app_lang("yearly"); ?></a></li>
             <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("invoices/monthly_invoices_summary"); ?>" data-bs-target="#monthly-invoices-summary"><?php echo app_lang('monthly'); ?></a></li>
@@ -46,9 +46,9 @@
             filterDropdown: filtrDropdown,
             rangeDatepicker: customDatePicker,
             columns: [
-                {title: '<?php echo app_lang("client_name") ?> '},
+                {title: '<?php echo app_lang("client_name") ?>', "class": "all"},
                 {title: '<?php echo app_lang("count") ?>', class: "text-right"},
-                {title: '<?php echo app_lang("invoice_total") ?>', class: "text-right"},
+                {title: '<?php echo app_lang("invoice_total") ?>', class: "text-right all"},
                 {title: '<?php echo app_lang("discount") ?>', class: "text-right"},
                 {title: '<?php echo app_lang("tax") ?>', class: "text-right"},
                 {title: '<?php echo app_lang("second_tax") ?>', class: "text-right"},

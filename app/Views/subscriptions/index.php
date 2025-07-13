@@ -35,12 +35,13 @@
         $("#subscriptions-table").appTable({
             source: '<?php echo_uri("subscriptions/list_data") ?>',
             order: [[0, "desc"]],
+            smartFilterIdentity: "subscriptions_list", //a to z and _ only. should be unique to avoid conflicts
             rangeDatepicker: [{startDate: {name: "next_billing_start_date", value: ""}, endDate: {name: "next_billing_end_date", value: ""}, showClearButton: true, label: "<?php echo app_lang('next_billing_date'); ?>", ranges: ['tomorrow', 'next_7_days', 'this_month', 'next_month', 'this_year', 'next_year']}],
             filterDropdown: filterDropdowns,
             columns: [
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("subscription_id") ?>", "class": "w10p", "iDataSort": 0},
-                {title: "<?php echo app_lang("title") ?> ", "class": "w20p"},
+                {title: "<?php echo app_lang("title") ?> ", "class": "w20p all"},
                 {title: "<?php echo app_lang("type") ?> ", "class": "w100"},
                 {title: "<?php echo app_lang("client") ?>", "class": "w10p"},
                 {visible: false, searchable: false},

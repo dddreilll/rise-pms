@@ -56,7 +56,10 @@
                                 "name" => "description",
                                 "value" => process_images_from_content($model_info->description, false),
                                 "placeholder" => app_lang('description'),
-                                "class" => "form-control"
+                                "class" => "form-control",
+                                "data-toolbar" => "page_builder_toolbar",
+                                "data-encode_ajax_post_data" => "1",
+                                "data-height" => 250
                             ));
                             ?>
                         </div>
@@ -135,21 +138,7 @@
         setTimeout(function () {
             $("#title").focus();
         }, 200);
-        initWYSIWYGEditor("#description", {
-            height: 250,
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'clear']],
-                ['fontname', ['fontname']],
-                ['color', ['color']],
-                ['para', ['ul', 'ol', 'paragraph']],
-                ['height', ['height']],
-                ['table', ['table']],
-                ['insert', ['link', 'hr', 'picture', 'video']],
-                ['view', ['fullscreen', 'codeview']]
-            ],
-            lang: "<?php echo app_lang('language_locale_long'); ?>"
-        });
+        initWYSIWYGEditor("#description");
 
 
         $("#category_id").select2();

@@ -182,7 +182,7 @@
                 </div>
             <?php } ?>
 
-            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?> 
+            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?>
 
             <?php if ($can_share_events) { ?>
                 <?php if ($login_user->user_type == "client") { ?>
@@ -192,58 +192,9 @@
                         <div class="row">
                             <label for="share_with" class=" col-md-3"><?php echo app_lang('share_with'); ?></label>
                             <div class=" col-md-9">
-                                <div>
-                                    <?php
-                                    echo form_radio(array(
-                                        "id" => "only_me",
-                                        "name" => "share_with",
-                                        "value" => "",
-                                        "class" => "toggle_specific form-check-input",
-                                            ), $model_info->share_with, ($model_info->share_with === "") ? true : false);
-                                    ?>
-                                    <label for="only_me"><?php echo app_lang("only_me"); ?></label>
 
-                                </div>
-                                <div>
-                                    <?php
-                                    echo form_radio(array(
-                                        "id" => "share_with_all",
-                                        "name" => "share_with",
-                                        "value" => "all",
-                                        "class" => "toggle_specific form-check-input",
-                                            ), $model_info->share_with, ($model_info->share_with === "all") ? true : false);
-                                    ?>
-                                    <label for="share_with_all"><?php echo app_lang("all_team_members"); ?></label>
-                                </div>
-
-                                <div class="form-group mb0">
-                                    <?php
-                                    echo form_radio(array(
-                                        "id" => "share_with_specific_radio_button",
-                                        "name" => "share_with",
-                                        "value" => "specific",
-                                        "class" => "toggle_specific form-check-input",
-                                            ), $model_info->share_with, ($model_info->share_with && $model_info->share_with != "all" && $model_info->share_with_specific != "contact") ? true : false);
-                                    ?>
-                                    <label for="share_with_specific_radio_button"><?php echo app_lang("specific_members_and_teams"); ?>:</label>
-                                    <div class="specific_dropdown" style="display: none;">
-                                        <input type="text" value="<?php echo ($model_info->share_with && $model_info->share_with != "all" && $model_info->share_with_specific != "contact") ? $model_info->share_with : ""; ?>" name="share_with_specific" id="share_with_specific" class="w100p validate-hidden"  data-rule-required="true" data-msg-required="<?php echo app_lang('field_required'); ?>" placeholder="<?php echo app_lang('choose_members_and_or_teams'); ?>"  />
-                                    </div>
-                                </div>
-
-                                <div id="share-with-client-contact" class="form-group mb0 hide">
-                                    <?php
-                                    echo form_radio(array(
-                                        "id" => "share_with_client_contact_radio_button",
-                                        "name" => "share_with",
-                                        "value" => "specific_client_contacts",
-                                        "class" => "toggle_specific form-check-input",
-                                            ), $model_info->share_with, ($model_info->share_with && $model_info->share_with != "all" && $model_info->share_with_specific != "member" && $model_info->share_with_specific != "team") ? true : false);
-                                    ?>
-                                    <label for="share_with_client_contact_radio_button"><?php echo app_lang("specific_client_contacts"); ?>:</label>
-                                    <div class="specific_dropdown" style="display: none;">
-                                        <input type="text" value="<?php echo ($model_info->share_with && $model_info->share_with != "all" && $model_info->share_with_specific != "member") ? $model_info->share_with : ""; ?>" name="share_with_specific_client_contact" id="share_with_specific_client_contact" class="w100p validate-hidden"  data-rule-required="true" data-msg-required="<?php echo app_lang('field_required'); ?>" placeholder="<?php echo app_lang('choose_client_contacts'); ?>"  />
-                                    </div>
+                                <div id="share_with_container">
+                                    <?php echo $get_sharing_options_view; ?>
                                 </div>
 
                             </div>
@@ -258,12 +209,12 @@
                     <div class=" col-md-9 col-xs-7 col-sm-8">
                         <?php
                         echo form_checkbox("recurring", "1", $model_info->recurring ? true : false, "id='event_recurring' class='form-check-input'");
-                        ?>                       
+                        ?>
                     </div>
                 </div>
-            </div>  
+            </div>
 
-            <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>"> 
+            <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>">
                 <div class="form-group">
                     <div class="row">
                         <label for="repeat_every" class=" col-md-3 col-xs-12"><?php echo app_lang('repeat_every'); ?></label>
@@ -285,17 +236,20 @@
                         <div class="col-md-5 col-xs-6">
                             <?php
                             echo form_dropdown(
-                                    "repeat_type", array(
-                                "days" => app_lang("interval_days"),
-                                "weeks" => app_lang("interval_weeks"),
-                                "months" => app_lang("interval_months"),
-                                "years" => app_lang("interval_years"),
-                                    ), $model_info->repeat_type ? $model_info->repeat_type : "months", "class='select2 recurring_element' id='repeat_type'"
+                                "repeat_type",
+                                array(
+                                    "days" => app_lang("interval_days"),
+                                    "weeks" => app_lang("interval_weeks"),
+                                    "months" => app_lang("interval_months"),
+                                    "years" => app_lang("interval_years"),
+                                ),
+                                $model_info->repeat_type ? $model_info->repeat_type : "months",
+                                "class='select2 recurring_element' id='repeat_type'"
                             );
                             ?>
                         </div>
                     </div>
-                </div>    
+                </div>
 
                 <div class="form-group">
                     <div class="row">
@@ -319,7 +273,7 @@
                     </div>
                 </div>
 
-            </div>     
+            </div>
 
             <div class="form-group">
                 <div class="row">
@@ -350,13 +304,13 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         $("#event-form").appForm({
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 if ($("#event-calendar").length) {
                     window.fullCalendar.refetchEvents();
-                    setTimeout(function () {
+                    setTimeout(function() {
                         feather.replace();
                     }, 100);
                 }
@@ -366,96 +320,44 @@
                 }
             }
         });
-        setDatePicker("#start_date, #end_date");
 
+        setDatePicker("#start_date, #end_date");
         setTimePicker("#start_time, #end_time");
 
-
-        setTimeout(function () {
+        setTimeout(function() {
             $("#title").focus();
         }, 200);
 
-        get_specific_dropdown($("#share_with_specific"), <?php echo ($members_and_teams_dropdown); ?>);
-
-
-        var clientId = "<?php echo $model_info->client_id; ?>";
-
-        if (clientId && clientId != "0") {
-            prepareShareWithClientContactsDropdown(clientId);
-        }
-
-        //show the specific client contacts readio button after select any client
-        $('#clients_dropdown').select2({data: <?php echo json_encode($clients_dropdown); ?>}).on("change", function () {
-            prepareShareWithClientContactsDropdown($(this).val());
+        $("#event_labels").select2({
+            multiple: true,
+            data: <?php echo json_encode($label_suggestions); ?>
         });
-
-        function prepareShareWithClientContactsDropdown(clientId) {
-            //don't show client contacts section if the holiday is checked
-            if (clientId) {
-                $("#share-with-client-contact").removeClass("hide");
-                $.ajax({
-                    url: "<?php echo get_uri("events/get_all_contacts_of_client") ?>" + "/" + clientId,
-                    dataType: "json",
-                    success: function (result) {
-
-                        if (result.length) {
-                            get_specific_dropdown($("#share_with_specific_client_contact"), result);
-                        } else {
-                            //if no client contact exists, then don't show the share with client contacts option
-                            $("#share-with-client-contact").addClass("hide");
-                            prepareShareWithClientContactsDropdown();
-                        }
-
-                    }
-                });
-            } else {
-                $("#share-with-client-contact").addClass("hide");
-                var $element = $(".toggle_specific:checked");
-                if ($element.val() === "specific_client_contacts") {
-                    //unselect the specific_client_contacts
-                    $("#only_me").trigger("click");
-                    toggle_specific_dropdown();
-                }
-            }
-        }
-
-        function get_specific_dropdown(container, data) {
-            setTimeout(function () {
-                container.select2({
-                    multiple: true,
-                    formatResult: teamAndMemberSelect2Format,
-                    formatSelection: teamAndMemberSelect2Format,
-                    data: data
-                }).on('select2-open change', function (e) {
-                    feather.replace();
-                });
-
-                feather.replace();
-            }, 100);
-        }
-
-        $(".toggle_specific").click(function () {
-            toggle_specific_dropdown();
-        });
-
-        toggle_specific_dropdown();
-
-        function toggle_specific_dropdown() {
-            $(".specific_dropdown").hide().find("input").removeClass("validate-hidden");
-
-            var $element = $(".toggle_specific:checked");
-            if ($element.val() === "specific" || $element.val() === "specific_client_contacts") {
-                var $dropdown = $element.closest("div").find("div.specific_dropdown");
-                $dropdown.show().find("input").addClass("validate-hidden");
-            }
-        }
-
-        $("#event_labels").select2({multiple: true, data: <?php echo json_encode($label_suggestions); ?>});
-
         $("#event-form .select2").select2();
 
+        //show the specific client contacts readio button after select any client
+        $('#clients_dropdown').select2({
+            data: <?php echo json_encode($clients_dropdown); ?>
+        }).on("change", function() {
+            var clientId = $(this).val();
+
+            // re-render the sharing options view
+            $.ajax({
+                url: "<?php echo_uri("events/get_sharing_options_view") ?>/1",
+                type: 'POST',
+                data: {
+                    id: "<?php echo $model_info->id; ?>",
+                    client_id: clientId,
+                    share_with: "<?php echo $model_info->share_with; ?>",
+                },
+                dataType: 'json',
+                success: function(result) {
+                    $("#share_with_container").html(result.sharing_options_view)
+                }
+            });
+        });
+
         //show/hide recurring fields
-        $("#event_recurring").click(function () {
+        $("#event_recurring").click(function() {
             if ($(this).is(":checked")) {
                 $("#recurring_fields").removeClass("hide");
             } else {

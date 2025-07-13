@@ -26,7 +26,10 @@
                                     "microsoft_outlook" => "Microsoft Outlook",
                                 );
                                 echo form_dropdown(
-                                        "email_protocol", $email_protocols, get_setting('email_protocol'), "class='select2 mini' id='email-protocol'"
+                                    "email_protocol",
+                                    $email_protocols,
+                                    get_setting('email_protocol'),
+                                    "class='select2 mini' id='email-protocol'"
                                 );
                                 ?>
                             </div>
@@ -52,7 +55,7 @@
                         </div>
                     </div>
 
-                    <div id="mail-settings-area" class="form-group <?php echo (get_setting('email_protocol') === "mail" || !get_setting('email_protocol')) ? "" : "hide"; ?>">
+                    <div id="mail-settings-area" class="form-group <?php echo (get_setting('email_protocol') === "mail" || get_setting('email_protocol') === "smtp" || !get_setting('email_protocol')) ? "" : "hide"; ?>">
                         <div class="row">
                             <label for="email_sent_from_address" class=" col-md-2"><?php echo app_lang('email_sent_from_address'); ?></label>
                             <div class=" col-md-10">
@@ -151,11 +154,14 @@
                                 <div class="col-md-10">
                                     <?php
                                     echo form_dropdown(
-                                            "email_smtp_security_type", array(
-                                        "none" => "-",
-                                        "tls" => "TLS",
-                                        "ssl" => "SSL"
-                                            ), get_setting('email_smtp_security_type'), "class='select2 mini'"
+                                        "email_smtp_security_type",
+                                        array(
+                                            "none" => "-",
+                                            "tls" => "TLS",
+                                            "ssl" => "SSL"
+                                        ),
+                                        get_setting('email_smtp_security_type'),
+                                        "class='select2 mini'"
                                     );
                                     ?>
                                 </div>
@@ -252,6 +258,7 @@
                                     "value" => "",
                                     "class" => "form-control",
                                     "placeholder" => "youremail@address.com",
+                                    "data-rule-email" => true
                                 ));
                                 ?>
                             </div>
@@ -269,23 +276,25 @@
 </div>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         $("#email-settings-form").appForm({
             isModal: false,
-            onSubmit: function () {
+            onSubmit: function() {
                 appLoader.show();
             },
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 appLoader.hide();
-                appAlert.success(result.message, {duration: 10000});
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
 
                 //for microsoft outlook, redirect to authorization
                 if ($("#email-protocol").val() === "microsoft_outlook") {
                     window.location.href = "<?php echo_uri('microsoft_api/authorize_outlook_smtp'); ?>";
                 }
             },
-            onError: function (result) {
+            onError: function(result) {
                 appLoader.hide();
                 appAlert.error(result.message);
             }
@@ -294,13 +303,13 @@
         $("#email-settings-form .select2").select2();
 
         var $mailSettingsArea = $("#mail-settings-area"),
-                $smtpSettingsArea = $("#smtp-settings-area"),
-                $microsoftOutlookArea = $("#microsoft-outlook-area"),
-                $saveAndAuthorizeBtn = $("#save-and-authorize-button"),
-                $saveBtn = $("#save-button"),
-                $emailSendFromName = $("#email-send-from-name");
+            $smtpSettingsArea = $("#smtp-settings-area"),
+            $microsoftOutlookArea = $("#microsoft-outlook-area"),
+            $saveAndAuthorizeBtn = $("#save-and-authorize-button"),
+            $saveBtn = $("#save-button"),
+            $emailSendFromName = $("#email-send-from-name");
 
-        $("#email-protocol").select2().on("change", function () {
+        $("#email-protocol").select2().on("change", function() {
             var value = $(this).val();
             if (value === "mail") {
                 $mailSettingsArea.removeClass("hide");
@@ -312,7 +321,7 @@
                 $emailSendFromName.removeClass("hide");
             } else if (value === "smtp") {
                 $smtpSettingsArea.removeClass("hide");
-                $mailSettingsArea.addClass("hide");
+                $mailSettingsArea.removeClass("hide");
                 $microsoftOutlookArea.addClass("hide");
 
                 $saveBtn.removeClass("hide");

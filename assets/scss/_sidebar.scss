@@ -1,4 +1,4 @@
-.sidebar{    
+.sidebar {
     width: 250px;
     z-index: 1005;
     bottom: 0;
@@ -7,63 +7,68 @@
     top: 0;
     font-size: 15px;
     font-weight: 400;
-    box-shadow: 0 0 10px rgba(0,0,0,.05)!important;
-    -webkit-box-shadow: 0 0 10px rgba(0,0,0,.05)!important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, .05) !important;
+    -webkit-box-shadow: 0 0 10px rgba(0, 0, 0, .05) !important;
     background: $white;
 }
 
-.sidebar-brand{
-    padding: 0.9rem 2.9rem;
+.sidebar-brand {
+    padding: 12px 20px;
     width: 250px;
-    height: 65px;
+    height: 66px;
     position: fixed;
     text-align: center;
     z-index: 999;
+    border-bottom: 1px solid #0000000f;
     background-color: $white;
-    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
-    -webkit-box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
 }
 
-.brand-logo-mini{
+.brand-logo-mini {
     display: none;
 }
 
-.sidebar-scroll{
+.sidebar-scroll {
     margin-top: 65px;
     background: $sidebar-bg;
 }
 
-.sidebar-menu{
+.sidebar-menu {
     padding: 10px 0;
     list-style: none;
     margin: 0;
-    li{
+
+    li {
         position: relative;
         margin: 0;
-        a{
+
+        a {
             text-decoration: none;
             position: relative;
             display: block;
             padding: 0.8rem 1.1rem;
             margin: 0 10px;
             border-radius: 3px;
-            color: #7b8190;
+            color: $light-sidebar-link-color;
             z-index: 2;
             align-items: center;
             -moz-transition: color 250ms ease-in-out, background-color 250ms ease-in-out;
             -o-transition: color 250ms ease-in-out, background-color 250ms ease-in-out;
             -webkit-transition: color 250ms ease-in-out, background-color 250ms ease-in-out;
             transition: color 250ms ease-in-out, background-color 250ms ease-in-out;
-            span{
+
+            span {
                 margin-left: 10px;
             }
 
-            &:active, &:hover, &:focus{
-                color: #383c40;
-                background-color: #F4F6F8;
+            &:active,
+            &:hover,
+            &:focus {
+                color: $light-sidebar-link-hover-color;
+                background-color: $light-default-bg;
             }
         }
-        ul{
+
+        ul {
             list-style: none;
             position: relative;
             padding: 0;
@@ -75,14 +80,17 @@
             -moz-transition: max-height 300ms ease;
             -o-transition: max-height 300ms ease;
             transition: max-height 300ms ease;
-            li{
-                a{
+
+            li {
+                a {
                     padding: 0.8rem 1.7rem;
-                    color: #7b8190;
-                    &:hover{
-                        color: #383c40;
+                    color: $light-sidebar-link-color;
+
+                    &:hover {
+                        color: $light-sidebar-link-hover-color;
                     }
-                    svg{
+
+                    svg {
                         margin-top: -3px;
                     }
                 }
@@ -92,28 +100,28 @@
     }
 
     li.active {
-        > a {
+        >a {
             color: $white !important;
-            background-color: #6690F4;
+            background-color: $primary;
         }
     }
 
-    .badge{
+    .badge {
         float: right;
         margin-top: 2px !important;
         padding: 3px 6px;
     }
 
-    .expand.open{
-        ul{
+    .expand.open {
+        ul {
             max-height: 1000px;
         }
     }
 }
 
-#sidebar-menu{
+#sidebar-menu {
     li.expand {
-        &.open > a::before {
+        &.open>a::before {
             content: " ";
             border: solid;
             border-width: 0 .075rem .075rem 0;
@@ -126,7 +134,7 @@
             top: 1.4rem;
         }
 
-        > a::before {
+        >a::before {
             content: " ";
             border: solid;
             border-width: 0 .075rem .075rem 0;
@@ -139,8 +147,4 @@
             transition: all .2s ease-out;
         }
     }
-} 
-
-#left-menu-toggle-mask{
-    background-color: $background-color;
 }

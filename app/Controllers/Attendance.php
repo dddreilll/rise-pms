@@ -33,6 +33,8 @@ class Attendance extends Security_Controller {
 
     //only admin or assigend members can access/manage other member's attendance
     protected function access_only_allowed_members($user_id = 0) {
+        validate_numeric_value($user_id);
+
         if ($this->access_type !== "all") {
             if ($user_id === $this->login_user->id || !array_search($user_id, $this->allowed_members)) {
                 app_redirect("forbidden");
@@ -178,6 +180,8 @@ class Attendance extends Security_Controller {
 
     //clock in / clock out
     function log_time($user_id = 0) {
+        validate_numeric_value($user_id);
+
         $note = $this->request->getPost('note');
 
         if ($user_id && $user_id != $this->login_user->id) {
@@ -190,9 +194,9 @@ class Attendance extends Security_Controller {
         if ($user_id) {
             echo json_encode(array("success" => true, "data" => $this->_clock_in_out_row_data($user_id), 'id' => $user_id, 'message' => app_lang('record_saved'), "isUpdate" => true));
         } else if ($this->request->getPost("clock_out")) {
-            echo json_encode(array("success" => true, "clock_widget" => clock_widget()));
+            echo json_encode(array("success" => true, "clock_widget" => clock_widget(1)));
         } else {
-            return clock_widget();
+            return clock_widget(1);
         }
     }
 
@@ -272,14 +276,14 @@ class Attendance extends Security_Controller {
             $out_time = "";
         }
 
-        $to_time = strtotime($data->out_time? $data->out_time : "");
+        $to_time = strtotime($data->out_time ? $data->out_time : "");
         if (!$out_time) {
-            $to_time = strtotime($data->in_time? $data->in_time: "");
+            $to_time = strtotime($data->in_time ? $data->in_time : "");
         }
-        $from_time = strtotime($data->in_time? $data->in_time: "");
+        $from_time = strtotime($data->in_time ? $data->in_time : "");
 
         $option_links = modal_anchor(get_uri("attendance/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_attendance'), "data-post-id" => $data->id))
-                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_attendance'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("attendance/delete"), "data-action" => "delete"));
+            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_attendance'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("attendance/delete"), "data-action" => "delete"));
 
         if ($this->access_type != "all") {
             //don't show options links for none admin user's own records
@@ -539,7 +543,6 @@ class Attendance extends Security_Controller {
             $view_data
         );
     }
-
 }
 
 /* End of file attendance.php */

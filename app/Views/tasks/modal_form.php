@@ -9,14 +9,17 @@
             $contexts_dropdown = array();
 
             foreach ($contexts as $context) {
-                $context_id_key = $context . "_id";
+                if ($context !== "general") {
+                    $context_id_key = $context . "_id";
+                    $contexts_dropdown[$context] = app_lang($context);
+            ?>
 
-                $contexts_dropdown[$context] = app_lang($context);
-                ?>
+                    <input type="hidden" name="<?php echo $context_id_key; ?>" value="<?php echo ${$context_id_key}; ?>" />
 
-                <input type="hidden" name="<?php echo $context_id_key; ?>" value="<?php echo ${$context_id_key}; ?>" />
-
-            <?php } ?>
+            <?php } else {
+                    $contexts_dropdown[$context] = "-";
+                }
+            } ?>
 
             <?php if ($is_clone) { ?>
                 <input type="hidden" name="is_clone" value="1" />
@@ -61,21 +64,31 @@
             <?php
             $related_to_dropdowns = array();
             if ($show_contexts_dropdown) {
+                if (get_setting("support_only_project_related_tasks_globally")) {
+            ?>
+                    <input type="hidden" name="context" id="task-context" value="project" />
+                <?php
+                } else {
                 ?>
-                <div class="form-group">
-                    <div class="row">
-                        <label for="context" class=" col-md-3"><?php echo app_lang('related_to'); ?></label>
-                        <div class=" col-md-9">
-                            <?php
-                            echo form_dropdown(
-                                    "context", $contexts_dropdown, $selected_context, "class='select2' id='task-context'"
-                            );
-                            ?>
+
+                    <div class="form-group">
+                        <div class="row">
+                            <label for="context" class=" col-md-3"><?php echo app_lang('related_to'); ?></label>
+                            <div class=" col-md-9">
+                                <?php
+                                echo form_dropdown(
+                                    "context",
+                                    $contexts_dropdown,
+                                    $selected_context,
+                                    "class='select2' id='task-context'"
+                                );
+                                ?>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-            <?php } else { ?>
+                <?php }
+            } else { ?>
                 <input type="hidden" name="context" id="task-context" value="<?php echo $selected_context; ?>" />
             <?php } ?>
 
@@ -84,7 +97,7 @@
             //and don't have any context_id selected. So, have to show the context dropdown
             if (!$show_contexts_dropdown) {
                 $context_id_key = $selected_context . "_id";
-                if (!${$context_id_key}) {
+                if ($selected_context === "general" || ($selected_context === "project" && $model_info->id) || !${$context_id_key}) {
                     $show_contexts_dropdown = true;
                 }
             }
@@ -92,30 +105,32 @@
             if ($show_contexts_dropdown) {
 
                 foreach ($contexts as $context) {
-                    $context_id_key = $context . "_id";
-                    $related_to_dropdowns[$context] = ${$context . "s_dropdown"};
-                    ?>
-                    <div class="form-group hide" id="<?php echo $context; ?>-dropdown">
-                        <div class="row">
-                            <label for="<?php echo $context_id_key; ?>" class=" col-md-3"><?php echo app_lang($context); ?></label>
-                            <div class="col-md-9">
-                                <?php
-                                echo form_input(array(
-                                    "id" => $context_id_key,
-                                    "name" => $context_id_key,
-                                    "value" => $model_info->$context_id_key,
-                                    "class" => "form-control task-context-options",
-                                    "placeholder" => app_lang($context),
-                                    "data-msg-required" => app_lang("field_required"),
-                                ));
-                                ?>
+                    if ($context !== "general") {
+                        $context_id_key = $context . "_id";
+                        $related_to_dropdowns[$context] = ${$context . "s_dropdown"};
+            ?>
+                        <div class="form-group hide" id="<?php echo $context; ?>-dropdown">
+                            <div class="row">
+                                <label for="<?php echo $context_id_key; ?>" class=" col-md-3"><?php echo app_lang($context); ?></label>
+                                <div class="col-md-9">
+                                    <?php
+                                    echo form_input(array(
+                                        "id" => $context_id_key,
+                                        "name" => $context_id_key,
+                                        "value" => $model_info->$context_id_key,
+                                        "class" => "form-control task-context-options",
+                                        "placeholder" => app_lang($context),
+                                        "data-msg-required" => app_lang("field_required"),
+                                    ));
+                                    ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <?php
+            <?php
+                    }
                 }
             }
-            ?>    
+            ?>
 
 
 
@@ -127,7 +142,7 @@
 
                     <div class="col-md-9">
                         <?php
-                        echo form_dropdown("points", $points_dropdown, array($model_info->points), "class='select2'");
+                        echo form_dropdown("points", $points_dropdown, array($model_info->points), "class='select2 js_app_dropdown'");
                         ?>
                     </div>
                 </div>
@@ -333,16 +348,16 @@
 
                 <div class="form-group">
                     <div class="row">
-                        <label for="recurring" class=" col-md-3"><?php echo app_lang('recurring'); ?>  <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather="help-circle" class="icon-16"></i></span></label>
+                        <label for="recurring" class=" col-md-3"><?php echo app_lang('recurring'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather="help-circle" class="icon-16"></i></span></label>
                         <div class=" col-md-9">
                             <?php
                             echo form_checkbox("recurring", "1", $model_info->recurring ? true : false, "id='recurring' class='form-check-input'");
                             ?>
                         </div>
                     </div>
-                </div>   
+                </div>
 
-                <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>"> 
+                <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>">
                     <div class="form-group">
                         <div class="row">
                             <label for="repeat_every" class=" col-md-3"><?php echo app_lang('repeat_every'); ?></label>
@@ -364,17 +379,20 @@
                             <div class="col-md-5">
                                 <?php
                                 echo form_dropdown(
-                                        "repeat_type", array(
-                                    "days" => app_lang("interval_days"),
-                                    "weeks" => app_lang("interval_weeks"),
-                                    "months" => app_lang("interval_months"),
-                                    "years" => app_lang("interval_years"),
-                                        ), $model_info->repeat_type ? $model_info->repeat_type : "months", "class='select2 recurring_element' id='repeat_type'"
+                                    "repeat_type",
+                                    array(
+                                        "days" => app_lang("interval_days"),
+                                        "weeks" => app_lang("interval_weeks"),
+                                        "months" => app_lang("interval_months"),
+                                        "years" => app_lang("interval_years"),
+                                    ),
+                                    $model_info->repeat_type ? $model_info->repeat_type : "months",
+                                    "class='select2 js_app_dropdown recurring_element' id='repeat_type'"
                                 );
                                 ?>
                             </div>
-                        </div>    
-                    </div>    
+                        </div>
+                    </div>
 
                     <div class="form-group">
                         <div class="row">
@@ -395,12 +413,12 @@
                             <div class="col-md-5 mt5">
                                 <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('recurring_cycle_instructions'); ?>"><i data-feather="help-circle" class="icon-16"></i></span>
                             </div>
-                        </div>  
-                    </div>  
+                        </div>
+                    </div>
 
-                    <div class = "form-group hide" id = "next_recurring_date_container" >
+                    <div class="form-group hide" id="next_recurring_date_container">
                         <div class="row">
-                            <label for = "next_recurring_date" class = " col-md-3"><?php echo app_lang('next_recurring_date'); ?>  </label>
+                            <label for="next_recurring_date" class=" col-md-3"><?php echo app_lang('next_recurring_date'); ?> </label>
                             <div class=" col-md-9">
                                 <?php
                                 echo form_input(array(
@@ -416,11 +434,11 @@
                             </div>
                         </div>
                     </div>
-                </div>  
+                </div>
 
             <?php } ?>
 
-            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?> 
+            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?>
 
             <?php echo view("includes/dropzone_preview"); ?>
 
@@ -430,7 +448,7 @@
                         <label for="copy_checklist" class=" col-md-12">
                             <?php
                             echo form_checkbox("copy_checklist", "1", true, "id='copy_checklist' class='float-start mr15 form-check-input'");
-                            ?>    
+                            ?>
                             <?php echo app_lang('copy_checklist'); ?>
                         </label>
                     </div>
@@ -441,8 +459,20 @@
                         <label for="copy_sub_tasks" class=" col-md-12">
                             <?php
                             echo form_checkbox("copy_sub_tasks", "1", false, "id='copy_sub_tasks' class='float-start mr15 form-check-input'");
-                            ?>    
+                            ?>
                             <?php echo app_lang('copy_sub_tasks'); ?>
+                        </label>
+                    </div>
+                <?php } ?>
+
+                <?php if ($model_info->parent_task_id) { ?>
+                    <input type="hidden" name="parent_task_id" value="<?php echo $model_info->parent_task_id; ?>" />
+                    <div class="form-group">
+                        <label for="create_as_a_non_subtask" class=" col-md-12">
+                            <?php
+                            echo form_checkbox("create_as_a_non_subtask", "1", false, "id='create_as_a_non_subtask' class='float-start mr15 form-check-input'");
+                            ?>
+                            <?php echo app_lang('create_as_a_non_subtask'); ?>
                         </label>
                     </div>
                 <?php } ?>
@@ -463,7 +493,7 @@
         }
         ?>
 
-        <button type="button" class="btn btn-default" data-bs-dismiss="modal"><span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?></button>
+        <button type="button" class="btn btn-default hidden-xs" data-bs-dismiss="modal"><span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?></button>
 
         <?php if ($add_type == "multiple") { ?>
             <button id="save-and-add-button" type="button" class="btn btn-primary"><span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('save_and_add_more'); ?></button>
@@ -472,30 +502,34 @@
                 <button id="save-and-show-button" type="button" class="btn btn-info text-white"><span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('save_and_show'); ?></button>
             <?php } ?>
             <button type="submit" class="btn btn-primary"><span data-feather="check-circle" class="icon-16"></span> <?php echo app_lang('save'); ?></button>
-<?php } ?>
+        <?php } ?>
     </div>
 </div>
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         //send data to show the task after save
         window.showAddNewModal = false;
 
-        $("#save-and-show-button, #save-and-add-button").click(function () {
+        $("#save-and-show-button, #save-and-add-button").click(function() {
             window.showAddNewModal = true;
             $(this).trigger("submit");
         });
 
         var taskShowText = "<?php echo app_lang('task_info') ?>",
-                multipleTaskAddText = "<?php echo app_lang('add_multiple_tasks') ?>",
-                addType = "<?php echo $add_type; ?>";
+            multipleTaskAddText = "<?php echo app_lang('add_multiple_tasks') ?>",
+            addType = "<?php echo $add_type; ?>";
 
         window.taskForm = $("#task-form").appForm({
             closeModalOnSuccess: false,
-            onSuccess: function (result) {
-                $("#task-table").appTable({newData: result.data, dataId: result.id});
+            onSuccess: function(result) {
+
+                $("#task-table").appTable({
+                    newData: result.data,
+                    dataId: result.id
+                });
                 $("#reload-kanban-button:visible").trigger("click");
 
                 $("#save_and_show_value").append(result.save_and_show_link);
@@ -508,7 +542,7 @@
                         $taskViewLink.attr("data-action-url", "<?php echo get_uri("tasks/modal_form"); ?>");
                         $taskViewLink.attr("data-title", multipleTaskAddText);
                         $taskViewLink.attr("data-post-last_id", result.id);
-                        $taskViewLink.attr("data-post-project_id", "<?php echo $project_id; ?>");
+                        $taskViewLink.attr("data-post-project_id", "<?php echo isset($project_id) ? $project_id : ''; ?>");
                         $taskViewLink.attr("data-post-add_type", "multiple");
                     } else {
                         //save and show
@@ -533,7 +567,7 @@
                     window.reloadGantt(true);
                 }
             },
-            onAjaxSuccess: function (result) {
+            onAjaxSuccess: function(result) {
                 if (!result.success && result.next_recurring_date_error) {
                     $("#next_recurring_date").val(result.next_recurring_date_value);
                     $("#next_recurring_date_container").removeClass("hide");
@@ -544,8 +578,9 @@
                 }
             }
         });
-        $("#task-form .select2").select2();
-        setTimeout(function () {
+        $("#task-form .js_app_dropdown").appDropdown();
+
+        setTimeout(function() {
             $("#title").focus();
         }, 200);
 
@@ -560,7 +595,7 @@
         $('[data-bs-toggle="tooltip"]').tooltip();
 
         //show/hide recurring fields
-        $("#recurring").click(function () {
+        $("#recurring").click(function() {
             if ($(this).is(":checked")) {
                 $("#recurring_fields").removeClass("hide");
             } else {
@@ -568,8 +603,10 @@
             }
         });
 
+        var dynamicDates = getDynamicDates();
+
         setDatePicker("#next_recurring_date", {
-            startDate: moment().add(1, 'days').format("YYYY-MM-DD") //set min date = tomorrow
+            startDate: dynamicDates.tomorrow //set min date = tomorrow
         });
 
 

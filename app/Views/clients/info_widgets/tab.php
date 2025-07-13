@@ -26,7 +26,7 @@ if ($tab == "projects") {
         $value = to_decimal_format($client_info->total_projects);
     }
     if ($view_type == "client_dashboard") {
-        $link = get_uri('projects/index');
+        $link = get_uri('projects/all_projects');
     } else {
         $link = get_uri('clients/view/' . $client_info->id . '/projects');
     }

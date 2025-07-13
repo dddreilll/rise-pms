@@ -31,7 +31,7 @@
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {title: '<?php echo app_lang("id") ?>', "class": "w50"},
-                {title: "<?php echo app_lang("title") ?>", "class": "w25p"},
+                {title: "<?php echo app_lang("title") ?>", "class": "w25p all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("project") ?>", "class": "w25p"},
                 {visible: false, searchable: false},

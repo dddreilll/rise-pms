@@ -16,287 +16,65 @@
                 </div>
                 <div class="card-body">
 
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_announcement" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('announcement'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_announcement", "1", get_setting("module_announcement") ? true : false, "id='module_announcement' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
+                    <?php
+                    $modules = [
+                        "self_improvements" => [
+                            "todo" => app_lang('todo'),
+                            "note" => app_lang('note'),
+                            "reminder" => app_lang('reminder'),
+                            "event" => app_lang('event'),
+                        ],
+                        "business_growth" => [
+                            "lead" => app_lang('lead'),
+                            "expense" => app_lang('expense'),
+                        ],
+                        "sales_management" => [
+                            "contract" => app_lang('contract'),
+                            "proposal" => app_lang('proposal'),
+                            "estimate" => app_lang('estimate'),
+                            "estimate_request" => app_lang('estimate_request'),
+                            "invoice" => app_lang('invoice'),
+                            "subscription" => app_lang('subscription'),
+                            "order" => app_lang('order'),
+                        ],
+                        "customer_support" => [
+                            "ticket" => app_lang('ticket'),
+                            "knowledge_base" => app_lang('knowledge_base') . " (" . app_lang("public") . ")",
+                        ],
+                        "team_management" => [
+                            "leave" => app_lang('leave'),
+                            "attendance" => app_lang('attendance'),
+                            "project_timesheet" => app_lang('project_timesheet'),
+                            "gantt" => app_lang('gantt'),
+                            "help" => app_lang('help') . " (" . app_lang("team_members") . ")",
+                        ],
+                        "collaboration" => [
+                            "message" => app_lang('message'),
+                            "chat" => app_lang('chat'),
+                            "file_manager" => app_lang('file_manager'),
+                            "timeline" => app_lang('timeline'),
+                            "announcement" => app_lang('announcement'),
+                        ],
+                    ];
 
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_chat" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('chat'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_chat", "1", get_setting("module_chat") ? true : false, "id='module_chat' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_contract" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('contract'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_contract", "1", get_setting("module_contract") ? true : false, "id='module_contract' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div> 
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_estimate" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('estimate'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_estimate", "1", get_setting("module_estimate") ? true : false, "id='module_estimate' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_estimate_request" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('estimate_request'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_estimate_request", "1", get_setting("module_estimate_request") ? true : false, "id='module_estimate_request' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_event" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('event'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_event", "1", get_setting("module_event") ? true : false, "id='module_event' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div> 
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_expense" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('expense'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_expense", "1", get_setting("module_expense") ? true : false, "id='module_expense' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>   
-
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_file_manager" class="col-md-2"><?php echo app_lang('file_manager'); ?></label>
-                            <div class="col-md-10">
-                                <?php
-                                echo form_checkbox("module_file_manager", "1", get_setting("module_file_manager") ? true : false, "id='module_file_manager' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_gantt" class="col-md-2"><?php echo app_lang('gantt'); ?></label>
-                            <div class="col-md-10">
-                                <?php
-                                echo form_checkbox("module_gantt", "1", get_setting("module_gantt") ? true : false, "id='module_gantt' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_help" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('help') . " (" . app_lang("team_members") . ")"; ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_help", "1", get_setting("module_help") ? true : false, "id='module_help' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_invoice" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('invoice'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_invoice", "1", get_setting("module_invoice") ? true : false, "id='module_invoice' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>    
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_knowledge_base" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('knowledge_base') . " (" . app_lang("public") . ")"; ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_knowledge_base", "1", get_setting("module_knowledge_base") ? true : false, "id='module_knowledge_base' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_lead" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('lead'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_lead", "1", get_setting("module_lead") ? true : false, "id='module_lead' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_leave" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('leave'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_leave", "1", get_setting("module_leave") ? true : false, "id='module_leave' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_message" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('message'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_message", "1", get_setting("module_message") ? true : false, "id='module_message' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_note" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('note'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_note", "1", get_setting("module_note") ? true : false, "id='module_note' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_order" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('order'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_order", "1", get_setting("module_order") ? true : false, "id='module_order' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>  
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_proposal" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('proposal'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_proposal", "1", get_setting("module_proposal") ? true : false, "id='module_proposal' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_project_timesheet" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('project_timesheet'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_project_timesheet", "1", get_setting("module_project_timesheet") ? true : false, "id='module_project_timesheet' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_reminder" class="col-md-2"><?php echo app_lang('reminder'); ?></label>
-                            <div class="col-md-10">
-                                <?php
-                                echo form_checkbox("module_reminder", "1", get_setting("module_reminder") ? true : false, "id='module_reminder' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_subscription" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('subscription'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_subscription", "1", get_setting("module_subscription") ? true : false, "id='module_subscription' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_ticket" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('ticket'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_ticket", "1", get_setting("module_ticket") ? true : false, "id='module_ticket' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_timeline" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('timeline'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_timeline", "1", get_setting("module_timeline") ? true : false, "id='module_timeline' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_attendance" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('attendance'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_attendance", "1", get_setting("module_attendance") ? true : false, "id='module_attendance' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div> 
-
-
-                    <div class="form-group">
-                        <div class="row">
-                            <label for="module_todo" class="col-md-2 col-xs-8 col-sm-4"><?php echo app_lang('todo'); ?></label>
-                            <div class="col-md-10 col-xs-4 col-sm-8">
-                                <?php
-                                echo form_checkbox("module_todo", "1", get_setting("module_todo") ? true : false, "id='module_todo' class='form-check-input ml15'");
-                                ?>
-                            </div>
-                        </div>
-                    </div>
-
-
+                    foreach ($modules as $category => $items) {
+                        echo '<div class="mb20"><span class="highlight-toolbar strong ml0">' . app_lang($category) . '</span></div>';
+                        echo '<div class="row">';
+                        foreach ($items as $key => $label) {
+                            echo '<div class="col-md-3 col-sm-6">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <div class="card-text form-switch">
+                                                ' . form_checkbox("module_$key", "1", get_setting("module_$key") ? true : false, "id='module_$key' class='form-check-input'") . '
+                                                <label for="module_' . $key . '" class="block">' . $label . '</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                  </div>';
+                        }
+                        echo '</div>';
+                    }
+                    ?>
 
                 </div>
                 <div class="card-footer">
@@ -309,11 +87,13 @@
 </div>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#module-settings-form").appForm({
             isModal: false,
-            onSuccess: function (result) {
-                appAlert.success(result.message, {duration: 10000});
+            onSuccess: function(result) {
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
                 location.reload();
             }
         });

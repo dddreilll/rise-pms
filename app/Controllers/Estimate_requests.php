@@ -83,7 +83,9 @@ class Estimate_requests extends Security_Controller {
 
     // download files 
     function download_estimate_request_files($id = 0) {
+        validate_numeric_value($id);
         $this->access_only_allowed_members();
+
         $info = $this->Estimate_requests_model->get_one($id);
         return $this->download_app_files(get_setting("timeline_file_path"), $info->files);
     }
@@ -104,6 +106,7 @@ class Estimate_requests extends Security_Controller {
     /* load estimate requests tab  */
 
     function estimate_requests_for_client($client_id) {
+        validate_numeric_value($client_id);
         $this->access_only_allowed_members_or_client_contact($client_id);
 
         if ($client_id) {
@@ -213,7 +216,7 @@ class Estimate_requests extends Security_Controller {
             $status_class = "bg-success";
         }
 
-        return "<span class='badge $status_class large text-white'>" . app_lang($status) . "</span>";
+        return "<span class='badge $status_class text-white'>" . app_lang($status) . "</span>";
     }
 
     //prepare data for datatable for estimate request field list
@@ -364,7 +367,7 @@ class Estimate_requests extends Security_Controller {
             $embedded_code,
             app_lang($data->status),
             modal_anchor(get_uri("estimate_requests/estimate_request_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_form'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate_form'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/delete_estimate_request_form"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate_form'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/delete_estimate_request_form"), "data-action" => "delete"))
         );
     }
 
@@ -535,7 +538,7 @@ class Estimate_requests extends Security_Controller {
         } else {
             $title = $data->title;
         }
-        
+
         $placeholder = "";
         if ($data->placeholder_language_key) {
             $placeholder = app_lang($data->placeholder_language_key);
@@ -553,7 +556,7 @@ class Estimate_requests extends Security_Controller {
             $field,
             $data->sort,
             modal_anchor(get_uri("estimate_requests/estimate_form_field_modal_form/" . $estimate_form_id), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_form'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate_form'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/estimate_form_field_delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_estimate_form'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/estimate_form_field_delete"), "data-action" => "delete"))
         );
     }
 
@@ -709,7 +712,6 @@ class Estimate_requests extends Security_Controller {
 
         return $this->template->view('estimate_requests/embedded_code_modal_form', $view_data);
     }
-
 }
 
 /* End of file quotations.php */

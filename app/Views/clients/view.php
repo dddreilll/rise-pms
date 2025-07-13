@@ -1,5 +1,5 @@
-<div id="page-content" class="clearfix page-content">
-    <div class="container-fluid  full-width-button">
+<div id="page-content" class="clearfix page-wrapper">
+    <div class="clearfix">
         <div class="row clients-view-button">
             <div class="col-md-12">
                 <div class="page-title clearfix no-border no-border-top-radius no-bg">
@@ -46,7 +46,7 @@
                     <?php echo view("clients/info_widgets/index"); ?>
                 </div>
 
-                <ul id="client-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs scrollable-tabs" role="tablist">
+                <ul id="client-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs scrollable-tabs border-bottom-0" role="tablist">
                     <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/contacts/" . $client_info->id); ?>" data-bs-target="#client-contacts"> <?php echo app_lang('contacts'); ?></a></li>
                     <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/company_info_tab/" . $client_info->id); ?>" data-bs-target="#client-info"> <?php echo app_lang('client_info'); ?></a></li>
 

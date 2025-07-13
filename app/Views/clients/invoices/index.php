@@ -2,7 +2,7 @@
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
 
-    <div class="card rounded-bottom">
+    <div class="card rounded-top-0">
         <?php if (isset($page_type) && $page_type === "full") { ?>
             <div class="page-title clearfix">
                 <h1><?php echo app_lang('invoices'); ?></h1>
@@ -41,11 +41,11 @@
             rangeDatepicker: [{startDate: {name: "start_date", value:""}, endDate: {name: "end_date",  value:""}, showClearButton: true}],
             columns: [
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("id") ?>', "class": "w10p", "iDataSort": 0},
+                {title: '<?php echo app_lang("id") ?>', "class": "w10p all", "iDataSort": 0},
                 {targets: [1], visible: false, searchable: false},
                 {title: "<?php echo app_lang("project") ?>"},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("bill_date") ?>", "class": "w10p", "iDataSort": 4},
+                {title: "<?php echo app_lang("bill_date") ?>", "class": "all w10p", "iDataSort": 4},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("due_date") ?>", "class": "w10p", "iDataSort": 6},
                 {title: "<?php echo app_lang("total_invoiced") ?>", "class": "w10p text-right"},

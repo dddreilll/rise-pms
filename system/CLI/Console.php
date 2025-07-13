@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,23 +14,32 @@
 namespace CodeIgniter\CLI;
 
 use CodeIgniter\CodeIgniter;
+use Config\App;
 use Config\Services;
 use Exception;
 
 /**
  * Console
+ *
+ * @see \CodeIgniter\CLI\ConsoleTest
  */
 class Console
 {
     /**
      * Runs the current command discovered on the CLI.
      *
-     * @return int|void
+     * @return int|void Exit code
      *
      * @throws Exception
      */
     public function run()
     {
+        // Create CLIRequest
+        $appConfig = config(App::class);
+        Services::createRequest($appConfig, true);
+        // Load Routes
+        Services::routes()->loadRoutes();
+
         $runner  = Services::commands();
         $params  = array_merge(CLI::getSegments(), CLI::getOptions());
         $params  = $this->parseParamsForHelpOption($params);
@@ -39,6 +50,8 @@ class Console
 
     /**
      * Displays basic information about the Console.
+     *
+     * @return void
      */
     public function showHeader(bool $suppress = false)
     {

@@ -1,6 +1,6 @@
 <?php echo view("includes/cropbox"); ?>
-<div id="page-content" class="clearfix">
-    <div class="bg-dark-success clearfix">
+<div id="page-content" class="page-wrapper clearfix">
+    <div class="bg-primary card mb0 rounded-bottom-0 clearfix">
         <div class="container-fluid">
             <div class="row">
                 <div class="col-md-6">
@@ -62,7 +62,7 @@
     </div>
 
 
-    <ul id="client-contact-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs scrollable-tabs b-b rounded-0" role="tablist">
+    <ul id="client-contact-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs scrollable-tabs b-b rounded-0 border-top-0" role="tablist">
         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/contact_general_info_tab/" . $user_info->id); ?>" data-bs-target="#tab-general-info"> <?php echo app_lang('general_info'); ?></a></li>
         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/company_info_tab/" . $user_info->client_id); ?>" data-bs-target="#tab-company-info"> <?php echo ($client_info->type == "person") ? app_lang('contact_info') : app_lang('company'); ?></a></li>
         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("clients/contact_social_links_tab/" . $user_info->id); ?>" data-bs-target="#tab-social-links"> <?php echo app_lang('social_links'); ?></a></li>

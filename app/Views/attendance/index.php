@@ -1,7 +1,7 @@
 <div id="page-content" class="page-wrapper clearfix grid-button">
 
     <div class="card">
-        <ul id="attendance-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
+        <ul id="attendance-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title scrollable-tabs" role="tablist">
             <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("attendance"); ?></h4></li>
 
             <li><a role="presentation" data-bs-toggle="tab"  href="javascript:;" data-bs-target="#daily-attendance"><?php echo app_lang("daily"); ?></a></li>

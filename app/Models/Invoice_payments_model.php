@@ -73,6 +73,9 @@ class Invoice_payments_model extends Crud_model {
         $invoices_table = $this->db->prefixTable('invoices');
         $clients_table = $this->db->prefixTable('clients');
 
+        $year = $this->_get_clean_value($year);
+        $project_id = $this->_get_clean_value($project_id);
+
         $where = "";
         if ($currency) {
             $where = $this->_get_clients_of_currency_query($currency, $invoices_table, $clients_table);
@@ -142,7 +145,8 @@ class Invoice_payments_model extends Crud_model {
         $selected_currency = get_array_value($options, "currency");
         $default_currency = get_setting("default_currency");
         $currency = $selected_currency ? $selected_currency : get_setting("default_currency");
-        $currency = $this->db->escapeString($currency);
+        
+        $currency = $this->_get_clean_value(array("currency" => $currency), "currency");
 
         $where .= ($currency == $default_currency) ? " AND ($clients_table.currency='$default_currency' OR $clients_table.currency='' OR $clients_table.currency IS NULL)" : " AND $clients_table.currency='$currency'";
 
@@ -177,7 +181,7 @@ class Invoice_payments_model extends Crud_model {
         $selected_currency = get_array_value($options, "currency");
         $default_currency = get_setting("default_currency");
         $currency = $selected_currency ? $selected_currency : get_setting("default_currency");
-        $currency = $this->db->escapeString($currency);
+        $currency = $this->_get_clean_value(array("currency" => $currency), "currency");
 
         $where .= ($currency == $default_currency) ? " AND ($clients_table.currency='$default_currency' OR $clients_table.currency='' OR $clients_table.currency IS NULL)" : " AND $clients_table.currency='$currency'";
 

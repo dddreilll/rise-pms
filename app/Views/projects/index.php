@@ -36,16 +36,17 @@
             ignoreSavedFilter = true;
 <?php } ?>
 
-
+        var dynamicDates = getDynamicDates();
         $("#project-table").appTable({
             source: '<?php echo_uri("projects/list_data") ?>',
+            serverSide: true,
             smartFilterIdentity: "all_projects_list", //a to z and _ only. should be unique to avoid conflicts 
             ignoreSavedFilter: ignoreSavedFilter,
             multiSelect: [
                 {
                     name: "status_id",
                     text: "<?php echo app_lang('status'); ?>",
-                    options: <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses, "selected_status_id" => $selected_status_id, "selected_status_key" => "open")); ?>
+                    options: <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses, "selected_status_id" => $selected_status_id)); ?>
                 }
             ],
             filterDropdown: [{name: "project_label", class: "w200", options: <?php echo $project_labels_dropdown; ?>}, <?php echo $custom_field_filters; ?>],
@@ -53,22 +54,22 @@
             singleDatepicker: [{name: "deadline", defaultText: "<?php echo app_lang('deadline') ?>",
                     options: [
                         {value: "expired", text: "<?php echo app_lang('expired') ?>"},
-                        {value: moment().format("YYYY-MM-DD"), text: "<?php echo app_lang('today') ?>"},
-                        {value: moment().add(1, 'days').format("YYYY-MM-DD"), text: "<?php echo app_lang('tomorrow') ?>"},
-                        {value: moment().add(7, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
-                        {value: moment().add(15, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
+                        {value: dynamicDates.today, text: "<?php echo app_lang('today') ?>"},
+                        {value: dynamicDates.tomorrow, text: "<?php echo app_lang('tomorrow') ?>"},
+                        {value: dynamicDates.in_next_7_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
+                        {value: dynamicDates.in_next_15_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
                     ]}],
             columns: [
-                {title: '<?php echo app_lang("id") ?>', "class": "all w50"},
-                {title: '<?php echo app_lang("title") ?>', "class": "all"},
-                {title: '<?php echo app_lang("client") ?>', "class": "w10p"},
-                {visible: optionVisibility, title: '<?php echo app_lang("price") ?>', "class": "w10p"},
-                {visible: false, searchable: false},
+                {title: '<?php echo app_lang("id") ?>', "class": "w50", order_by: "id"},
+                {title: '<?php echo app_lang("title") ?>', "class": "all", order_by: "title"},
+                {title: '<?php echo app_lang("client") ?>', "class": "w10p", order_by: "company_name"},
+                {visible: optionVisibility, title: '<?php echo app_lang("price") ?>', "class": "w10p text-right", order_by: "price"},
+                {visible: false, searchable: false, order_by: "start_date"},
                 {title: '<?php echo app_lang("start_date") ?>', "class": "w10p", "iDataSort": 4},
-                {visible: false, searchable: false},
+                {visible: false, searchable: false, order_by: "deadline"},
                 {title: '<?php echo app_lang("deadline") ?>', "class": "w10p", "iDataSort": 6},
                 {title: '<?php echo app_lang("progress") ?>', "class": "w10p"},
-                {title: '<?php echo app_lang("status") ?>', "class": "w10p"}
+                {title: '<?php echo app_lang("status") ?>', "class": "w10p", order_by: "status"}
 <?php echo $custom_field_headers; ?>,
                 {visible: optionVisibility, title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ],

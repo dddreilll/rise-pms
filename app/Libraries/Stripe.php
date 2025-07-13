@@ -85,45 +85,50 @@ class Stripe {
             "payment_verification_code" => $payment_verification_code
         );
 
+        $payment_method_types = array("card");
+        if ($currency == "EUR") {
+            $payment_method_types = array("card", "ideal");
+        }
+
         if ($subscription_id) {
             //create/get existing stripe client first
             $stripe_customer_id = $this->get_customer_id($client_id, $contact_user_id);
 
             //create session to add card
             $session = \Stripe\Checkout\Session::create([
-                        'payment_method_types' => array('card'),
-                        'mode' => 'setup',
-                        'customer' => $stripe_customer_id,
-                        'success_url' => get_uri("stripe_redirect/subscription/$payment_verification_code"),
-                        'cancel_url' => get_uri($redirect_to),
+                'payment_method_types' => $payment_method_types,
+                'mode' => 'setup',
+                'customer' => $stripe_customer_id,
+                'success_url' => get_uri("stripe_redirect/subscription/$payment_verification_code"),
+                'cancel_url' => get_uri($redirect_to),
             ]);
         } else { //single time payment
             $session = \Stripe\Checkout\Session::create(array(
-                        'mode' => 'payment',
-                        'payment_method_types' => array('card'),
-                        'line_items' => array(
-                            array(
-                                'quantity' => 1,
-                                'price_data' => array(
-                                    'unit_amount' => $payment_amount * 100, //stripe will devide it with 100
-                                    'currency' => $currency,
-                                    'product_data' => array(
-                                        'name' => $invoice_info->display_id,
-                                        'description' => $description,
-                                        'images' => array(
-                                            get_file_uri("assets/images/stripe-payment-logo.png")
-                                        ),
-                                    )
+                'mode' => 'payment',
+                'payment_method_types' => $payment_method_types,
+                'line_items' => array(
+                    array(
+                        'quantity' => 1,
+                        'price_data' => array(
+                            'unit_amount' => $payment_amount * 100, //stripe will devide it with 100
+                            'currency' => $currency,
+                            'product_data' => array(
+                                'name' => $invoice_info->display_id,
+                                'description' => $description,
+                                'images' => array(
+                                    get_file_uri("assets/images/stripe-payment-logo.png")
                                 ),
                             )
                         ),
-                        'payment_intent_data' => array(
-                            'description' => $invoice_info->display_id . ", " . app_lang('amount') . ": " . to_currency($payment_amount, $currency . " "),
-                            'metadata' => $stripe_ipn_data,
-                            'setup_future_usage' => 'off_session', //save this paymentIntent's payment method for future use
-                        ),
-                        'success_url' => get_uri("stripe_redirect/index/$payment_verification_code"),
-                        'cancel_url' => get_uri($redirect_to),
+                    )
+                ),
+                'payment_intent_data' => array(
+                    'description' => $invoice_info->display_id . ", " . app_lang('amount') . ": " . to_currency($payment_amount, $currency . " "),
+                    'metadata' => $stripe_ipn_data,
+                    //'setup_future_usage' => 'off_session', //save this paymentIntent's payment method for future use
+                ),
+                'success_url' => get_uri("stripe_redirect/index/$payment_verification_code"),
+                'cancel_url' => get_uri($redirect_to),
             ));
         }
 
@@ -159,16 +164,16 @@ class Stripe {
             //create stripe client
             $user_info = $this->Users_model->get_one($contact_user_id);
             $customer = \Stripe\Customer::create(array(
-                        "name" => $client_info->company_name,
-                        "phone" => $client_info->phone,
-                        "email" => $user_info->email,
-                        "address" => array(
-                            "line1" => $client_info->address,
-                            "city" => $client_info->city,
-                            "state" => $client_info->state,
-                            "postal_code" => $client_info->zip,
-                            "country" => $client_info->country,
-                        ),
+                "name" => $client_info->company_name,
+                "phone" => $client_info->phone,
+                "email" => $user_info->email,
+                "address" => array(
+                    "line1" => $client_info->address,
+                    "city" => $client_info->city,
+                    "state" => $client_info->state,
+                    "postal_code" => $client_info->zip,
+                    "country" => $client_info->country,
+                ),
             ));
 
             //save the stripe customer id to clients table
@@ -183,17 +188,23 @@ class Stripe {
         return $this->stripe_config->publishable_key;
     }
 
+    public function retrieve_session($session_id) {
+        $session = \Stripe\Checkout\Session::retrieve($session_id);
+        return $session;
+    }
+
+    public function retrieve_payment_intent($payment_intent_id) {
+        $payment_intent = \Stripe\PaymentIntent::retrieve($payment_intent_id);
+        return $payment_intent;
+    }
+
     public function is_valid_ipn($stripe_ipn_info) {
         //get the payment_intent with the session_id
-        $session = \Stripe\Checkout\Session::retrieve($stripe_ipn_info->session_id);
-        if (!($session && $session->payment_intent)) {
-            return false;
-        }
-
-        $payment = \Stripe\PaymentIntent::retrieve($session->payment_intent);
-        if ($payment && $payment->status == "succeeded") {
+        $session = $this->retrieve_session($stripe_ipn_info->session_id);
+        $payment_intent = $this->retrieve_payment_intent($session->payment_intent);
+        if ($payment_intent && $payment_intent->status == "succeeded") {
             //so the payment is successful
-            return $payment;
+            return $payment_intent;
         }
     }
 
@@ -239,14 +250,14 @@ class Stripe {
 
     public function create_webhook($webhook_listener_link) {
         return \Stripe\WebhookEndpoint::create(array(
-                    'url' => get_uri("webhooks_listener/stripe_subscription") . "/" . $webhook_listener_link,
-                    'enabled_events' => array('invoice.payment_succeeded', 'invoice.payment_failed'),
+            'url' => get_uri("webhooks_listener/stripe_subscription") . "/" . $webhook_listener_link,
+            'enabled_events' => array('invoice.payment_succeeded', 'invoice.payment_failed'),
         ));
     }
 
     public function update_webhook($webhook_id, $webhook_listener_link) {
         return \Stripe\WebhookEndpoint::update($webhook_id, array(
-                    'url' => get_uri("webhooks_listener/stripe_subscription") . "/" . $webhook_listener_link,
+            'url' => get_uri("webhooks_listener/stripe_subscription") . "/" . $webhook_listener_link,
         ));
     }
 
@@ -258,5 +269,4 @@ class Stripe {
         $subscription = $this->retrieve_subscription($subscription_id);
         $subscription->cancel();
     }
-
 }

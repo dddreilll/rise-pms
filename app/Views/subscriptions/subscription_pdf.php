@@ -29,7 +29,7 @@
         <tr style="background-color: #f4f4f4; ">
             <td style="width: 45%; border: 1px solid #fff; padding: 10px;"><?php echo $item->title; ?>
                 <br />
-                <span style="color: #888; font-size: 90%;"><?php echo nl2br($item->description); ?></span>
+                <span style="color: #888; font-size: 90%;"><?php echo custom_nl2br($item->description); ?></span>
             </td>
             <td style="text-align: center; width: 15%; border: 1px solid #fff;"> <?php echo $item->quantity . " " . $item->unit_type; ?></td>
             <td style="text-align: right; width: 20%; border: 1px solid #fff;"> <?php echo to_currency($item->rate, $item->currency_symbol); ?></td>
@@ -68,7 +68,7 @@
 <?php if ($subscription_info->note) { ?>
     <br />
     <br />
-    <div style="border-top: 1px solid #f2f4f6; color:#444; padding:0 0 20px 0;"><br /><?php echo nl2br($subscription_info->note); ?></div>
+    <div style="border-top: 1px solid #f2f4f6; color:#444; padding:0 0 20px 0;"><br /><?php echo custom_nl2br($subscription_info->note); ?></div>
 <?php } else { ?> <!-- use table to avoid extra spaces -->
     <br /><br /><table class="invoice-pdf-hidden-table" style="border-top: 1px solid #f2f4f6; margin: 0; padding: 0; display: block; width: 100%; height: 10px;"></table>
 <?php } ?>

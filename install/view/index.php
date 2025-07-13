@@ -43,7 +43,7 @@
                     <div class="tab-content">
                         <div role="tabpanel" class="tab-pane active" id="pre-installation-tab">
                             <div class="section">
-                                <p>1. Please configure your PHP settings to match following requirements:</p>
+                                <p>1. Please configure your PHP settings to match the following requirements:</p>
                                 <hr />
                                 <div>
                                     <table>
@@ -381,7 +381,7 @@
                                     <div>
                                         <div class="form-group clearfix">
                                             <div class="row">
-                                                <label for="purchase_code" class=" col-md-3">Item purchase code | <a href="https://cutt.ly/PLFZenO" target="_blank">Nulled Community</a></label>
+                                                <label for="purchase_code" class=" col-md-3">Item purchase code | <a style="color:red;" href="https://weadown.com" target="_blank">weadown.com</a></label>
                                                 <div class="col-md-9">
                                                     <input type="text" value=""  id="purchase_code"  name="purchase_code" class="form-control"  placeholder="Find in codecanyon item download section" />
                                                 </div>
@@ -403,13 +403,13 @@
                         <div role="tabpanel" class="tab-pane" id="finished-tab">
                             <div class="section">
                                 <div class="clearfix">
-                                    <i data-feather="check-circle" height="2.5rem" width="2.5rem" stroke-width="3" class='status mr10'></i><span class="pull-left"  style="line-height: 50px;">Congratulation! You have successfully installed RISE - Ultimate Project Manager</span>  
+                                    <i data-feather="check-circle" height="2.5rem" width="2.5rem" stroke-width="3" class='status mr10'></i><span class="pull-left"  style="line-height: 50px;">Congratulation! You have successfully installed RISE - Ultimate Project Manager & CRM.</span>  
                                 </div>
 
                                 <div style="margin: 15px 0 15px 55px; color: #d73b3b;">
                                     Don't forget to delete the <b>install</b> directory!
                                 </div>
-                                <a class="go-to-login-page" href="<?php echo $dashboard_url; ?>">
+                                <a class="go-to-login-page" href="<?php echo $domain; ?>">
                                     <div class="text-center">
                                         <div style="font-size: 100px;"><i data-feather="monitor" height="7rem" width="7rem" class="mb-2"></i></div>
                                         <div>GO TO YOUR LOGIN PAGE</div>

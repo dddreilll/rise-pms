@@ -10,10 +10,6 @@ foreach ($project_statuses as $status) {
         if ($selected_status_id == $status->id) {
             $is_selected = true;
         }
-    } else if (isset($selected_status_key) && $selected_status_key == $status->key_name) {
-        $is_selected = true;
-    } else if (isset($selected_status_keys) && count($selected_status_keys) && in_array($status->key_name, $selected_status_keys)) {
-        $is_selected = true;
     }
 
     $statuses[] = array("text" => ($status->title_language_key ? app_lang($status->title_language_key) : $status->title), "value" => $status->id, "isChecked" => $is_selected);

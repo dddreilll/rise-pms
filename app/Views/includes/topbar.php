@@ -2,14 +2,27 @@
 
 <?php $user = $login_user->id; ?>
 
-<nav class="navbar navbar-expand fixed-top navbar-light navbar-custom shadow-sm" role="navigation" id="default-navbar">
+<nav class="navbar navbar-expand fixed-top navbar-light navbar-custom" role="navigation" id="default-navbar">
     <div class="container-fluid">
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav me-auto mb-lg-0">
-                <li class="nav-item">
+                <li class="nav-item hidden-xs">
                     <a class="nav-link sidebar-toggle-btn" aria-current="page" href="#">
                         <i data-feather="menu" class="icon"></i>
                     </a>
+                </li>
+
+                <li class="nav-item d-block d-sm-none">
+                    <?php
+                    $user = $login_user->id;
+                    $dashboard_link = get_uri("dashboard");
+                    $user_dashboard = get_setting("user_" . $user . "_dashboard");
+                    if ($user_dashboard) {
+                        $dashboard_link = get_uri("dashboard/view/" . $user_dashboard);
+                    }
+                    ?>
+                    <a id="dashboard-link" href="<?php echo $dashboard_link; ?>"><img class="dashboard-image m10 mt15" style="width: 32px;" src="<?php echo get_favicon_url(); ?>" /></a>
+
                 </li>
 
                 <?php
@@ -45,9 +58,7 @@
                 <ul class="navbar-nav">
 
                     <?php
-                    if ($login_user->user_type == "staff") {
-                        load_js(array("assets/js/awesomplete/awesomplete.min.js"));
-                        ?>
+                    if ($login_user->user_type == "staff") { ?>
                         <li class="nav-item hidden-sm" title="<?php echo app_lang('search') . ' (/)'; ?>">
                             <?php echo modal_anchor(get_uri("search/search_modal_form"), "<i data-feather='search' class='icon'></i>", array("class" => "nav-link", "data-modal-title" => app_lang('search') . ' (/)', "data-post-hide-header" => true, "data-modal-close" => "1", "id" => "global-search-btn")); ?>
                         </li>
@@ -61,8 +72,8 @@
 
                     <?php if (!in_array("language", $hidden_topbar_menus) && (($login_user->user_type == "staff" && !get_setting("disable_language_selector_for_team_members")) || ($login_user->user_type == "client" && !get_setting("disable_language_selector_for_clients")))) { ?>
 
-                        <li class="nav-item dropdown">
-                            <?php echo js_anchor("<i data-feather='globe' class='icon'></i>", array("id" => "personal-language-icon", "class" => "nav-link dropdown-toggle", "data-bs-toggle" => "dropdown")); ?>
+                        <li id="topbar-language-dropdown" class="nav-item dropdown hidden-xs">
+                            <?php echo js_anchor("<i data-feather='globe' class='icon'></i>", array("id" => "personal-language-icon", "class" => "nav-link dropdown-toggle p20", "data-bs-toggle" => "dropdown")); ?>
 
                             <ul class="dropdown-menu dropdown-menu-end language-dropdown">
                                 <li>
@@ -102,13 +113,15 @@
                     <li class="nav-item dropdown">
                         <?php echo js_anchor("<i data-feather='bell' class='icon'></i>", array("id" => "web-notification-icon", "class" => "nav-link dropdown-toggle", "data-bs-toggle" => "dropdown")); ?>
                         <div class="dropdown-menu dropdown-menu-end notification-dropdown w400">
-                            <div class="dropdown-details card bg-white m0">
-                                <div class="list-group">
-                                    <span class="list-group-item inline-loader p10"></span>                          
+                            <div class="card m0">
+                                <div class="dropdown-details bg-white m0">
+                                    <div class="list-group">
+                                        <span class="list-group-item inline-loader p10"></span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="card-footer text-center mt-2">
-                                <?php echo anchor("notifications", app_lang('see_all')); ?>
+                                <div class="card-footer text-center">
+                                    <?php echo anchor("notifications", app_lang('see_all'), array("class" => "w-100 d-block")); ?>
+                                </div>
                             </div>
                         </div>
                     </li>
@@ -116,14 +129,16 @@
                     <?php if (get_setting("module_message") && can_access_messages_module()) { ?>
                         <li class="nav-item dropdown hidden-sm <?php echo ($login_user->user_type === "client" && !get_setting("client_message_users")) ? "hide" : ""; ?>">
                             <?php echo js_anchor("<i data-feather='mail' class='icon'></i>", array("id" => "message-notification-icon", "class" => "nav-link dropdown-toggle", "data-bs-toggle" => "dropdown")); ?>
-                            <div class="dropdown-menu dropdown-menu-end w300">
-                                <div class="dropdown-details card bg-white m0">
-                                    <div class="list-group">
-                                        <span class="list-group-item inline-loader p10"></span>                          
+                            <div class="dropdown-menu dropdown-menu-end w300 message-dropdown">
+                                <div class="card m0">
+                                    <div class="dropdown-details bg-white">
+                                        <div class="list-group">
+                                            <span class="list-group-item inline-loader p10"></span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="card-footer text-center">
-                                    <?php echo anchor("messages", app_lang('see_all')); ?>
+                                    <div class="card-footer text-center">
+                                        <?php echo anchor("messages", app_lang('see_all'), array("class" => "w-100 d-block")); ?>
+                                    </div>
                                 </div>
                             </div>
                         </li>
@@ -131,7 +146,7 @@
 
                     <li class="nav-item dropdown">
                         <a id="user-dropdown" href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                            <span class="avatar-xs avatar me-1" >
+                            <span class="avatar-xs avatar me-1">
                                 <img alt="..." src="<?php echo get_avatar($login_user->image); ?>">
                             </span>
                             <span class="user-name ml10"><?php echo $login_user->first_name . " " . $login_user->last_name; ?></span>
@@ -150,7 +165,7 @@
 
                             <?php if (get_setting("show_theme_color_changer") === "yes") { ?>
 
-                                <li class="dropdown-divider"></li>    
+                                <li class="dropdown-divider"></li>
                                 <li class="pl10 ms-2 mt10 theme-changer">
                                     <?php echo get_custom_theme_color_list(); ?>
                                 </li>
@@ -169,7 +184,7 @@
 
 <script type="text/javascript">
     //close navbar collapse panel on clicking outside of the panel
-    $(document).click(function (e) {
+    $(document).click(function(e) {
         if (!$(e.target).is('#navbar') && isMobile()) {
             $('#navbar').collapse('hide');
         }
@@ -177,11 +192,11 @@
 
     var notificationOptions = {};
 
-    $(document).ready(function () {
+    $(document).ready(function() {
         //load message notifications
         var messageOptions = {},
-                messageIcon = "#message-notification-icon",
-                notificationIcon = "#web-notification-icon";
+            messageIcon = "#message-notification-icon",
+            notificationIcon = "#web-notification-icon";
 
         //check message notifications
         messageOptions.notificationUrl = "<?php echo_uri('messages/count_notifications'); ?>";
@@ -193,11 +208,11 @@
 
         checkNotifications(messageOptions);
 
-        window.updateLastMessageCheckingStatus = function () {
+        window.updateLastMessageCheckingStatus = function() {
             checkNotifications(messageOptions, true);
         };
 
-        $('body').on('show.bs.dropdown', messageIcon, function () {
+        $('body').on('show.bs.dropdown', messageIcon, function() {
             messageOptions.notificationUrl = "<?php echo_uri('messages/get_notifications'); ?>";
             checkNotifications(messageOptions, true);
         });
@@ -222,26 +237,35 @@
             checkNotifications(notificationOptions);
         }
 
-        $('body').on('show.bs.dropdown', notificationIcon, function () {
+        $('body').on('show.bs.dropdown', notificationIcon, function() {
             notificationOptions.notificationUrl = "<?php echo_uri('notifications/get_notifications'); ?>";
             checkNotifications(notificationOptions, true);
         });
 
-        $('body').on('click', "#reminder-icon", function () {
+        $('body').on('click', "#reminder-icon", function() {
             $("#ajaxModal").addClass("reminder-modal");
         });
 
-        $("body").on("click", ".notification-dropdown a[data-act='ajax-modal'], #js-quick-add-task, #js-quick-add-multiple-task, #task-details-edit-btn, #task-modal-view-link", function () {
+        $("body").on("click", ".notification-dropdown a[data-act='ajax-modal'], #js-quick-add-task, #js-quick-add-multiple-task, #task-details-edit-btn, #task-modal-view-link, #parent-task-link", function() {
             if ($(".task-preview").length) {
+                // Store the current location
+                var currentLocation = window.location.href;
+
                 //remove task details view when it's already opened to prevent selector duplication
                 $("#page-content").remove();
-                $('#ajaxModal').on('hidden.bs.modal', function () {
-                    location.reload();
+                $('#ajaxModal').on('hidden.bs.modal', function() {
+                    window.location.href = currentLocation;
                 });
             }
         });
 
         $('[data-bs-toggle="tooltip"]').tooltip();
-    });
 
+        if (isMobile()) {
+            $("#left-menu-language-dropdown").html($("#topbar-language-dropdown").html());
+            $("#topbar-language-dropdown").remove();
+
+        }
+
+    });
 </script>

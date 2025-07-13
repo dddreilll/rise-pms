@@ -105,7 +105,7 @@ class Timesheets_model extends Crud_model {
             $order = " ORDER BY $order_by $order_dir ";
         }
 
-        $search_by = get_array_value($options, "search_by");
+        $search_by = $this->_get_clean_value($options, "search_by");
         if ($search_by) {
             $search_by = $this->db->escapeLikeString($search_by);
 
@@ -134,13 +134,24 @@ class Timesheets_model extends Crud_model {
 
         $raw_query = $this->db->query($sql);
 
-        $total_rows = $this->db->query("SELECT FOUND_ROWS() as found_rows")->getRow();
+        $summation_sql = "SELECT COUNT($timesheet_table.id) AS found_rows,(SUM(TIMESTAMPDIFF(SECOND, $timesheet_table.start_time, $timesheet_table.end_time)) + SUM(ROUND(($timesheet_table.hours * 60), 0) * 60)) AS total_timesheet_value 
+        FROM $timesheet_table
+        LEFT JOIN $users_table ON $users_table.id= $timesheet_table.user_id
+        LEFT JOIN $tasks_table ON $tasks_table.id= $timesheet_table.task_id
+        LEFT JOIN $projects_table ON $projects_table.id= $timesheet_table.project_id
+        $join_custom_fieds
+        WHERE $timesheet_table.deleted=0 $where $custom_fields_where";
+
+        $total_rows = $this->db->query($summation_sql)->getRow();
 
         if ($limit) {
             return array(
                 "data" => $raw_query->getResult(),
                 "recordsTotal" => $total_rows->found_rows,
                 "recordsFiltered" => $total_rows->found_rows,
+                "summation" => array(
+                    "total_timesheet_value" => $total_rows->total_timesheet_value
+                )
             );
         } else {
             return $raw_query;
@@ -221,7 +232,7 @@ class Timesheets_model extends Crud_model {
 
         $custom_field_filter = $this->_get_clean_value($options, "custom_field_filter");
         $custom_field_query_info = $this->prepare_custom_field_query_string("timesheets", "", $timesheet_table, $custom_field_filter);
-        $custom_fields_where = $this->_get_clean_value($custom_field_query_info, "where_string");
+        $custom_fields_where = get_array_value($custom_field_query_info, "where_string");
 
         $sql = "SELECT new_summary_table.user_id, new_summary_table.total_duration, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS logged_by_user, $users_table.image as logged_by_avatar,
                        $tasks_table.id AS task_id,  $tasks_table.title AS task_title,  $projects_table.id AS project_id,  $projects_table.title AS project_title,
@@ -294,6 +305,7 @@ class Timesheets_model extends Crud_model {
         $timesheet_table = $this->db->prefixTable('project_time');
         $projects_table = $this->db->prefixTable('projects');
         $tasks_table = $this->db->prefixTable('tasks');
+        $user_id = $this->_get_clean_value($user_id);
 
         $sql = "SELECT $timesheet_table.*, $projects_table.title AS project_title, $tasks_table.title AS task_title
         FROM $timesheet_table
@@ -343,7 +355,6 @@ class Timesheets_model extends Crud_model {
         try {
             $this->db->query("SET sql_mode = ''");
         } catch (\Exception $e) {
-            
         }
 
         $timeZone = new \DateTimeZone(get_setting("timezone"));
@@ -393,6 +404,8 @@ class Timesheets_model extends Crud_model {
 
     function user_has_any_timer_except_this_project($project_id, $user_id) {
         $timesheet_table = $this->db->prefixTable('project_time');
+        $project_id = $this->_get_clean_value($project_id);
+        $user_id = $this->_get_clean_value($user_id);
 
         $sql = "SELECT COUNT($timesheet_table.id) AS total_timers FROM $timesheet_table WHERE $timesheet_table.deleted=0 AND $timesheet_table.user_id=$user_id AND $timesheet_table.project_id!=$project_id AND $timesheet_table.status='open'";
 
@@ -401,6 +414,7 @@ class Timesheets_model extends Crud_model {
 
     function user_has_any_timer($user_id) {
         $timesheet_table = $this->db->prefixTable('project_time');
+        $user_id = $this->_get_clean_value($user_id);
 
         $sql = "SELECT COUNT($timesheet_table.id) AS total_timers FROM $timesheet_table WHERE $timesheet_table.deleted=0 AND $timesheet_table.user_id=$user_id AND $timesheet_table.status='open'";
 
@@ -463,13 +477,15 @@ class Timesheets_model extends Crud_model {
             return " AND $timesheet_table.project_id IN(SELECT $project_members_table.project_id FROM $project_members_table WHERE $project_members_table.deleted=0 AND $project_members_table.user_id=$login_user_id)";
         }
     }
-    
+
     function user_has_any_open_timer_on_this_task($task_id, $user_id) {
         $timesheet_table = $this->db->prefixTable('project_time');
+
+        $task_id = $this->_get_clean_value($task_id);
+        $user_id = $this->_get_clean_value($user_id);
 
         $sql = "SELECT COUNT($timesheet_table.id) AS total_timers FROM $timesheet_table WHERE $timesheet_table.deleted=0 AND $timesheet_table.user_id=$user_id AND $timesheet_table.task_id=$task_id AND $timesheet_table.status='open'";
 
         return $this->db->query($sql)->getRow()->total_timers;
     }
-
 }

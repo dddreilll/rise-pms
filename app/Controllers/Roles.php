@@ -2,11 +2,9 @@
 
 namespace App\Controllers;
 
-class Roles extends Security_Controller
-{
+class Roles extends Security_Controller {
 
-    function __construct()
-    {
+    function __construct() {
         parent::__construct();
         $this->access_only_admin_or_settings_admin();
         if (!($this->login_user->is_admin || get_array_value($this->login_user->permissions, "can_manage_user_role_and_permissions"))) {
@@ -15,15 +13,12 @@ class Roles extends Security_Controller
     }
 
     //load the role view
-    function index()
-    {
+    function index() {
         return $this->template->rander("roles/index");
     }
 
     //load the role add/edit modal
-    function modal_form()
-    {
-
+    function modal_form() {
         $this->validate_submitted_data(array(
             "id" => "numeric"
         ));
@@ -34,8 +29,7 @@ class Roles extends Security_Controller
     }
 
     //get permisissions of a role
-    function permissions($role_id)
-    {
+    function permissions($role_id) {
         if ($role_id) {
             validate_numeric_value($role_id);
             $view_data['model_info'] = $this->Roles_model->get_one($role_id);
@@ -149,8 +143,7 @@ class Roles extends Security_Controller
     }
 
     //save a role
-    function save()
-    {
+    function save() {
         $this->validate_submitted_data(array(
             "id" => "numeric",
             "title" => "required"
@@ -176,8 +169,7 @@ class Roles extends Security_Controller
     }
 
     //save permissions of a role
-    function save_permissions()
-    {
+    function save_permissions() {
         $this->validate_submitted_data(array(
             "id" => "numeric|required"
         ));
@@ -393,8 +385,7 @@ class Roles extends Security_Controller
     }
 
     //delete or undo a role
-    function delete()
-    {
+    function delete() {
         $this->validate_submitted_data(array(
             "id" => "numeric|required"
         ));
@@ -416,8 +407,7 @@ class Roles extends Security_Controller
     }
 
     //get role list data
-    function list_data()
-    {
+    function list_data() {
         $list_data = $this->Roles_model->get_details()->getResult();
         $result = array();
         foreach ($list_data as $data) {
@@ -427,16 +417,14 @@ class Roles extends Security_Controller
     }
 
     //get a row of role list
-    private function _row_data($id)
-    {
+    private function _row_data($id) {
         $options = array("id" => $id);
         $data = $this->Roles_model->get_details($options)->getRow();
         return $this->_make_row($data);
     }
 
     //make a row of role list table
-    private function _make_row($data)
-    {
+    private function _make_row($data) {
         return array(
             "<a href='#' data-id='$data->id' class='role-row link'>" . $data->title . "</a>",
             "<a class='edit'><i data-feather='sliders' class='icon-16'></i></a>" . modal_anchor(get_uri("roles/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "", "title" => app_lang('edit_role'), "data-post-id" => $data->id))
@@ -445,14 +433,12 @@ class Roles extends Security_Controller
     }
 
     //load the user roles view
-    function user_roles()
-    {
+    function user_roles() {
         return $this->template->rander("roles/user_roles/index");
     }
 
     //list of user roles for datatable
-    function user_role_list_data()
-    {
+    function user_role_list_data() {
         $options = array(
             "status" => $this->request->getPost("status"),
             "user_type" => "staff"
@@ -471,16 +457,14 @@ class Roles extends Security_Controller
     }
 
     //reaturn a row of user roles list table
-    private function _user_role_row_data($id)
-    {
+    private function _user_role_row_data($id) {
         $options = array("id" => $id);
         $data = $this->Users_model->get_details($options)->getRow();
         return $this->_make_user_role_row($data);
     }
 
     //prepare a row of user roles list table
-    private function _make_user_role_row($data)
-    {
+    private function _make_user_role_row($data) {
         $full_name = $data->first_name . " " . $data->last_name;
 
         $role_title = $data->role_title;
@@ -503,9 +487,10 @@ class Roles extends Security_Controller
     }
 
     //load user roles add/edit modal
-    function user_role_modal_form()
-    {
+    function user_role_modal_form() {
         $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
         $view_data['role_dropdown'] = $this->_get_roles_dropdown();
 
         $options = array(
@@ -525,9 +510,10 @@ class Roles extends Security_Controller
     }
 
     //save a user role
-    function save_user_role()
-    {
+    function save_user_role() {
         $user_id = $this->request->getPost('user_id');
+        validate_numeric_value($user_id);
+
         $user_info = $this->Users_model->get_one($user_id);
 
         $role = $this->request->getPost('role');
@@ -554,5 +540,5 @@ class Roles extends Security_Controller
     }
 }
 
-/* End of file roles.php */
-/* Location: ./app/controllers/roles.php */
+/* End of file Roles.php */
+/* Location: ./app/Controllers/Roles.php */

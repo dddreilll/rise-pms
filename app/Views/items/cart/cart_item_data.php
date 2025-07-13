@@ -8,7 +8,7 @@
     <div class="box-content cart-item-details-container cart-item-details">
         <div class="ml15">
             <strong><?php echo $item->title; ?></strong>
-            <div class='text-off'><?php echo nl2br($item->description ? process_images_from_content($item->description) : ""); ?></div>
+            <div class='text-off'><?php echo custom_nl2br($item->description ? process_images_from_content($item->description) : ""); ?></div>
         </div>
     </div>
 

@@ -18,6 +18,7 @@ class Tickets_model extends Crud_model {
         $users_table = $this->db->prefixTable('users');
         $project_table = $this->db->prefixTable("projects");
         $task_table = $this->db->prefixTable("tasks");
+        $ticket_comments_table = $this->db->prefixTable('ticket_comments');
 
         $where = "";
         $id = $this->_get_clean_value($options, "id");
@@ -40,8 +41,15 @@ class Tickets_model extends Crud_model {
         $status = $this->_get_clean_value($options, "status");
         if ($status === "closed") {
             $where .= " AND $tickets_table.status='$status'";
-        } if ($status === "open") {
+        }
+
+        if ($status === "open") {
             $where .= " AND FIND_IN_SET($tickets_table.status, 'new,open,client_replied')";
+        }
+
+        $statuses = $this->_get_clean_value($options, "statuses");
+        if ($statuses) {
+            $where .= " AND FIND_IN_SET($tickets_table.status, '$statuses')";
         }
 
         $ticket_label = $this->_get_clean_value($options, "ticket_label");
@@ -129,12 +137,11 @@ class Tickets_model extends Crud_model {
             $order = " ORDER BY $order_by $order_dir ";
         }
 
-
         $search_by = get_array_value($options, "search_by");
+        $search_by = $search_by? $this->db->escapeLikeString($search_by): "";
+        $search_by = $this->_get_clean_value($options, "search_by");
         if ($search_by) {
-            $search_by = $this->db->escapeLikeString($search_by);
             $labels_table = $this->db->prefixTable("labels");
-
             $where .= " AND (";
             $where .= " $tickets_table.id LIKE '%$search_by%' ESCAPE '!' ";
             $where .= " OR $tickets_table.title LIKE '%$search_by%' ESCAPE '!' ";
@@ -147,11 +154,45 @@ class Tickets_model extends Crud_model {
             $where .= " )";
         }
 
+        $ticket_client_info_select = "";
+        $client_tickets_count_join = "";
+        $in_out_message_count_select = "";
+        $in_out_ticket_comments_count_join = "";
 
+        if ($id) {
+            $ticket_client_info_select = ", $clients_table.phone AS company_phone ";
+
+            //count tickets by client id
+            $ticket_client_info_select .= ", client_tickets_table.total_tickets ";
+            $client_tickets_count_join = " LEFT JOIN (
+                SELECT client_id, COUNT(id) AS total_tickets 
+                FROM $tickets_table 
+                WHERE deleted=0 
+                GROUP BY client_id
+            ) AS client_tickets_table 
+            ON client_tickets_table.client_id = $tickets_table.client_id ";
+
+            //count in and out messages
+            $in_out_message_count_select = ", in_message_table.in_message_count, out_message_table.out_message_count";
+            $in_out_ticket_comments_count_join = "
+            LEFT JOIN (
+                SELECT ticket_id, COUNT(id) AS in_message_count
+                FROM $ticket_comments_table
+                WHERE deleted=0 AND created_by IN (SELECT id FROM $users_table WHERE $users_table.user_type = 'client')
+                GROUP BY ticket_id
+            ) AS in_message_table ON in_message_table.ticket_id = $tickets_table.id 
+             
+            LEFT JOIN (
+                SELECT ticket_id, COUNT(id) AS out_message_count
+                FROM $ticket_comments_table
+                WHERE deleted=0 AND is_note = 0 AND created_by IN (SELECT id FROM $users_table WHERE $users_table.user_type = 'staff')
+                GROUP BY ticket_id
+            ) AS out_message_table ON out_message_table.ticket_id = $tickets_table.id";
+        }
 
         $sql = "SELECT SQL_CALC_FOUND_ROWS $tickets_table.*, $ticket_types_table.title AS ticket_type, $clients_table.company_name, $project_table.title AS project_title, $task_table.title AS task_title,
               CONCAT(assigned_table.first_name, ' ',assigned_table.last_name) AS assigned_to_user, assigned_table.image as assigned_to_avatar, $select_labels_data_query $select_custom_fieds,
-              CONCAT(requested_table.first_name, ' ',requested_table.last_name) AS requested_by_name
+              CONCAT(requested_table.first_name, ' ',requested_table.last_name) AS requested_by_name, requested_table.image as requested_by_avatar $ticket_client_info_select $in_out_message_count_select
         FROM $tickets_table
         LEFT JOIN $ticket_types_table ON $ticket_types_table.id= $tickets_table.ticket_type_id
         LEFT JOIN $clients_table ON $clients_table.id= $tickets_table.client_id
@@ -159,15 +200,17 @@ class Tickets_model extends Crud_model {
         LEFT JOIN $users_table AS requested_table ON requested_table.id= $tickets_table.requested_by
         LEFT JOIN $project_table ON $project_table.id= $tickets_table.project_id
         LEFT JOIN $task_table ON $task_table.id= $tickets_table.task_id
+        $client_tickets_count_join
+        $in_out_ticket_comments_count_join
         $join_custom_fieds    
         WHERE $tickets_table.deleted=0 $where $custom_fields_where
         $order $limit_offset";
 
         $raw_query = $this->db->query($sql);
 
-        $total_rows = $this->db->query("SELECT FOUND_ROWS() as found_rows")->getRow();
-
         if ($limit) {
+            $total_rows = $this->db->query("SELECT FOUND_ROWS() as found_rows")->getRow();
+
             return array(
                 "data" => $raw_query->getResult(),
                 "recordsTotal" => $total_rows->found_rows,
@@ -181,6 +224,9 @@ class Tickets_model extends Crud_model {
     function count_new_tickets($ticket_types = "", $show_assigned_tickets_only_user_id = 0) {
         $tickets_table = $this->db->prefixTable('tickets');
         $where = "";
+        $ticket_types = $this->_get_clean_value($ticket_types);
+        $show_assigned_tickets_only_user_id = $this->_get_clean_value($show_assigned_tickets_only_user_id);
+
         if ($ticket_types) {
             $where = " AND FIND_IN_SET($tickets_table.ticket_type_id, '$ticket_types')";
         }
@@ -206,6 +252,7 @@ class Tickets_model extends Crud_model {
     function delete_ticket_and_sub_items($ticket_id) {
         $tickets_table = $this->db->prefixTable('tickets');
         $ticket_comments_table = $this->db->prefixTable('ticket_comments');
+        $ticket_id = $this->_get_clean_value($ticket_id);
 
         //get ticket comments info to delete the files from directory 
         $ticket_comments_sql = "SELECT * FROM $ticket_comments_table WHERE $ticket_comments_table.deleted=0 AND $ticket_comments_table.ticket_id=$ticket_id; ";
@@ -284,7 +331,8 @@ class Tickets_model extends Crud_model {
         $status = $this->_get_clean_value($options, "status");
         if ($status === "closed") {
             $where .= " AND $tickets_table.status='$status'";
-        } if ($status === "open") {
+        }
+        if ($status === "open") {
             $where .= " AND FIND_IN_SET($tickets_table.status, 'new,open,client_replied')";
         }
 

@@ -11,7 +11,7 @@
 
                         <div class="title-button-group">
                             <span class="dropdown inline-block mt15">
-                                <button class="btn btn-info text-white dropdown-toggle caret mt0 mb0" type="button" data-bs-toggle="dropdown" aria-expanded="true">
+                                <button class="btn btn-primary text-white dropdown-toggle caret mt0 mb0" type="button" data-bs-toggle="dropdown" aria-expanded="true">
                                     <i data-feather="tool" class="icon-16"></i> <?php echo app_lang('actions'); ?>
                                 </button>
                                 <ul class="dropdown-menu" role="menu">
@@ -29,7 +29,7 @@
                                         <li role="presentation"><?php echo modal_anchor(get_uri("invoices/modal_form"), "<i data-feather='file-text' class='icon-16'></i> " . app_lang('create_invoice'), array("title" => app_lang("create_invoice"), "data-post-order_id" => $order_info->id, "class" => "dropdown-item")); ?> </li>
                                     <?php } ?>
                                     <?php if ($can_create_projects && !$order_info->project_id) { ?>
-                                        <li role="presentation"><?php echo modal_anchor(get_uri("projects/modal_form"), "<i data-feather='grid' class='icon-16'></i> " . app_lang('create_project'), array("title" => app_lang("create_project"), "data-post-order_id" => $order_info->id, "data-post-client_id" => $order_info->client_id, "class" => "dropdown-item")); ?> </li>
+                                        <li role="presentation"><?php echo modal_anchor(get_uri("projects/modal_form"), "<i data-feather='command' class='icon-16'></i> " . app_lang('create_project'), array("title" => app_lang("create_project"), "data-post-context" => "order", "data-post-context_id" => $order_info->id, "data-post-client_id" => $order_info->client_id, "class" => "dropdown-item")); ?> </li>
                                     <?php } ?>
 
                                 </ul>
@@ -38,10 +38,10 @@
                     </div>
 
                     <ul id="order-tabs" data-bs-toggle="ajax-tab" class="nav nav-pills rounded classic mb20 scrollable-tabs border-white" role="tablist">
-                        <li><a role="presentation" data-bs-toggle="tab"  href="<?php echo_uri("orders/details/" . $order_info->id); ?>" data-bs-target="#order-details-section"><?php echo app_lang("details"); ?></a></li>
+                        <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("orders/details/" . $order_info->id); ?>" data-bs-target="#order-details-section"><?php echo app_lang("details"); ?></a></li>
                         <?php if ($can_view_invoices) { ?>
-                            <li><a role="presentation" data-bs-toggle="tab"  href="<?php echo_uri("orders/invoices/" . $order_info->id); ?>" data-bs-target="#order-invoices-section"><?php echo app_lang("invoices"); ?></a></li>
-                            <li><a role="presentation" data-bs-toggle="tab"  href="<?php echo_uri("orders/invoice_payment_list/" . $order_info->id); ?>" data-bs-target="#order-invoice-payment-list-section"><?php echo app_lang("invoice_payment_list"); ?></a></li>
+                            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("orders/invoices/" . $order_info->id); ?>" data-bs-target="#order-invoices-section"><?php echo app_lang("invoices"); ?></a></li>
+                            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("orders/invoice_payment_list/" . $order_info->id); ?>" data-bs-target="#order-invoice-payment-list-section"><?php echo app_lang("invoice_payment_list"); ?></a></li>
                         <?php } ?>
                         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("orders/tasks/" . $order_info->id); ?>" data-bs-target="#order-tasks-section"><?php echo app_lang('tasks'); ?></a></li>
                     </ul>
@@ -56,16 +56,5 @@
         </div>
     </div>
 </div>
-
-<?php
-//required to send email 
-
-load_css(array(
-    "assets/js/summernote/summernote.css",
-));
-load_js(array(
-    "assets/js/summernote/summernote.min.js",
-));
-?>
 
 <?php echo view("orders/update_order_status_script", array("details_view" => true)); ?>

@@ -30,7 +30,7 @@
                     </div>
                 <?php } ?>
             </div>
-            <p><?php echo nl2br(link_it(process_images_from_content($comment->description))); ?></p>
+            <p><?php echo custom_nl2br(link_it(process_images_from_content($comment->description))); ?></p>
             <div class="comment-image-box clearfix w-auto">
 
                 <?php

@@ -85,12 +85,12 @@ class Checklist_template extends Security_Controller {
 
     //prepare checklist template list row
     private function _make_row($data) {
-        return array($data->title,
+        return array(
+            $data->title,
             modal_anchor(get_uri("checklist_template/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_checklist_template'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_checklist_template'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("checklist_template/delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_checklist_template'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("checklist_template/delete"), "data-action" => "delete"))
         );
     }
-
 }
 
 /* End of file Task_checklist_template.php */

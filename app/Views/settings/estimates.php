@@ -87,7 +87,10 @@
                                             "id" => "estimate_footer",
                                             "name" => "estimate_footer",
                                             "value" => process_images_from_content(get_setting('estimate_footer'), false),
-                                            "class" => "form-control"
+                                            "class" => "form-control",
+                                            "data-toolbar" => "pdf_friendly_toolbar",
+                                            "data-height" => 100,
+                                            "data-encode_ajax_post_data" => "1"
                                         ));
                                         ?>
                                     </div>
@@ -161,13 +164,6 @@
     $(document).ready(function () {
         $("#estimate-settings-form").appForm({
             isModal: false,
-            beforeAjaxSubmit: function (data) {
-                $.each(data, function (index, obj) {
-                    if (obj.name === "estimate_footer") {
-                        data[index]["value"] = encodeAjaxPostData(getWYSIWYGEditorHTML("#estimate_footer"));
-                    }
-                });
-            },
             onSuccess: function (result) {
                 if (result.success) {
                     appAlert.success(result.message, {duration: 10000});
@@ -178,7 +174,7 @@
         });
         $("#estimate-settings-form .select2").select2();
 
-        initWYSIWYGEditor("#estimate_footer", {height: 100});
+        initWYSIWYGEditor("#estimate_footer");
 
         $(".cropbox-upload").change(function () {
             showCropBox(this);

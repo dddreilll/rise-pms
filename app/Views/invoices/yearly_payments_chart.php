@@ -1,7 +1,7 @@
-<div class="card">
+<div class="payment-received-chart">
     <div class="card-header clearfix border-bottom-0">
         <div class="float-start strong"><i data-feather="bar-chart-2" class="icon-16"></i>&nbsp; <?php echo app_lang("chart"); ?></div>
-        <div class="float-end">
+        <div class="float-end payment-chart-button-section">
             <?php
             if ($currencies_dropdown) {
                 echo form_input(array(

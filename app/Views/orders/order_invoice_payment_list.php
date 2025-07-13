@@ -17,7 +17,7 @@
                 {title: "<?php echo app_lang("invoice_id") ?>", "class": "w15p all"},
                 {visible: false, searchable: false},
                 {title: '<?php echo app_lang("payment_date") ?> ', "class": "w15p", "iDataSort": 1},
-                {title: '<?php echo app_lang("payment_method") ?>', "class": "w15p"},
+                {title: '<?php echo app_lang("payment_method") ?>', "class": "w15p all"},
                 {title: '<?php echo app_lang("note") ?>', "class": "w15p"},
                 {title: '<?php echo app_lang("amount") ?>', "class": "text-right w15p"},
                 {visible: false, searchable: false}

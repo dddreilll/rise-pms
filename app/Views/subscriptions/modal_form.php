@@ -255,12 +255,13 @@
 
         setDatePicker("#today_date");
 
+        var dynamicDates = getDynamicDates();
         setDatePicker("#subscription_bill_date", {
-            startDate: moment().local().format() //set min date = today
+            startDate: dynamicDates.today //set min date = today
         });
 
         setDatePicker("#next_recurring_date", {
-            startDate: moment().add(1, 'days').local().format() //set min date = tomorrow
+            startDate: dynamicDates.tomorrow //set min date = tomorrow
         });
 
         $('[data-bs-toggle="tooltip"]').tooltip();

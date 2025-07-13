@@ -29,8 +29,8 @@
             source: '<?php echo_uri("clients/contacts_list_data/" . $client_id) ?>',
             order: [[1, "asc"]],
             columns: [
-                {title: '', "class": "w50 text-center"},
-                {title: "<?php echo app_lang("name") ?>"},
+                {title: '', "class": "w50 text-center all"},
+                {title: "<?php echo app_lang("name") ?>", "class": "all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("job_title") ?>", "class": "w15p"},
                 {title: "<?php echo app_lang("email") ?>", "class": "w20p"},

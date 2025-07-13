@@ -1,6 +1,8 @@
-.sidebar-scroll, #timeline .post-content .post-date span {
+.sidebar-scroll,
+#timeline .post-content .post-date span {
   background: #557bbb;
 }
+
 .sidebar-menu li a {
   color: rgba(255, 255, 255, 0.8);
 }
@@ -19,19 +21,21 @@
   color: #FFF !important;
   background-color: rgba(255, 255, 255, 0.2);
 }
+
 .sidebar-toggled .sidebar-menu li:hover {
   background-color: #557bbb;
 }
+
 .nav-tabs li a:hover, .nav-tabs li a:focus, .nav-tabs li a:active {
   color: #557bbb !important;
 }
 .nav-tabs li .active, .nav-tabs li.active {
   color: #557bbb !important;
-  border-color: #557bbb !important;
 }
-.nav-tabs li:not(.title-tab):after {
+.nav-tabs li:not(.title-tab) a::after {
   background-color: #557bbb;
 }
+
 .list-group-item.active {
   background: #557bbb;
   border-color: #557bbb;
@@ -40,44 +44,54 @@
   background: #557bbb;
   border-color: #557bbb;
 }
+
 .btn-primary {
   background-color: #557bbb;
   border-color: #557bbb;
 }
 .btn-primary:hover, .btn-primary:active, .btn-primary:focus {
-  background-color: #41609c;
-  border-color: #41609c;
+  background-color: #41609c !important;
+  border-color: #41609c !important;
   color: #FFF;
 }
+
 .bg-success {
   background-color: #41609c !important;
 }
+
 a {
   color: #41609c;
 }
 a:hover, a:focus, a:active {
   color: #2e4577;
 }
+
 .circle-done {
   color: #557bbb;
 }
+
 .app-alert.alert-success {
   background-color: #41609c;
   color: #fff;
 }
+
 .bg-dark-success {
   background: #2e4577;
 }
+
 .dataTable tbody tr.active td, .dataTable tbody tr.active:hover td {
   background: #557bbb !important;
 }
+
 td.dropdown-option button:hover {
   background: #557bbb;
   border-color: #557bbb;
 }
+
 .select2-results .select2-highlighted {
   background-color: #557bbb;
 }
+
 .datepicker table tr td.active.active {
   background: #557bbb;
   border-color: #557bbb;
@@ -98,9 +112,13 @@ td.dropdown-option button:hover {
   background: #557bbb;
   border-color: #557bbb;
 }
-.atwho-view .cur, .note-hint-group .active, .note-hint-item:hover {
+
+.atwho-view .cur,
+.note-hint-group .active,
+.note-hint-item:hover {
   background-color: #557bbb !important;
 }
+
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
 }
@@ -110,8 +128,33 @@ td.dropdown-option button:hover {
 .sidebar-scroll::-webkit-scrollbar-thumb:active {
   background: rgba(255, 255, 255, 0.2);
 }
+
 @media (min-width: 991px) {
   .sidebar {
     background: #557bbb;
   }
+}
+.bg-primary {
+  background-color: #557bbb !important;
+}
+
+.sidebar-brand {
+  background-color: #557bbb;
+}
+
+@media (max-width: 500px) {
+  .sidebar.sidebar-off {
+    background-color: #557bbb;
+  }
+  .sidebar .sidebar-scroll {
+    border-top-color: rgba(0, 0, 0, 0.0588235294) !important;
+  }
+  .sidebar #personal-language-icon,
+  .sidebar .sidebar-toggle-btn {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+}
+.form-check-input:checked {
+  background-color: #557bbb !important;
+  border-color: #557bbb !important;
 }

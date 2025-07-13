@@ -88,35 +88,49 @@
                 </div>
             </div>
 
+            <?php
+
+            if ($client_id) { ?>
+                <input type="hidden" name="expense_client_id" value="<?php echo $client_id; ?>" />
+            <?php } else if ($clients_dropdown) { ?>
+                <div class="form-group">
+                    <div class="row">
+                        <label for="client_id" class=" col-md-3"><?php echo app_lang('client'); ?></label>
+                        <div class=" col-md-9">
+                            <?php
+                            echo form_input(array(
+                                "id" => "expense_client_id",
+                                "name" => "expense_client_id",
+                                "value" => $model_info->client_id,
+                                "class" => "form-control",
+                                "data-roload_dropdown_on_change" => "#expense_project_id",
+                            ));
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+
             <?php if ($project_id) { ?>
                 <input type="hidden" name="expense_project_id" value="<?php echo $project_id; ?>" />
             <?php } else { ?>
-                <?php if ($login_user->is_admin || $can_access_clients && $can_access_expenses) { ?>
-
-                    <?php if ($client_id) { ?>
-                        <input type="hidden" name="expense_client_id" value="<?php echo $client_id; ?>" />
-                    <?php } else { ?>
-                        <div class="form-group">
-                            <div class="row">
-                                <label for="expense_client_id" class="col-md-3"><?php echo app_lang('client'); ?></label>
-                                <div class="col-md-9">
-                                    <?php
-                                    echo form_dropdown("expense_client_id", $clients_dropdown, $model_info->client_id, "class='select2' id='expense_client_id'");
-                                    ?>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                <?php } ?>
-
                 <div class="form-group">
                     <div class="row">
-                        <label for="expense_project_id" class=" col-md-3"><?php echo app_lang('project'); ?></label>
+                        <label for="expense_project_id" class="col-md-3"><?php echo app_lang('project'); ?></label>
                         <div class=" col-md-9">
                             <?php
-                            echo form_dropdown("expense_project_id", $projects_dropdown, $model_info->project_id, "class='select2 validate-hidden' id='expense_project_id'");
+                            echo form_input(array(
+                                "id" => "expense_project_id",
+                                "name" => "expense_project_id",
+                                "value" => $model_info->project_id,
+                                "class" => "form-control",
+                                "data-source_url" => get_uri("expenses/get_projects_dropdown"),
+                                "data-post_field_values_of" => "expense_client_id",
+                            ));
+
                             ?>
                         </div>
+
                     </div>
                 </div>
             <?php } ?>
@@ -156,15 +170,15 @@
 
             <div class="form-group">
                 <div class="row">
-                    <label for="expense_recurring" class=" col-md-3"><?php echo app_lang('recurring'); ?>  <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather="help-circle" class="icon-16"></i></span></label>
+                    <label for="expense_recurring" class=" col-md-3"><?php echo app_lang('recurring'); ?> <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('cron_job_required'); ?>"><i data-feather="help-circle" class="icon-16"></i></span></label>
                     <div class=" col-md-9">
                         <?php
                         echo form_checkbox("recurring", "1", $model_info->recurring ? true : false, "id='expense_recurring' class='form-check-input'");
-                        ?>                       
+                        ?>
                     </div>
                 </div>
             </div>
-            <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>"> 
+            <div id="recurring_fields" class="<?php if (!$model_info->recurring) echo "hide"; ?>">
                 <div class="form-group">
                     <div class="row">
                         <label for="repeat_every" class=" col-md-3"><?php echo app_lang('repeat_every'); ?></label>
@@ -186,17 +200,20 @@
                         <div class="col-md-5">
                             <?php
                             echo form_dropdown(
-                                    "repeat_type", array(
-                                "days" => app_lang("interval_days"),
-                                "weeks" => app_lang("interval_weeks"),
-                                "months" => app_lang("interval_months"),
-                                "years" => app_lang("interval_years"),
-                                    ), $model_info->repeat_type ? $model_info->repeat_type : "months", "class='select2 recurring_element' id='repeat_type'"
+                                "repeat_type",
+                                array(
+                                    "days" => app_lang("interval_days"),
+                                    "weeks" => app_lang("interval_weeks"),
+                                    "months" => app_lang("interval_months"),
+                                    "years" => app_lang("interval_years"),
+                                ),
+                                $model_info->repeat_type ? $model_info->repeat_type : "months",
+                                "class='select2 recurring_element' id='repeat_type'"
                             );
                             ?>
                         </div>
-                    </div>    
-                </div>    
+                    </div>
+                </div>
 
                 <div class="form-group">
                     <div class="row">
@@ -218,13 +235,11 @@
                             <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('recurring_cycle_instructions'); ?>"><i data-feather="help-circle" class="icon-16"></i></span>
                         </div>
                     </div>
-                </div>  
+                </div>
 
-
-
-                <div class = "form-group hide" id = "next_recurring_date_container" >
+                <div class="form-group hide" id="next_recurring_date_container">
                     <div class="row">
-                        <label for = "next_recurring_date" class = " col-md-3"><?php echo app_lang('next_recurring_date'); ?>  </label>
+                        <label for="next_recurring_date" class=" col-md-3"><?php echo app_lang('next_recurring_date'); ?> </label>
                         <div class=" col-md-9">
                             <?php
                             echo form_input(array(
@@ -240,9 +255,9 @@
                         </div>
                     </div>
                 </div>
-            </div> 
+            </div>
 
-            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?> 
+            <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?>
 
             <?php if ($is_clone) { ?>
                 <div class="form-group">
@@ -262,7 +277,7 @@
                 </div>
             </div>
 
-            <?php echo view("includes/dropzone_preview"); ?>  
+            <?php echo view("includes/dropzone_preview"); ?>
 
         </div>
     </div>
@@ -276,17 +291,20 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         $("#expense-form").appForm({
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 if (typeof $EXPENSE_TABLE !== 'undefined') {
-                    $EXPENSE_TABLE.appTable({newData: result.data, dataId: result.id});
+                    $EXPENSE_TABLE.appTable({
+                        newData: result.data,
+                        dataId: result.id
+                    });
                 } else {
                     location.reload();
                 }
             },
-            onAjaxSuccess: function (result) {
+            onAjaxSuccess: function(result) {
                 if (!result.success && result.next_recurring_date_error) {
                     $("#next_recurring_date").val(result.next_recurring_date_value);
                     $("#next_recurring_date_container").removeClass("hide");
@@ -300,12 +318,23 @@
 
         setDatePicker("#expense_date");
 
-        $("#expense-form .select2").select2();
+        $("#expense-form .select2").appDropdown();
+
+        $("#expense_project_id").appDropdown({
+            list_data: <?php echo json_encode($projects_dropdown); ?>
+        });
+
+        var clients_dropdown = <?php echo json_encode($clients_dropdown); ?>;
+        if (clients_dropdown) {
+            $("#expense_client_id").appDropdown({
+                list_data: clients_dropdown
+            });
+        }
 
         $('[data-bs-toggle="tooltip"]').tooltip();
 
         //show/hide recurring fields
-        $("#expense_recurring").click(function () {
+        $("#expense_recurring").click(function() {
             if ($(this).is(":checked")) {
                 $("#recurring_fields").removeClass("hide");
             } else {
@@ -313,8 +342,9 @@
             }
         });
 
+        var dynamicDates = getDynamicDates();
         setDatePicker("#next_recurring_date", {
-            startDate: moment().add(1, 'days').format("YYYY-MM-DD") //set min date = tomorrow
+            startDate: dynamicDates.tomorrow //set min date = tomorrow
         });
 
     });

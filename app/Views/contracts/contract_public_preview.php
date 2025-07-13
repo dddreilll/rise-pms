@@ -28,7 +28,11 @@
                 ));
 
                 $print_button = "<div class='float-end'>" . js_anchor("<i data-feather='printer' class='icon-16'></i> " . app_lang('print'), array('id' => 'print-contract-btn', "class" => "btn btn-default round mr10 mt4")) . "</div>";
-                $download_pdf_button = "<div class='float-end'>" . anchor(get_uri("contract/download_pdf/" . $contract_info->id . "/" . $contract_info->public_key), "<i data-feather='download' class='icon-16'></i> " . app_lang('download_pdf'), array("title" => app_lang('download_pdf'), "class" => "btn btn-default round mr10 mt4")) . "</div>";
+
+                $download_pdf_button = "";
+                if ($has_pdf_access) {
+                    $download_pdf_button = "<div class='float-end'>" . anchor(get_uri("contract/download_pdf/" . $contract_info->id . "/" . $contract_info->public_key), "<i data-feather='download' class='icon-16'></i> " . app_lang('download_pdf'), array("title" => app_lang('download_pdf'), "class" => "btn btn-default round mr10 mt4")) . "</div>";
+                }
                 ?>
 
                 <div class="contract-preview">

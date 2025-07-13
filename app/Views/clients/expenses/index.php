@@ -1,4 +1,4 @@
-<div class="card rounded-bottom">
+<div class="card rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('expenses'); ?></h4>
         <div class="title-button-group">
@@ -18,7 +18,7 @@
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("date") ?>', "iDataSort": 0},
+                {title: '<?php echo app_lang("date") ?>', "class": "all", "iDataSort": 0},
                 {title: '<?php echo app_lang("category") ?>'},
                 {title: '<?php echo app_lang("title") ?>'},
                 {title: '<?php echo app_lang("description") ?>'},
@@ -26,7 +26,7 @@
                 {title: '<?php echo app_lang("amount") ?>', "class": "text-right"},
                 {title: '<?php echo app_lang("tax") ?>', "class": "text-right"},
                 {title: '<?php echo app_lang("second_tax") ?>', "class": "text-right"},
-                {title: '<?php echo app_lang("total") ?>', "class": "text-right"}
+                {title: '<?php echo app_lang("total") ?>', "class": "text-right all"}
                 <?php echo $custom_field_headers; ?>
             ],
             summation: [{column: 6, dataType: 'currency'}, {column: 7, dataType: 'currency'}, {column: 8, dataType: 'currency'}, {column: 9, dataType: 'currency'}]

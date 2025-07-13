@@ -26,11 +26,11 @@
             filterDropdown: [{name: "status", class: "w150", options: <?php echo view("invoices/invoice_statuses_dropdown"); ?>}, <?php echo $custom_field_filters; ?>],
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("invoice_id") ?>", "class": "w10p", "iDataSort": 0},
+                {title: "<?php echo app_lang("invoice_id") ?>", "class": "w10p all", "iDataSort": 0},
                 {targets: [2], visible: false, searchable: false},
                 {targets: [3], visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("bill_date") ?>", "class": "w10p", "iDataSort": 4},
+                {title: "<?php echo app_lang("bill_date") ?>", "class": "w10p all", "iDataSort": 4},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("due_date") ?>", "class": "w10p", "iDataSort": 6},
                 {title: "<?php echo app_lang("total_invoiced") ?>", "class": "w10p text-right"},

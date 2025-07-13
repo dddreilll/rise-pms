@@ -14,7 +14,7 @@ if (version_compare($current_php_version, $php_version_required) >= 0) {
 $imap_extension_success = extension_loaded("imap") ? true : false;
 ?>
 
-<div class="card mb0">
+<div class="mb0">
 
     <?php if ($php_version_success && $imap_extension_success) { ?>
 

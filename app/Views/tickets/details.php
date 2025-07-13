@@ -1,131 +1,87 @@
 <div class="clearfix ">
-    <div class="row">
-        <div class="col-md-9 d-flex align-items-stretch">
-            <div class="card p15 b-t w-100" id="subscription-item-section">
+    <div class="ticket-details-container d-flex">
+        <div class="w-100">
+            <div class="card p15 b-t w-100 ticket-comments-section">
                 <?php echo view("tickets/view_data"); ?>
             </div>
         </div>
-        <div class="col-md-3 d-flex align-items-stretch">
-            <div class="card p15" id="subscription-info-section">
-                <div class="clearfix p20">
-                    <div class="row">
-                        <?php if ($login_user->user_type === "staff" && $ticket_info->client_id) { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("client") . ": "; ?></strong>
-                                <?php echo $ticket_info->company_name ? anchor(get_uri("clients/view/" . $ticket_info->client_id), $ticket_info->company_name) : "-"; ?>
-                            </div>
+        <div class="flex-shrink-0 details-view-right-section">
+            <div class="card" id="ticket-details-ticket-info"><?php echo view("tickets/ticket_info"); ?></div>
 
-                            <?php if ($ticket_info->requested_by) { ?>
-                                <div class="col-md-12 mb15">
-                                    <strong><?php echo app_lang("requested_by") . ": "; ?></strong>
-                                    <?php echo anchor(get_uri("clients/contact_profile/" . $ticket_info->requested_by), $ticket_info->requested_by_name ? $ticket_info->requested_by_name : ""); ?>
-                                </div>
+            <?php if ($login_user->user_type === "staff") { ?>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="text-center mb10">
+                            <?php if ($ticket_info->client_id) { ?>
+                                <?php if ($ticket_info->requested_by) { ?>
+                                    <div class="avatar avatar-xs mb5">
+                                        <img src="<?php echo get_avatar($ticket_info->requested_by_avatar); ?>" alt="..." />
+                                    </div>
+                                    <div><?php echo anchor(get_uri("clients/contact_profile/" . $ticket_info->requested_by), $ticket_info->requested_by_name ? $ticket_info->requested_by_name : "", array("class" => "dark")); ?></div>
+                                <?php } else {
+                                    echo $ticket_info->company_name ? anchor(get_uri("clients/view/" . $ticket_info->client_id), $ticket_info->company_name) : "-";
+                                } ?>
+                            <?php } else {
+                                echo $ticket_info->creator_name . " [" . app_lang("unknown_client") . "]";
+                            } ?>
+                        </div>
+
+                        <ul class="list-group info-list">
+
+                            <?php if ($ticket_info->company_name && $ticket_info->requested_by && ($ticket_info->company_name != $ticket_info->requested_by)) { ?>
+                                <li class="list-group-item">
+                                    <span title="<?php echo app_lang("client"); ?>"><i data-feather="briefcase" class="icon-16 mr5"></i> <?php echo $ticket_info->company_name ? anchor(get_uri("clients/view/" . $ticket_info->client_id), $ticket_info->company_name, array("class" => "dark")) : "-"; ?></span>
+                                </li>
                             <?php } ?>
 
-                        <?php } ?>
+                            <?php if ($ticket_info->client_id && $ticket_info->company_phone) { ?>
+                                <li class="list-group-item">
+                                    <span title="<?php echo app_lang("phone"); ?>"><i data-feather="phone" class="icon-16 mr5"></i> <?php echo $ticket_info->company_phone; ?></span>
+                                </li>
+                            <?php } ?>
+                            <?php if ($ticket_info->client_id && ($ticket_info->total_tickets > 1)) { ?>
+                                <li class="list-group-item">
+                                    <span"><i data-feather="package" class="icon-16 mr5"></i> <?php echo anchor(get_uri("tickets/index/all/0/" . $ticket_info->client_id), $ticket_info->total_tickets . " " . app_lang("tickets"), array("class" => "dark")); ?></span>
+                                </li>
+                            <?php } else if (!$ticket_info->client_id) { ?>
+                                <li class="list-group-item">
+                                    <span title="<?php echo app_lang("email"); ?>"><i data-feather="mail" class="icon-16 mr5"></i> <?php echo $ticket_info->creator_email ? $ticket_info->creator_email : "-"; ?></span>
+                                </li>
+                            <?php } ?>
 
-                        <div class="col-md-12 mb15">
-                            <strong><?php echo app_lang('status') . ": "; ?></strong>
-                            <?php
-                            $ticket_status_class = "bg-danger";
-                            if ($ticket_info->status === "new") {
-                                $ticket_status_class = "bg-warning";
-                            } else if ($ticket_info->status === "closed") {
-                                $ticket_status_class = "bg-success";
-                            }
-
-                            if ($ticket_info->status === "client_replied" && $login_user->user_type === "client") {
-                                $ticket_info->status = "open"; //don't show client_replied status to client
-                            }
-
-                            $ticket_status = "<span class='badge $ticket_status_class large'>" . app_lang($ticket_info->status) . "</span> ";
-                            echo $ticket_status;
-                            ?>
-                        </div>
-
-                        <?php if ($ticket_info->labels_list) { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("label") . ": "; ?></strong>
-                                <?php echo make_labels_view_data($ticket_info->labels_list); ?>
-                            </div>
-                        <?php } ?>
-
-                        <?php if ($ticket_info->project_id != "0" && $show_project_reference == "1") { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("project") . ": "; ?></strong>
-                                <?php echo $ticket_info->project_title ? anchor(get_uri("projects/view/" . $ticket_info->project_id), $ticket_info->project_title) : "-"; ?>
-                            </div>
-                        <?php } ?>
-
-                        <div class="col-md-12 mb15">
-                            <strong><?php echo app_lang("created") . ": "; ?></strong>
-                            <?php echo format_to_relative_time($ticket_info->created_at); ?> 
-                        </div>
-
-                        <?php if ($ticket_info->closed_at && $ticket_info->status == "closed") { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("closed") . ": "; ?></strong>
-                                <?php echo format_to_relative_time($ticket_info->closed_at); ?> 
-                            </div>
-                        <?php } ?>
-
-                        <?php if ($ticket_info->ticket_type) { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("ticket_type") . ": "; ?></strong>
-                                <?php echo $ticket_info->ticket_type; ?> 
-                            </div>
-                        <?php } ?>
-
-                        <?php
-                        if ($ticket_info->assigned_to && $login_user->user_type == "staff") {
-                            //show assign to field to team members only
-
-                            $image_url = get_avatar($ticket_info->assigned_to_avatar);
-                            $assigned_to_user = "<span class='avatar avatar-xs mr10'><img src='$image_url' alt='...'></span> $ticket_info->assigned_to_user";
-                            ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("assigned_to") . ": "; ?></strong>
-                                <?php echo get_team_member_profile_link($ticket_info->assigned_to, $assigned_to_user); ?>
-                            </div>
-                            <?php
-                        }
-                        ?>
-
-                        <?php if ($ticket_info->task_id != "0") { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("task") . ": "; ?></strong>
-                                <?php echo modal_anchor(get_uri("tasks/view"), $ticket_info->task_title, array("title" => app_lang('task_info') . " #$ticket_info->task_id", "data-post-id" => $ticket_info->task_id, "data-modal-lg" => "1")) ?>
-                            </div>
-                        <?php } ?>
-
-                        <?php if ($ticket_info->merged_with_ticket_id) { ?>
-                            <div class="col-md-12 mb15">
-                                <strong><?php echo app_lang("moved_to") . ": "; ?></strong>
-                                <?php echo anchor(get_uri("tickets/view/" . $ticket_info->merged_with_ticket_id), get_ticket_id($ticket_info->merged_with_ticket_id), array()); ?>
-                            </div>
-                        <?php } ?>
-
-                        <?php
-                        if (count($custom_fields_list)) {
-                            $fields = "";
-                            foreach ($custom_fields_list as $data) {
-                                if ($data->value) {
-                                    $fields .= "<div class='col-md-12 mb15'><strong> $data->title:</strong> " . view("custom_fields/output_" . $data->field_type, array("value" => $data->value)) . "</div>";
-                                }
-                            }
-                            if ($fields) {
-                                echo $fields;
-                            }
-                        }
-                        ?>
-
-                        <?php if (can_access_reminders_module()) { ?>
-                            <div class="col-md-12 mb15" id="ticket-reminders">
-                                <div class="mb15"><strong><?php echo app_lang("reminders") . " (" . app_lang('private') . ")" . ": "; ?> </strong></div>
-                                <?php echo view("reminders/reminders_view_data", array("ticket_id" => $ticket_info->id, "hide_form" => true, "reminder_view_type" => "ticket")); ?>
-                            </div>
-                        <?php } ?>
+                        </ul>
                     </div>
+                </div>
+
+                <div id="ticket-tasks-section">
+                    <?php echo view("tickets/tasks/index", array("ticket_info" => $ticket_info)); ?>
+                </div>
+            <?php } ?>
+
+            <?php if (can_access_reminders_module()) { ?>
+                <div class="card reminders-card" id="ticket-reminders">
+                    <div class="card-header fw-bold">
+                        <i data-feather="clock" class="icon-16"></i> &nbsp;<?php echo app_lang("reminders") . " (" . app_lang('private') . ")"; ?>
+                    </div>
+                    <div class="card-body">
+                        <?php echo view("reminders/reminders_view_data", array("ticket_id" => $ticket_info->id, "hide_form" => true, "reminder_view_type" => "ticket")); ?>
+                    </div>
+                </div>
+            <?php } ?>
+
+            <?php
+            $pinned_status = "hide";
+            if (count($pinned_comments)) {
+                $pinned_status = "";
+            }
+            ?>
+
+            <div class="card <?php echo $pinned_status; ?>" id="ticket-pinned-comments">
+                <div class="card-header fw-bold">
+                    <i data-feather="map-pin" class="icon-16"></i> &nbsp;<?php echo app_lang("pinned_comments"); ?>
+                </div>
+                <div class="card-body">
+                    <?php echo view("lib/pin_comments/comments_list"); ?>
                 </div>
             </div>
         </div>

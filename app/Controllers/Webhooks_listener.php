@@ -45,7 +45,7 @@ class Webhooks_listener extends App_Controller {
 
     private function _is_valid_payloads_of_bitbucket($payloads, $key) {
         $settings_key = get_setting("enable_bitbucket_commit_logs_in_tasks");
-        if ($settings_key && $settings_key == $key && $payloads && $payloads->push) {
+        if ($settings_key && $settings_key == $key && $payloads && isset($payloads->push) &&  $payloads->push) {
             return true;
         } else {
             return false;
@@ -224,7 +224,7 @@ class Webhooks_listener extends App_Controller {
     function stripe_subscription($key) {
         try {
             $payloads = json_decode(file_get_contents('php://input'));
-            if (!$this->_is_valid_payloads_of_stripe($payloads, $key)) {
+            if (!$this->_is_valid_payloads_of_stripe_subscription($payloads, $key)) {
                 app_redirect("forbidden");
             }
         } catch (\Exception $ex) {
@@ -241,7 +241,7 @@ class Webhooks_listener extends App_Controller {
         }
     }
 
-    private function _is_valid_payloads_of_stripe($payloads, $key) {
+    private function _is_valid_payloads_of_stripe_subscription($payloads, $key) {
         $settings_key = get_setting("webhook_listener_link_of_stripe_subscription");
         if ($settings_key && $settings_key == $key && $payloads) {
             return true;
@@ -326,7 +326,78 @@ class Webhooks_listener extends App_Controller {
         $this->Subscriptions_model->ci_save($subscription_data, $subscription_info->id);
     }
 
+    function stripe_payment($key) {
+        try {
+            $payloads = json_decode(file_get_contents('php://input'));
+            if (!$this->_is_valid_payloads_of_stripe_payment($payloads, $key)) {
+                app_redirect("forbidden");
+            }
+        } catch (\Exception $ex) {
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            exit();
+        }
+
+        if ($payloads->type === "checkout.session.completed") {
+            $this->_invoice_payment_succeeded($payloads);
+        }
+    }
+
+    private function _is_valid_payloads_of_stripe_payment($payloads, $key) {
+        $Payment_methods_model = model("App\Models\Payment_methods_model");
+        $stripe_config = $Payment_methods_model->get_oneline_payment_method("stripe");
+
+        $settings_key = $stripe_config->webhook_listener_link;
+        if ($settings_key && $settings_key == $key && $payloads) {
+            return true;
+        }
+    }
+
+    private function _invoice_payment_succeeded($payloads) {
+        $Stripe = new Stripe();
+
+        $session_id = $payloads->data->object->id;
+        $session = $Stripe->retrieve_session($session_id);
+        $payment_intent = $Stripe->retrieve_payment_intent($session->payment_intent);
+
+        if (!($payment_intent && $payment_intent->metadata && $payment_intent->status == "succeeded")) {
+            show_404();
+        }
+
+        //so, the payment is valid
+        //save the payment
+        $payment_intent_metadata = $payment_intent->metadata;
+        $invoice_id = $payment_intent_metadata->invoice_id;
+
+        $invoice_payment_data = array(
+            "invoice_id" => $invoice_id,
+            "payment_date" => get_current_utc_time(),
+            "payment_method_id" => $payment_intent_metadata->payment_method_id,
+            "note" => "",
+            "amount" => $payment_intent->amount / 100,
+            "transaction_id" => $payment_intent->id,
+            "created_at" => get_current_utc_time(),
+            "created_by" => $payment_intent_metadata->contact_user_id,
+        );
+
+        //check if already a payment done with this transaction
+        $existing = $this->Invoice_payments_model->get_one_where(array("transaction_id" => $payment_intent->id));
+        if ($existing->id) {
+            show_404();
+        }
+
+        $invoice_payment_id = $this->Invoice_payments_model->ci_save($invoice_payment_data);
+        if (!$invoice_payment_id) {
+            show_404();
+        }
+
+        //as receiving payment for the invoice, we'll remove the 'draft' status from the invoice 
+        $this->Invoices_model->update_invoice_status($invoice_id);
+
+        log_notification("invoice_payment_confirmation", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), "0");
+
+        log_notification("invoice_online_payment_received", array("invoice_payment_id" => $invoice_payment_id, "invoice_id" => $invoice_id), $payment_intent_metadata->contact_user_id);
+    }
 }
 
 /* End of file Webhooks_listener.php */
-/* Location: ./app/Controllers/Webhooks_listener.php */    
+/* Location: ./app/Controllers/Webhooks_listener.php */

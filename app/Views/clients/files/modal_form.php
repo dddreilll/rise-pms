@@ -14,13 +14,20 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#file-form").appForm({
-            onSuccess: function (result) {
-                $("#client-file-table").appTable({reload: true});
+            onSuccess: function(result) {
+
+                if ($("#file-manager-container-card").is(":visible")) {
+                    location.reload();
+                }
+                
+                $("#client-file-table").appTable({
+                    reload: true
+                });
+
             }
         });
 
     });
-
-</script>    
+</script>

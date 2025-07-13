@@ -1,7 +1,7 @@
 <div class="modal-body clearfix general-form">
     <div class="container-fluid">
         <div class="form-group">
-            <div  class="col-md-12 notepad-title">
+            <div  class="col-md-12 notepad-title" style="border-left: 5px solid <?php echo $model_info->color ? $model_info->color : "#6690F4"; ?> !important;">
                 <strong><?php echo $model_info->title; ?></strong>
                 <?php
                 if ($model_info->is_public) {
@@ -19,7 +19,7 @@
         </div>
         <div class="col-md-12 mb15 notepad">
             <?php
-            echo nl2br(convert_comment_link(process_images_from_content($model_info->description)));
+            echo custom_nl2br(convert_comment_link(process_images_from_content($model_info->description)));
             ?>
         </div>
 

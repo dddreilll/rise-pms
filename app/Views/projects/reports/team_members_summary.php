@@ -2,7 +2,7 @@
 
 <div id="page-content" class="page-wrapper clearfix grid-button">
     <div class="card clearfix">
-        <ul id="project-reports-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner" role="tablist">
+        <ul id="project-reports-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner scrollable-tabs" role="tablist">
             <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("projects"); ?></h4></li>
             <li><a role="presentation" data-bs-toggle="tab"  href="javascript:;" data-bs-target="#team-members-summary-tab"><?php echo app_lang("team_members_summary"); ?></a></li>
             <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("projects/clients_summary"); ?>" data-bs-target="#clints-summary-tab"><?php echo app_lang('clients_summary'); ?></a></li>
@@ -30,8 +30,8 @@
             source: '<?php echo_uri("projects/team_members_summary_data") ?>',
             rangeDatepicker: [{startDate: {name: "start_date_from", value: ""}, endDate: {name: "start_date_to", value: ""}, showClearButton: true, label: "<?php echo app_lang('project_start_date'); ?>", ranges: ['this_month', 'last_month', 'this_year', 'last_year', 'last_30_days', 'last_7_days']}],
             columns: [
-                {title: '<?php echo app_lang("team_member") ?> '},
-                {title: '<?php echo $project_status_text_info->open . " " . app_lang("projects") ?>', class: "text-right"},
+                {title: '<?php echo app_lang("team_member") ?>', "class": "all"},
+                {title: '<?php echo $project_status_text_info->open . " " . app_lang("projects") ?>', class: "text-right all"},
                 {title: '<?php echo $project_status_text_info->completed . " " . app_lang("projects") ?>', class: "text-right"},
                 {title: '<?php echo $project_status_text_info->hold . " " . app_lang("projects") ?>', class: "text-right"},
                 {title: '<?php echo app_lang("open_tasks") ?>', class: "text-right"},

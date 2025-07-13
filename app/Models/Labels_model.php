@@ -34,12 +34,14 @@ class Labels_model extends Crud_model {
         $sql = "SELECT $labels_table.*
         FROM $labels_table
         WHERE $labels_table.deleted=0 $where 
-        ORDER BY $labels_table.id DESC";
+        ORDER BY $labels_table.title ASC";
 
         return $this->db->query($sql);
     }
 
     function label_group_list($label_ids = "") {
+        $label_ids = $this->_get_clean_value($label_ids);
+        
         if (preg_match('/[A-Za-z]/', $label_ids)) {
             //strings found, prepare class object with values
             $result = new \stdClass();
@@ -57,9 +59,12 @@ class Labels_model extends Crud_model {
 
     function is_label_exists($id = 0, $type = "") {
         if ($id && $type) {
+            $id = $this->_get_clean_value($id);
+            $type = $this->_get_clean_value($type);
+            
             $table = $this->db->prefixTable($type);
 
-            $sql = "SELECT COUNT($table.id) AS existing_labels FROM $table WHERE $table.deleted=0 AND $table.labels REGEXP '[[:<:]]" . $id . "[[:>:]]'";
+            $sql = "SELECT COUNT($table.id) AS existing_labels FROM $table WHERE $table.deleted=0 AND FIND_IN_SET('$id', $table.labels)";
 
             return $this->db->query($sql)->getRow()->existing_labels;
         }

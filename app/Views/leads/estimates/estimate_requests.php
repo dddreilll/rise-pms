@@ -1,4 +1,4 @@
-<div class="card no-border-top-radius">
+<div class="card border-top-0 rounded-top-0">
 
     <?php if ($login_user->user_type == "staff") { ?>
         <div class="tab-title clearfix">
@@ -26,7 +26,7 @@
             columns: [
                 {title: "<?php echo app_lang('id'); ?>"},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang('title'); ?>"},
+                {title: "<?php echo app_lang('title'); ?>", "class": "all"},
                 {title: "<?php echo app_lang('assigned_to'); ?>", visible: fieldVisibility},
                 {visible: false, searchable: false},
                 {title: '<?php echo app_lang("created_date") ?>', "iDataSort": 3},

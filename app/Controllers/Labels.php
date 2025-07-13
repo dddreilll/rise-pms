@@ -31,7 +31,7 @@ class Labels extends Security_Controller {
                     return false;
                 }
             }
-            
+
             return true;
         } else if ($context == "task" && ($this->can_manage_all_projects() || get_array_value($this->login_user->permissions, "can_edit_tasks") == "1")) {
             return true;
@@ -58,7 +58,7 @@ class Labels extends Security_Controller {
             $model_info = new \stdClass();
             $model_info->color = "";
 
-            $view_data["type"] = $type;
+            $view_data["type"] = clean_data($type);
             $view_data["model_info"] = $model_info;
 
             $view_data["existing_labels"] = $this->_make_existing_labels_data($type);
@@ -87,7 +87,7 @@ class Labels extends Security_Controller {
     }
 
     private function _get_labels_row_data($data) {
-        return "<span data-act='label-edit-delete' data-id='" . $data->id . "' data-color='" . $data->color . "' class='badge large mr5 clickable' style='background-color: " . $data->color . "'>" . $data->title . "</span>";
+        return "<span data-act='label-edit-delete' data-id='" . $data->id . "' data-color='" . $data->color . "' class='badge mr5 clickable' style='background-color: " . $data->color . "'>" . $data->title . "</span>";
     }
 
     function save() {
@@ -104,7 +104,7 @@ class Labels extends Security_Controller {
             app_redirect("forbidden");
         }
 
-        $label_data = array(
+        $data = array(
             "context" => $context,
             "title" => $this->request->getPost("title"),
             "color" => $this->request->getPost("color")
@@ -112,10 +112,11 @@ class Labels extends Security_Controller {
 
         //save user_id for only events and personal notes
         if ($context == "event" || $context == "to_do" || $context == "note") {
-            $label_data["user_id"] = $this->login_user->id;
+            $data["user_id"] = $this->login_user->id;
         }
 
-        $save_id = $this->Labels_model->ci_save($label_data, $id);
+        $data = clean_data($data);
+        $save_id = $this->Labels_model->ci_save($data, $id);
 
         if ($save_id) {
             $label_info = $this->Labels_model->get_one($save_id);
@@ -128,6 +129,8 @@ class Labels extends Security_Controller {
     function delete() {
         $id = $this->request->getPost("id");
         $type = $this->request->getPost("type");
+
+        validate_numeric_value($id);
 
         if (!$this->can_access_labels_of_this_context($type, $id)) {
             app_redirect("forbidden");

@@ -66,7 +66,7 @@ class Messages_model extends Crud_model {
         $offset = $this->_get_clean_value($options, "offset");
         $offset = $offset ? $offset : "0";
 
-        $sql = "SELECT * FROM (SELECT 0 AS reply_message_id, $messages_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS user_name, $users_table.image AS user_image, $users_table.user_type, CONCAT(another_user.first_name, ' ', another_user.last_name) AS another_user_name, another_user.id AS another_user_id, another_user.last_online AS another_user_last_online
+        $sql = "SELECT * FROM (SELECT 0 AS reply_message_id, $messages_table.*, CONCAT($users_table.first_name, ' ', $users_table.last_name) AS user_name, $users_table.image AS user_image, $users_table.user_type, CONCAT(another_user.first_name, ' ', another_user.last_name) AS another_user_name, another_user.id AS another_user_id, another_user.last_online AS another_user_last_online, another_user.image AS another_user_image
         FROM $messages_table
         LEFT JOIN $users_table ON $users_table.id=$join_with
         LEFT JOIN $users_table AS another_user ON another_user.id=$join_another
@@ -172,6 +172,12 @@ class Messages_model extends Crud_model {
     function count_notifications($user_id, $last_message_checke_at = "0", $active_message_id = 0, $user_ids = "") {
         $messages_table = $this->db->prefixTable('messages');
 
+        $user_id = $this->_get_clean_value($user_id);
+        $last_message_checke_at = $this->_get_clean_value($last_message_checke_at);
+        $active_message_id = $this->_get_clean_value($active_message_id);
+        $user_ids = $this->_get_clean_value($user_ids);
+
+
         $where = "";
         if ($active_message_id) {
             $where = " AND $messages_table.message_id!=$active_message_id";
@@ -197,12 +203,19 @@ class Messages_model extends Crud_model {
 
     function set_message_status_as_read($message_id, $user_id = 0) {
         $messages_table = $this->db->prefixTable('messages');
+
+        $message_id = $this->_get_clean_value($message_id);
+        $user_id = $this->_get_clean_value($user_id);
+
         $sql = "UPDATE $messages_table SET status='read' WHERE $messages_table.to_user_id=$user_id AND ($messages_table.message_id=$message_id OR $messages_table.id=$message_id)";
         return $this->db->query($sql);
     }
 
     function count_unread_message($user_id = 0, $user_ids = "") {
         $messages_table = $this->db->prefixTable('messages');
+
+        $user_id = $this->_get_clean_value($user_id);
+        $user_ids = $this->_get_clean_value($user_ids);
 
         $where = "";
         if ($user_ids) {
@@ -216,6 +229,9 @@ class Messages_model extends Crud_model {
     }
 
     function delete_messages_for_user($message_id = 0, $user_id = 0) {
+        $message_id = $this->_get_clean_value($message_id);
+        $user_id = $this->_get_clean_value($user_id);
+
         $messages_table = $this->db->prefixTable('messages');
 
         $sql = "UPDATE $messages_table SET $messages_table.deleted_by_users = CONCAT($messages_table.deleted_by_users,',',$user_id)
@@ -225,6 +241,8 @@ class Messages_model extends Crud_model {
 
     function clear_deleted_status($message_id = 0) {
         $messages_table = $this->db->prefixTable('messages');
+
+        $message_id = $this->_get_clean_value($message_id);
 
         $sql = "UPDATE $messages_table SET $messages_table.deleted_by_users = ''
         WHERE $messages_table.id=$message_id OR $messages_table.message_id=$message_id";
@@ -289,5 +307,4 @@ class Messages_model extends Crud_model {
 
         return $this->db->query($sql);
     }
-
 }

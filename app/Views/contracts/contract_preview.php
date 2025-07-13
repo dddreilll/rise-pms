@@ -19,7 +19,9 @@
                 echo "<div class='text-center'>" . anchor("contracts/view/" . $contract_info->id, app_lang("close_preview"), array("class" => "btn btn-default round mb20 mr5")) . "</div>";
             }
 
-            $action_buttons .= "<div class='float-start'>" . anchor(get_uri("contracts/download_pdf/" . $contract_info->id), "<i data-feather='download' class='icon-16'></i> " . app_lang('download_pdf'), array("title" => app_lang('download_pdf'), "class" => "btn btn-default round mr10")) . "</div>";
+            if ($has_pdf_access) {
+                $action_buttons .= "<div class='float-start'>" . anchor(get_uri("contracts/download_pdf/" . $contract_info->id), "<i data-feather='download' class='icon-16'></i> " . app_lang('download_pdf'), array("title" => app_lang('download_pdf'), "class" => "btn btn-default round mr10")) . "</div>";
+            }
 
             $action_buttons .= "<div class='float-start'>" . js_anchor("<i data-feather='printer' class='icon-16'></i> " . app_lang('print_contract'), array('id' => 'print-contract-btn', "class" => "btn btn-default round mr10")) . "</div>";
 

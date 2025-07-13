@@ -320,17 +320,22 @@ class Dashboard extends Security_Controller {
     }
 
     function modal_form($id = 0) {
+        validate_numeric_value($id);
+
         $view_data['model_info'] = $this->Dashboards_model->get_one($id);
         return $this->template->view("dashboards/custom_dashboards/modal_form", $view_data);
     }
 
     function custom_widget_modal_form($id = 0) {
+        validate_numeric_value($id);
+
         $view_data['model_info'] = $this->Custom_widgets_model->get_one($id);
         return $this->template->view("dashboards/custom_widgets/modal_form", $view_data);
     }
 
     function save_custom_widget() {
         $id = $this->request->getPost("id");
+        validate_numeric_value($id);
 
         if ($id) {
             $custom_widget_info = $this->_get_my_custom_widget($id);
@@ -727,6 +732,7 @@ class Dashboard extends Security_Controller {
         }
 
         $id = $this->request->getPost("id");
+        validate_numeric_value($id);
 
         if ($id) {
             $dashboard_info = $this->_get_my_dashboard($id);
@@ -937,8 +943,8 @@ class Dashboard extends Security_Controller {
                 $error_class = "error";
             }
             $widgets .= "<div data-value=" . $key . " class='mb5 widget clearfix p10 bg-white $error_class'>" .
-                    $this->_widgets_row_data(array($key => $value))
-                    . "</div>";
+                $this->_widgets_row_data(array($key => $value))
+                . "</div>";
         }
 
         if ($widgets) {
@@ -1069,7 +1075,7 @@ class Dashboard extends Security_Controller {
             } else if ($widget == "timecard_statistics") {
                 return timecard_statistics_widget();
             } else if ($widget == "income_vs_expenses") {
-                return income_vs_expenses_widget("h373");
+                return income_vs_expenses_widget("h379");
             } else if ($widget == "events") {
                 return events_widget();
             } else if ($widget == "my_open_tasks") {
@@ -1077,9 +1083,9 @@ class Dashboard extends Security_Controller {
             } else if ($widget == "project_timeline") {
                 return $this->template->view("dashboards/custom_dashboards/extra_data/widget_with_heading", array("icon" => "clock", "widget" => $widget));
             } else if ($widget == "task_status") {
-                return my_task_stataus_widget("h370");
+                return my_task_stataus_widget("h377");
             } else if ($widget == "sticky_note") {
-                return sticky_note_widget("h370");
+                return sticky_note_widget("h377");
             } else if ($widget == "all_tasks_kanban") {
                 return all_tasks_kanban_widget();
             } else if ($widget == "todo_list") {
@@ -1203,7 +1209,7 @@ class Dashboard extends Security_Controller {
             } else if ($widget == "events") {
                 return events_widget();
             } else if ($widget == "sticky_note") {
-                return sticky_note_widget("h370");
+                return sticky_note_widget("h377");
             } else if ($widget == "invoice_statistics") {
                 return invoice_statistics_widget();
             } else if ($widget == "events_today") {
@@ -1368,7 +1374,6 @@ class Dashboard extends Security_Controller {
         $this->Settings_model->save_setting("staff_default_dashboard", $id);
         echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
     }
-
 }
 
 /* End of file dashboard.php */

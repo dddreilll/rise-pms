@@ -6,27 +6,22 @@ use App\Libraries\Imap;
 use App\Libraries\Stripe;
 use App\Controllers\App_Controller;
 
-class Settings extends Security_Controller
-{
+class Settings extends Security_Controller {
 
-    function __construct()
-    {
+    function __construct() {
         parent::__construct();
         $this->access_only_admin_or_settings_admin();
     }
 
-    function index()
-    {
+    function index() {
         app_redirect('settings/general');
     }
 
-    function general()
-    {
+    function general() {
         return $this->template->rander("settings/general");
     }
 
-    function save_general_settings()
-    {
+    function save_general_settings() {
         $settings = array("site_logo", "favicon", "show_background_image_in_signin_page", "show_logo_in_signin_page", "app_title", "accepted_file_formats", "landing_page", "rows_per_page", "item_purchase_code", "scrollbar", "enable_rich_text_editor", "show_theme_color_changer", "default_theme_color", "enable_audio_recording");
         $has_php_file_format = false;
 
@@ -97,20 +92,24 @@ class Settings extends Security_Controller
                     continue;
                 }
 
-                $file_name = get_array_value($file_data, "tmp_name");
+                $temp_name = get_array_value($file_data, "tmp_name");
+                $file_name = get_array_value($file_data, "name");
                 $file_size = get_array_value($file_data, "size");
                 if (!$file_name) {
                     continue;
                 }
 
-                $new_file_name = "site-logo.png";
+                $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+                $new_file_name = "site-logo." . $file_ext;
+
                 $setting_name = "site_logo";
                 if ($file === "favicon_file") {
-                    $new_file_name = "favicon.png";
+                    $new_file_name = "favicon." . $file_ext;
                     $setting_name = "favicon";
                 }
 
-                $new_file_data = serialize(move_temp_file($new_file_name, get_setting("system_file_path"), "", $file_name, "", "", false, $file_size));
+                $new_file_data = serialize(move_temp_file($new_file_name, get_setting("system_file_path"), "", $temp_name, "", "", false, $file_size));
                 //delete old file
                 delete_app_files(get_setting("system_file_path"), get_system_files_setting_value($setting_name));
                 $this->Settings_model->save_setting($setting_name, $new_file_data);
@@ -132,13 +131,11 @@ class Settings extends Security_Controller
         }
     }
 
-    function email()
-    {
+    function email() {
         return $this->template->rander("settings/email");
     }
 
-    function save_email_settings()
-    {
+    function save_email_settings() {
         $settings = array("email_sent_from_address", "email_sent_from_name", "email_protocol", "email_smtp_host", "email_smtp_port", "email_smtp_user", "email_smtp_pass", "email_smtp_security_type", "outlook_smtp_client_id", "outlook_smtp_client_secret");
 
         foreach ($settings as $setting) {
@@ -153,6 +150,8 @@ class Settings extends Security_Controller
                 } else {
                     $value = encode_id($value, "email_smtp_pass");
                 }
+            } else {
+                $value = remove_quotations($value);
             }
 
             $this->Settings_model->save_setting($setting, $value);
@@ -161,8 +160,16 @@ class Settings extends Security_Controller
         }
 
         $test_email_to = $this->request->getPost("send_test_mail_to");
+        $email_protocol = $this->request->getPost("email_protocol");
 
         if (!$test_email_to) {
+            echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
+            return true;
+        }
+
+        if ($test_email_to && $email_protocol === "microsoft_outlook") {
+            // for microsoft smtp we've to send the test email after authorization
+            $this->Settings_model->save_setting("send_test_mail_to", $test_email_to);
             echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
             return true;
         }
@@ -176,25 +183,21 @@ class Settings extends Security_Controller
         }
     }
 
-    function ip_restriction()
-    {
+    function ip_restriction() {
         return $this->template->rander("settings/ip_restriction");
     }
 
-    function save_ip_settings()
-    {
+    function save_ip_settings() {
         $this->Settings_model->save_setting("allowed_ip_addresses", $this->request->getPost("allowed_ip_addresses"));
 
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function db_backup()
-    {
+    function db_backup() {
         return $this->template->rander("settings/db_backup");
     }
 
-    function client_permissions()
-    {
+    function client_permissions() {
         $team_members = $this->Users_model->get_all_where(array("deleted" => 0, "user_type" => "staff"))->getResult();
         $members_dropdown = array();
 
@@ -226,11 +229,12 @@ class Settings extends Security_Controller
         $view_data['members_dropdown'] = json_encode($members_dropdown);
         $view_data["available_menus_for_clients_dropdown"] = get_available_menus_for_clients_dropdown();
 
+        $view_data['project_tabs_dropdown'] = $this->_get_client_project_tabs_dropdown();
+
         return $this->template->rander("settings/client_permissions", $view_data);
     }
 
-    function save_client_settings()
-    {
+    function save_client_settings() {
         $settings = array(
             "disable_client_login",
             "disable_client_signup",
@@ -263,7 +267,8 @@ class Settings extends Security_Controller
             "verify_email_before_client_signup",
             "client_can_create_reminders",
             "client_can_access_notes",
-            "default_permissions_for_non_primary_contact"
+            "default_permissions_for_non_primary_contact",
+            "project_tab_order_of_clients"
         );
 
         foreach ($settings as $setting) {
@@ -284,26 +289,20 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function invoices()
-    {
-        $last_invoice_id = $this->Invoices_model->get_last_invoice_id();
-        $view_data["last_id"] = $last_invoice_id;
-
+    function invoices() {
+        $view_data["last_id"] = $this->Invoices_model->get_last_invoice_sequence();
         return $this->template->rander("settings/invoices/index", $view_data);
     }
 
-    function invoice_general()
-    {
+    function invoice_general() {
         return $this->template->view("settings/invoices/invoice_general");
     }
 
-    function invoice_reminders()
-    {
+    function invoice_reminders() {
         return $this->template->view("settings/invoices/invoice_reminders");
     }
 
-    function save_invoice_settings()
-    {
+    function save_invoice_settings() {
         $settings = array("invoice_prefix", "invoice_color", "invoice_item_list_background", "enable_background_image_for_invoice_pdf", "set_invoice_pdf_background_only_on_first_page", "invoice_footer",  "invoice_style", "initial_number_of_the_invoice", "invoice_number_format", "year_based_on", "reset_invoice_number_every_year");
         $reload_page = false;
 
@@ -337,8 +336,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated'), "reload_page" => $reload_page));
     }
 
-    function save_invoice_general_settings()
-    {
+    function save_invoice_general_settings() {
         $settings = array("default_due_date_after_billing_date", "send_bcc_to", "allow_partial_invoice_payment_from_clients", "client_can_pay_invoice_without_login", "enable_invoice_lock_state");
 
         foreach ($settings as $setting) {
@@ -352,8 +350,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function save_invoice_reminders_settings()
-    {
+    function save_invoice_reminders_settings() {
         $settings = array("send_invoice_due_pre_reminder", "send_invoice_due_pre_second_reminder", "send_invoice_due_after_reminder", "send_invoice_due_after_second_reminder", "send_recurring_invoice_reminder_before_creation");
 
         foreach ($settings as $setting) {
@@ -367,13 +364,11 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function events()
-    {
+    function events() {
         return $this->template->rander("settings/events");
     }
 
-    function save_event_settings()
-    {
+    function save_event_settings() {
         $settings = array("enable_google_calendar_api", "google_calendar_client_id", "google_calendar_client_secret");
 
         $enable_google_calendar_api = $this->request->getPost("enable_google_calendar_api");
@@ -395,8 +390,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function notifications()
-    {
+    function notifications() {
         $category_suggestions = array(
             array("id" => "", "text" => "- " . app_lang('category') . " -"),
             array("id" => "announcement", "text" => app_lang("announcement")),
@@ -428,8 +422,7 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/notifications/index", $view_data);
     }
 
-    function notification_modal_form()
-    {
+    function notification_modal_form() {
         $id = $this->request->getPost("id");
         if ($id) {
 
@@ -480,8 +473,7 @@ class Settings extends Security_Controller
         }
     }
 
-    function notification_settings_list_data()
-    {
+    function notification_settings_list_data() {
 
         $options = array("category" => $this->request->getPost("category"));
         $list_data = $this->Notification_settings_model->get_details($options)->getResult();
@@ -492,15 +484,13 @@ class Settings extends Security_Controller
         echo json_encode(array("data" => $result));
     }
 
-    private function _notification_list_data($id)
-    {
+    private function _notification_list_data($id) {
         $options = array("id" => $id);
         $data = $this->Notification_settings_model->get_details($options)->getRow();
         return $this->_make_notification_settings_row($data);
     }
 
-    private function _make_notification_settings_row($data)
-    {
+    private function _make_notification_settings_row($data) {
 
         $yes = "<i data-feather='check-circle' class='icon-16'></i>";
         $no = "<i data-feather='check-circle' class='icon-16' style='opacity:0.2'></i>";
@@ -540,8 +530,7 @@ class Settings extends Security_Controller
         );
     }
 
-    function save_notification_settings()
-    {
+    function save_notification_settings() {
         $id = $this->request->getPost("id");
 
         $this->validate_submitted_data(array(
@@ -593,13 +582,11 @@ class Settings extends Security_Controller
         }
     }
 
-    function modules()
-    {
+    function modules() {
         return $this->template->rander("settings/modules");
     }
 
-    function save_module_settings()
-    {
+    function save_module_settings() {
         $settings = array("module_timeline", "module_event", "module_todo", "module_note", "module_message", "module_chat", "module_invoice", "module_expense", "module_attendance", "module_leave", "module_estimate", "module_estimate_request", "module_lead", "module_ticket", "module_announcement", "module_project_timesheet", "module_help", "module_knowledge_base", "module_gantt", "module_order", "module_proposal", "module_contract", "module_file_manager", "module_reminder", "module_subscription");
 
         foreach ($settings as $setting) {
@@ -615,36 +602,35 @@ class Settings extends Security_Controller
 
     /* show the cron job tab */
 
-    function cron_job()
-    {
+    function cron_job() {
         return $this->template->rander("settings/cron_job");
     }
 
     /* show the integration tab */
 
-    function integration($tab = "")
-    {
+    function integration($tab = "") {
         $view_data["tab"] = clean_data($tab);
         return $this->template->rander("settings/integration/index", $view_data);
     }
 
     /* load content in reCAPTCHA tab */
 
-    function re_captcha()
-    {
+    function re_captcha() {
         return $this->template->view("settings/integration/re_captcha");
     }
 
     /* save reCAPTCHA settings */
 
-    function save_re_captcha_settings()
-    {
+    function save_re_captcha_settings() {
 
-        $settings = array("re_captcha_site_key", "re_captcha_secret_key");
+        $settings = array("re_captcha_protocol", "re_captcha_site_key", "re_captcha_secret_key");
 
         foreach ($settings as $setting) {
             $value = $this->request->getPost($setting);
-            if (is_null($value)) {
+
+            if (!is_null($value)) {
+                $value = remove_quotations($value);
+            } else {
                 $value = "";
             }
 
@@ -655,15 +641,13 @@ class Settings extends Security_Controller
 
     /* load content in bitbucket tab */
 
-    function bitbucket()
-    {
+    function bitbucket() {
         return $this->template->view("settings/integration/bitbucket");
     }
 
     /* save bitbucket settings */
 
-    function save_bitbucket_settings()
-    {
+    function save_bitbucket_settings() {
 
         $settings = array("enable_bitbucket_commit_logs_in_tasks");
 
@@ -680,15 +664,13 @@ class Settings extends Security_Controller
 
     /* show the ticket settings tab */
 
-    function tickets()
-    {
+    function tickets() {
         return $this->template->view("settings/tickets/index");
     }
 
     /* save ticket settings */
 
-    function save_ticket_settings()
-    {
+    function save_ticket_settings() {
 
         $settings = array("show_recent_ticket_comments_at_the_top", "ticket_prefix", "project_reference_in_tickets", "auto_close_ticket_after", "auto_reply_to_tickets", "auto_reply_to_tickets_message", "enable_embedded_form_to_get_tickets");
 
@@ -704,8 +686,7 @@ class Settings extends Security_Controller
     }
 
     //show task settings
-    function tasks()
-    {
+    function tasks() {
         $values = array(
             "id",
             "project_name",
@@ -725,23 +706,20 @@ class Settings extends Security_Controller
 
     /* show imap settings tab */
 
-    function imap_settings()
-    {
+    function imap_settings() {
         return $this->template->view("settings/tickets/imap_settings");
     }
 
     /* push notification integration settings tab */
 
-    function push_notification()
-    {
+    function push_notification() {
         return $this->template->view("settings/integration/push_notification/index");
     }
 
     //save task settings
-    function save_task_settings()
-    {
+    function save_task_settings() {
 
-        $settings = array("project_task_reminder_on_the_day_of_deadline", "project_task_deadline_pre_reminder", "project_task_deadline_overdue_reminder", "enable_recurring_option_for_tasks", "task_point_range", "create_recurring_tasks_before", "show_in_kanban", "show_time_with_task_start_date_and_deadline");
+        $settings = array("project_task_reminder_on_the_day_of_deadline", "project_task_deadline_pre_reminder", "project_task_deadline_overdue_reminder", "enable_recurring_option_for_tasks", "task_point_range", "create_recurring_tasks_before", "show_in_kanban", "show_time_with_task_start_date_and_deadline", "show_the_status_checkbox_in_tasks_list", "support_only_project_related_tasks_globally");
 
         foreach ($settings as $setting) {
             $value = $this->request->getPost($setting);
@@ -756,8 +734,7 @@ class Settings extends Security_Controller
 
     /* save imap settings */
 
-    function save_imap_settings()
-    {
+    function save_imap_settings() {
         $settings = array("enable_email_piping", "create_tickets_only_by_registered_emails", "imap_encryption", "imap_host", "imap_port", "imap_email", "imap_password", "imap_type", "outlook_imap_client_id", "outlook_imap_client_secret");
 
         $enable_email_piping = $this->request->getPost("enable_email_piping");
@@ -788,13 +765,15 @@ class Settings extends Security_Controller
 
     /* save push notification settings */
 
-    function save_push_notification_settings()
-    {
+    function save_push_notification_settings() {
         $settings = array("enable_push_notification", "pusher_app_id", "pusher_key", "pusher_secret", "pusher_cluster", "enable_chat_via_pusher");
 
         foreach ($settings as $setting) {
             $value = $this->request->getPost($setting);
-            if (is_null($value)) {
+
+            if (!is_null($value)) {
+                $value = remove_quotations($value);
+            } else {
                 $value = "";
             }
 
@@ -805,22 +784,23 @@ class Settings extends Security_Controller
 
     /* show the google drive settings tab */
 
-    function google_drive()
-    {
+    function google_drive() {
         return $this->template->view("settings/integration/google_drive");
     }
 
     /* save google drive settings */
 
-    function save_google_drive_settings()
-    {
+    function save_google_drive_settings() {
         $settings = array("enable_google_drive_api_to_upload_file", "google_drive_client_id", "google_drive_client_secret");
 
         $enable_google_drive = $this->request->getPost("enable_google_drive_api_to_upload_file");
 
         foreach ($settings as $setting) {
             $value = $this->request->getPost($setting);
-            if (is_null($value)) {
+
+            if (!is_null($value)) {
+                $value = remove_quotations($value);
+            } else {
                 $value = "";
             }
 
@@ -836,8 +816,7 @@ class Settings extends Security_Controller
     }
 
     //authorize imap
-    function authorize_imap()
-    {
+    function authorize_imap() {
         if (get_setting("enable_email_piping")) {
             $imap = new Imap();
 
@@ -848,16 +827,14 @@ class Settings extends Security_Controller
         }
     }
 
-    function estimates()
-    {
+    function estimates() {
         $estimate_info = $this->Estimates_model->get_estimate_last_id();
         $view_data["last_id"] = $estimate_info;
 
         return $this->template->rander("settings/estimates", $view_data);
     }
 
-    function save_estimate_settings()
-    {
+    function save_estimate_settings() {
         $settings = array("estimate_prefix", "estimate_color", "estimate_footer", "send_estimate_bcc_to", "initial_number_of_the_estimate", "create_new_projects_automatically_when_estimates_gets_accepted", "enable_comments_on_estimates", "show_most_recent_estimate_comments_at_the_top", "add_signature_option_on_accepting_estimate", "enable_estimate_lock_state");
         $reload_page = false;
 
@@ -884,8 +861,7 @@ class Settings extends Security_Controller
     }
 
     //show a demo push notification
-    function test_push_notification()
-    {
+    function test_push_notification() {
         helper('notifications');
         if (send_push_notifications("test_push_notification", $this->login_user->id, $this->login_user->id)) {
             echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
@@ -896,15 +872,13 @@ class Settings extends Security_Controller
 
     /* show timesheet settings tab */
 
-    function timesheets()
-    {
+    function timesheets() {
         return $this->template->rander("settings/timesheets");
     }
 
     /* save timesheet settings */
 
-    function save_timesheets_settings()
-    {
+    function save_timesheets_settings() {
         $settings = array(
             "users_can_start_multiple_timers_at_a_time",
             "users_can_input_only_total_hours_instead_of_period"
@@ -921,13 +895,11 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function gdpr()
-    {
+    function gdpr() {
         return $this->template->rander("settings/gdpr");
     }
 
-    function save_gdpr_settings()
-    {
+    function save_gdpr_settings() {
         $settings = array("enable_gdpr", "allow_clients_to_export_their_data", "clients_can_request_account_removal", "show_terms_and_conditions_in_client_signup_page", "gdpr_terms_and_conditions_link");
 
         foreach ($settings as $setting) {
@@ -941,8 +913,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function footer()
-    {
+    function footer() {
         //check available menus
         $footer_menus_data = "";
 
@@ -958,8 +929,7 @@ class Settings extends Security_Controller
         return $this->template->view("settings/footer/index", $view_data);
     }
 
-    private function _make_footer_menu_item_data($menu_name, $url, $type = "")
-    {
+    private function _make_footer_menu_item_data($menu_name, $url, $type = "") {
         $edit = modal_anchor(get_uri("settings/footer_item_edit_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "float-end mr5 footer-menu-edit-btn", "title" => app_lang('edit_footer_menu'), "data-post-menu_name" => $menu_name, "data-post-url" => $url));
         $delete = "<span class='footer-menu-delete-btn  float-end clickable'><i data-feather='x' class='icon-16'></i></span>";
 
@@ -970,8 +940,7 @@ class Settings extends Security_Controller
         }
     }
 
-    function save_footer_settings()
-    {
+    function save_footer_settings() {
         $settings = array("enable_footer", "footer_menus", "footer_copyright_text");
 
         foreach ($settings as $setting) {
@@ -991,8 +960,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function footer_item_edit_modal_form()
-    {
+    function footer_item_edit_modal_form() {
         $model_info = new \stdClass();
         $model_info->menu_name = $this->request->getPost("menu_name");
         $model_info->url = $this->request->getPost("url");
@@ -1002,8 +970,7 @@ class Settings extends Security_Controller
         return $this->template->view("settings/footer/modal_form", $view_data);
     }
 
-    function save_footer_menu()
-    {
+    function save_footer_menu() {
         $menu_name = $this->request->getPost("menu_name");
         $url = $this->request->getPost("url");
         $type = $this->request->getPost("type");
@@ -1013,8 +980,7 @@ class Settings extends Security_Controller
         }
     }
 
-    function top_menu()
-    {
+    function top_menu() {
         //check available menus
         $top_menus_data = "";
 
@@ -1031,8 +997,7 @@ class Settings extends Security_Controller
         return $this->template->view("settings/top_menu/index", $view_data);
     }
 
-    private function _make_top_menu_item_data($menu_name, $url, $type = "")
-    {
+    private function _make_top_menu_item_data($menu_name, $url, $type = "") {
         $edit = modal_anchor(get_uri("settings/top_menu_item_edit_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "float-end mr5 top-menu-edit-btn", "title" => app_lang('edit_top_menu'), "data-post-menu_name" => $menu_name, "data-post-url" => $url));
         $delete = "<span class='top-menu-delete-btn  float-end clickable'><i data-feather='x' class='icon-16'></i></span>";
 
@@ -1043,8 +1008,7 @@ class Settings extends Security_Controller
         }
     }
 
-    function save_top_menu_settings()
-    {
+    function save_top_menu_settings() {
         $settings = array("enable_top_menu", "top_menus");
 
         foreach ($settings as $setting) {
@@ -1064,8 +1028,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function top_menu_item_edit_modal_form()
-    {
+    function top_menu_item_edit_modal_form() {
         $model_info = new \stdClass();
         $model_info->menu_name = $this->request->getPost("menu_name");
         $model_info->url = $this->request->getPost("url");
@@ -1075,8 +1038,7 @@ class Settings extends Security_Controller
         return $this->template->view("settings/top_menu/modal_form", $view_data);
     }
 
-    function save_top_menu()
-    {
+    function save_top_menu() {
         $menu_name = $this->request->getPost("menu_name");
         $url = $this->request->getPost("url");
         $type = $this->request->getPost("type");
@@ -1086,9 +1048,9 @@ class Settings extends Security_Controller
         }
     }
 
-    private function get_client_hidden_fields_dropdown()
-    {
+    private function get_client_hidden_fields_dropdown() {
         $hidden_fields = array(
+            "company_name",
             "first_name",
             "last_name",
             "email",
@@ -1108,14 +1070,12 @@ class Settings extends Security_Controller
         return json_encode($hidden_fields_dropdown);
     }
 
-    function estimate_request_settings()
-    {
+    function estimate_request_settings() {
         $view_data['hidden_fields_dropdown'] = $this->get_client_hidden_fields_dropdown();
         return $this->template->view("settings/estimate_requests", $view_data);
     }
 
-    function save_estimate_request_settings()
-    {
+    function save_estimate_request_settings() {
         $settings = array(
             "hidden_client_fields_on_public_estimate_requests"
         );
@@ -1139,17 +1099,15 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function orders()
-    {
+    function orders() {
         $order_info = $this->Orders_model->get_order_last_id();
         $view_data["last_id"] = $order_info;
-        $view_data['taxes_dropdown'] = array("" => "-") + $this->Taxes_model->get_dropdown_list(array("title"));
+        $view_data['taxes_dropdown'] = $this->Taxes_model->get_dropdown_list_with_blank_option(array("title"));
 
         return $this->template->rander("settings/orders", $view_data);
     }
 
-    function save_order_settings()
-    {
+    function save_order_settings() {
         $settings = array("order_prefix", "order_color", "order_footer", "initial_number_of_the_order", "order_tax_id", "order_tax_id2");
         $reload_page = false;
 
@@ -1174,8 +1132,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated'), "reload_page" => $reload_page));
     }
 
-    function projects()
-    {
+    function projects() {
         $project_tabs = array(
             "overview",
             "tasks_list",
@@ -1213,8 +1170,7 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/projects", $view_data);
     }
 
-    function save_projects_settings()
-    {
+    function save_projects_settings() {
         $settings = array(
             "project_tab_order",
         );
@@ -1230,18 +1186,19 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function slack()
-    {
+    function slack() {
         return $this->template->view("settings/integration/slack");
     }
 
-    function save_slack_settings()
-    {
+    function save_slack_settings() {
         $settings = array("enable_slack", "slack_webhook_url", "slack_dont_send_any_projects");
 
         foreach ($settings as $setting) {
             $value = $this->request->getPost($setting);
-            if (is_null($value)) {
+
+            if (!is_null($value)) {
+                $value = remove_quotations($value);
+            } else {
                 $value = "";
             }
 
@@ -1250,8 +1207,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function client_projects()
-    {
+    private function _get_client_project_tabs_dropdown() {
         $project_tabs = array(
             "overview",
             "tasks_list",
@@ -1280,38 +1236,19 @@ class Settings extends Security_Controller
             $project_tabs_dropdown[] = array("id" => $project_tab, "text" => app_lang($project_tab));
         }
 
-        $view_data['project_tabs_dropdown'] = json_encode($project_tabs_dropdown);
-        return $this->template->rander("settings/client_projects", $view_data);
+        return json_encode($project_tabs_dropdown);
     }
 
-    function save_client_project_settings()
-    {
-        $settings = array(
-            "project_tab_order_of_clients",
-        );
-
-        foreach ($settings as $setting) {
-            $value = $this->request->getPost($setting);
-            if (is_null($value)) {
-                $value = "";
-            }
-
-            $this->Settings_model->save_setting($setting, $value);
-        }
-        echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
-    }
 
     /* load content in github tab */
 
-    function github()
-    {
+    function github() {
         return $this->template->view("settings/integration/github");
     }
 
     /* save github settings */
 
-    function save_github_settings()
-    {
+    function save_github_settings() {
 
         $settings = array("enable_github_commit_logs_in_tasks");
 
@@ -1326,8 +1263,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function test_slack_notification()
-    {
+    function test_slack_notification() {
         helper('notifications');
         if (send_slack_notification("test_slack_notification", $this->login_user->id, 0, get_setting("slack_webhook_url"))) {
             echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
@@ -1336,8 +1272,7 @@ class Settings extends Security_Controller
         }
     }
 
-    function contracts()
-    {
+    function contracts() {
         $contract_info = $this->Contracts_model->get_contract_last_id();
         $view_data["last_id"] = $contract_info;
         $Contract_templates_model = model("App\Models\Contract_templates_model");
@@ -1346,9 +1281,9 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/contracts", $view_data);
     }
 
-    function save_contract_settings()
-    {
-        $settings = array("contract_prefix", "contract_color", "send_contract_bcc_to", "initial_number_of_the_contract", "add_signature_option_on_accepting_contract", "default_contract_template", "add_signature_option_for_team_members", "enable_contract_lock_state");
+    function save_contract_settings() {
+        $settings = array("contract_prefix", "contract_color", "send_contract_bcc_to", "initial_number_of_the_contract", "add_signature_option_on_accepting_contract", "default_contract_template", "add_signature_option_for_team_members", "enable_contract_lock_state", "disable_contract_pdf_for_clients");
+
         $reload_page = false;
 
         foreach ($settings as $setting) {
@@ -1369,16 +1304,14 @@ class Settings extends Security_Controller
 
     /* load content in leads tab */
 
-    function leads()
-    {
+    function leads() {
         $view_data['hidden_fields_dropdown'] = $this->get_client_hidden_fields_dropdown();
         return $this->template->view("settings/leads", $view_data);
     }
 
     /* save lead settings */
 
-    function save_lead_settings()
-    {
+    function save_lead_settings() {
 
         $settings = array("can_create_lead_from_public_form", "enable_embedded_form_to_get_leads", "after_submit_action_of_public_lead_form", "after_submit_action_of_public_lead_form_redirect_url", "hidden_fields_on_lead_embedded_form");
 
@@ -1393,8 +1326,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function proposals()
-    {
+    function proposals() {
         $proposal_info = $this->Proposals_model->get_proposal_last_id();
         $view_data["last_id"] = $proposal_info;
         $Proposal_templates_model = model("App\Models\Proposal_templates_model");
@@ -1403,9 +1335,8 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/proposals", $view_data);
     }
 
-    function save_proposal_settings()
-    {
-        $settings = array("proposal_prefix", "proposal_color", "send_proposal_bcc_to", "initial_number_of_the_proposal", "add_signature_option_on_accepting_proposal", "default_proposal_template", "enable_proposal_lock_state", "enable_comments_on_proposals", "show_most_recent_proposal_comments_at_the_top");
+    function save_proposal_settings() {
+        $settings = array("proposal_prefix", "proposal_color", "send_proposal_bcc_to", "initial_number_of_the_proposal", "add_signature_option_on_accepting_proposal", "default_proposal_template", "enable_proposal_lock_state", "enable_comments_on_proposals", "show_most_recent_proposal_comments_at_the_top", "disable_proposal_pdf_for_clients");
         $reload_page = false;
 
         foreach ($settings as $setting) {
@@ -1424,8 +1355,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated'), "reload_page" => $reload_page));
     }
 
-    function localization()
-    {
+    function localization() {
         $tzlist = \DateTimeZone::listIdentifiers();
         $view_data['timezone_dropdown'] = array();
         foreach ($tzlist as $zone) {
@@ -1440,8 +1370,7 @@ class Settings extends Security_Controller
 
     /* save localization settings */
 
-    function save_localization_settings()
-    {
+    function save_localization_settings() {
 
         $settings = array("language", "timezone", "date_format", "time_format", "first_day_of_week", "weekends", "default_currency", "currency_symbol", "currency_position", "decimal_separator", "no_of_decimals", "conversion_rate_currency");
 
@@ -1457,13 +1386,17 @@ class Settings extends Security_Controller
                 $setting = "conversion_rate";
             }
 
+            if ($setting === "currency_symbol") {
+                $value = remove_quotations($value);
+            }
+
             $this->Settings_model->save_setting($setting, $value);
         }
-        echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
+
+        echo json_encode(array("success" => true, 'message' => app_lang('settings_updated'))); // show localization settings success response
     }
 
-    private function prepare_conversion_rates($conversion_rate_currencies, $conversion_rates)
-    {
+    private function prepare_conversion_rates($conversion_rate_currencies, $conversion_rates) {
         $conversion_rate = array();
 
         if ($conversion_rate_currencies) {
@@ -1477,8 +1410,7 @@ class Settings extends Security_Controller
         return serialize($conversion_rate);
     }
 
-    function store()
-    {
+    function store() {
         $order_statuses_dropdown = array("" => "-");
         $store_statuses = $this->Order_status_model->get_details()->getResult();
         foreach ($store_statuses as $store_status) {
@@ -1490,8 +1422,7 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/store", $view_data);
     }
 
-    function save_store_settings()
-    {
+    function save_store_settings() {
         $settings = array("visitors_can_see_store_before_login", "show_payment_option_after_submitting_the_order", "accept_order_before_login", "order_status_after_payment");
 
         $visitors_can_see_store_before_login = $this->request->getPost("visitors_can_see_store_before_login");
@@ -1522,8 +1453,7 @@ class Settings extends Security_Controller
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    function subscriptions()
-    {
+    function subscriptions() {
         $last_subscription_id = $this->Subscriptions_model->get_last_subscription_id();
 
         $view_data["last_id"] = $last_subscription_id;
@@ -1534,8 +1464,7 @@ class Settings extends Security_Controller
         return $this->template->rander("settings/subscriptions/index", $view_data);
     }
 
-    function save_subscription_settings()
-    {
+    function save_subscription_settings() {
         $settings = array("subscription_prefix", "initial_number_of_the_subscription", "enable_stripe_subscription", "webhook_listener_link_of_stripe_subscription");
 
         foreach ($settings as $setting) {
@@ -1550,17 +1479,16 @@ class Settings extends Security_Controller
                 $this->Subscriptions_model->save_initial_number_of_subscription($value);
             }
         }
-        
-        if($this->request->getPost("enable_stripe_subscription")){
+
+        if ($this->request->getPost("enable_stripe_subscription")) {
             $webhook_listener_link_of_stripe_subscription = $this->request->getPost("webhook_listener_link_of_stripe_subscription");
             $this->save_stripe_webhook($webhook_listener_link_of_stripe_subscription);
         }
-    
+
         echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
     }
 
-    private function save_stripe_webhook($webhook_listener_link_of_stripe_subscription)
-    {
+    private function save_stripe_webhook($webhook_listener_link_of_stripe_subscription) {
         //create webhook in stripe
         if (!$webhook_listener_link_of_stripe_subscription) {
             return false;
@@ -1588,7 +1516,93 @@ class Settings extends Security_Controller
             }
         }
     }
+
+    function pwa() {
+        return $this->template->view("settings/pwa/index");
+    }
+
+    function save_pwa_settings() {
+        $pwa_theme_color = $this->request->getPost("pwa_theme_color") ? $this->request->getPost("pwa_theme_color") : "";
+        $this->Settings_model->save_setting("pwa_theme_color", $pwa_theme_color);
+
+        $pwa_icon = $this->request->getPost("pwa_icon") ? $this->request->getPost("pwa_icon") : "";
+        if ($pwa_icon) {
+            $pwa_icon = str_replace("~", ":", $pwa_icon);
+            $pwa_icon = serialize(move_temp_file("pwa_icon.png", get_setting("system_file_path") . "pwa/", "", $pwa_icon, "", "", false, 0, true));
+
+            //delete old file
+            delete_app_files(get_setting("system_file_path") . "pwa/", get_system_files_setting_value("pwa_icon"));
+
+            $this->Settings_model->save_setting("pwa_icon", $pwa_icon);
+        }
+
+        $reload_page = false;
+
+        if ($_FILES) {
+            $files = array("pwa_icon_file");
+
+            foreach ($files as $file) {
+                $file_data = get_array_value($_FILES, $file);
+
+                if (!($file_data && is_array($file_data) && count($file_data))) {
+                    continue;
+                }
+
+                $file_name = get_array_value($file_data, "tmp_name");
+                $file_size = get_array_value($file_data, "size");
+                if (!$file_name) {
+                    continue;
+                }
+
+                $new_file_name = "pwa_icon.png";
+                $setting_name = "pwa_icon";
+
+                $pwa_icon = serialize(move_temp_file($new_file_name, get_setting("system_file_path") . "pwa/", "", $file_name, "", "", false, $file_size, true));
+                //delete old file
+                delete_app_files(get_setting("system_file_path") . "pwa/", get_system_files_setting_value($setting_name));
+                $this->Settings_model->save_setting($setting_name, $pwa_icon);
+            }
+
+            $reload_page = true;
+        }
+
+        echo json_encode(array("success" => true, 'message' => app_lang('settings_updated'), 'reload_page' => $reload_page));
+    }
+
+    /* load content in tinymce tab */
+
+    function tinymce() {
+        return $this->template->view("settings/integration/tinymce");
+    }
+
+    /* save tinymce settings */
+
+    function save_tinymce_settings() {
+
+        $settings = array("enable_tinymce", "tinymce_api_key");
+
+        foreach ($settings as $setting) {
+            $value = $this->request->getPost($setting);
+
+            if (!is_null($value)) {
+                $value = remove_quotations($value);
+            } else {
+                $value = "";
+            }
+
+            if ($setting == "enable_tinymce") {
+                if ($value) {
+                    $this->Settings_model->save_setting("rich_text_editor_name", "tinymce");
+                } else {
+                    $this->Settings_model->save_setting("rich_text_editor_name", "");
+                }
+            }
+
+            $this->Settings_model->save_setting($setting, $value);
+        }
+        echo json_encode(array("success" => true, 'message' => app_lang('settings_updated')));
+    }
 }
 
-/* End of file general_settings.php */
-/* Location: ./app/controllers/general_settings.php */
+/* End of file Settings.php */
+/* Location: ./app/Controllers/Settings.php */

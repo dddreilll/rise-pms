@@ -14,7 +14,7 @@ if (isset($client_id)) {
 }
 ?>
 <div id="page-content<?php echo $client; ?>" class="page-wrapper<?php echo $client; ?> clearfix">
-    <div class="card mb0 full-width-button">
+    <div class="card full-width-button">
         <div class="page-title clearfix">
             <?php if ($client) { ?>
                 <h4><?php echo app_lang('events'); ?></h4>
@@ -70,7 +70,7 @@ if (isset($client_id)) {
 
         window.fullCalendar = new FullCalendar.Calendar($eventCalendar, {
             locale: AppLanugage.locale,
-            height: $(window).height() - 210,
+            height: isMobile() ? "auto" : $(window).height() - 210,
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -129,6 +129,9 @@ if (isset($client_id)) {
             loading: function (state) {
                 if (state === false) {
                     appLoader.hide();
+                    $(".fc-prev-button").html("<i data-feather='chevron-left' class='icon-16'></i>");
+                    $(".fc-next-button").html("<i data-feather='chevron-right' class='icon-16'></i>");
+                    feather.replace();
                     setTimeout(function () {
                         feather.replace();
                     }, 100);

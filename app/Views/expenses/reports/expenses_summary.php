@@ -2,7 +2,7 @@
 
 <div id="page-content" class="page-wrapper clearfix grid-button">
     <div class="card clearfix">
-        <ul id="summary-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner" role="tablist">
+        <ul id="summary-summary-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white inner scrollable-tabs" role="tablist">
             <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("expenses_summary"); ?></h4></li>
             <li><a role="presentation" data-bs-toggle="tab" href="javascript:;" data-bs-target="#yearly-expenses-summary"><?php echo app_lang('yearly'); ?></a></li>
             <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("expenses/monthly_summary"); ?>" data-bs-target="#monthly-expenses-summary"><?php echo app_lang("monthly"); ?></a></li>
@@ -41,11 +41,11 @@
             dateRangeType: dateRange,
             rangeDatepicker: customDatePicker,
             columns: [
-                {title: '<?php echo app_lang("category") ?>'},
+                {title: '<?php echo app_lang("category") ?>', "class": "all"},
                 {title: '<?php echo app_lang("amount") ?>', "class": "text-right"},
                 {title: '<?php echo app_lang("tax") ?>', "class": "text-right"},
                 {title: '<?php echo app_lang("second_tax") ?>', "class": "text-right"},
-                {title: '<?php echo app_lang("total") ?>', "class": "text-right"}
+                {title: '<?php echo app_lang("total") ?>', "class": "text-right all"}
             ],
             printColumns: [0, 1, 2, 3, 4],
             xlsColumns: [0, 1, 2, 3, 4],

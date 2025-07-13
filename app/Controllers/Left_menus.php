@@ -66,6 +66,7 @@ class Left_menus extends Security_Controller {
                 $items_data[] = array("name" => "settings");
             }
 
+            $items_data = clean_data($items_data);
             $items_data = serialize($items_data);
         }
 

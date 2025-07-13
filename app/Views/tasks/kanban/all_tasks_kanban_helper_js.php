@@ -1,13 +1,20 @@
 <script type="text/javascript">
 
     $(document).ready(function () {
+        var batchUpdateUrl = "<?php echo get_uri("tasks/batch_update_modal_form"); ?>";
+        var selectionHandler = {batchUpdateUrl: batchUpdateUrl, hideButton: true};
+        if("<?php echo $login_user->user_type == "client"; ?>"){
+            selectionHandler = false;
+        }
 
         var scrollLeft = 0;
+        var dynamicDates = getDynamicDates();
         $("#kanban-filters").appFilters({
             source: '<?php echo_uri("tasks/all_tasks_kanban_data") ?>',
             targetSelector: '#load-kanban',
             reloadSelector: "#reload-kanban-button",
             smartFilterIdentity: "all_tasks_kanban", //a to z and _ only. should be unique to avoid conflicts 
+            selectionHandler: selectionHandler,
             search: {name: "search"},
             filterDropdown: [
                 {name: "quick_filter", class: "w200", showHtml: true, options: <?php echo view("tasks/quick_filters_dropdown"); ?>},
@@ -46,10 +53,10 @@
             singleDatepicker: [{name: "deadline", class: "w200", defaultText: "<?php echo app_lang('deadline') ?>",
                     options: [
                         {value: "expired", text: "<?php echo app_lang('expired') ?>"},
-                        {value: moment().format("YYYY-MM-DD"), text: "<?php echo app_lang('today') ?>"},
-                        {value: moment().add(1, 'days').format("YYYY-MM-DD"), text: "<?php echo app_lang('tomorrow') ?>"},
-                        {value: moment().add(7, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
-                        {value: moment().add(15, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
+                        {value: dynamicDates.today, text: "<?php echo app_lang('today') ?>"},
+                        {value: dynamicDates.tomorrow, text: "<?php echo app_lang('tomorrow') ?>"},
+                        {value: dynamicDates.in_next_7_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
+                        {value: dynamicDates.in_next_15_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
                     ]}],
             beforeRelaodCallback: function () {
                 scrollLeft = $("#kanban-wrapper").scrollLeft();
@@ -58,7 +65,6 @@
                 setTimeout(function () {
                     $("#kanban-wrapper").animate({scrollLeft: scrollLeft}, 'slow');
                 }, 500);
-                hideBatchTasksBtn();
             }
         });
 

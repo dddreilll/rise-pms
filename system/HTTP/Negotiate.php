@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -21,6 +23,7 @@ use CodeIgniter\HTTP\Exceptions\HTTPException;
  * server wants.
  *
  * @see http://tools.ietf.org/html/rfc7231#section-5.3
+ * @see \CodeIgniter\HTTP\NegotiateTest
  */
 class Negotiate
 {
@@ -36,7 +39,7 @@ class Negotiate
      */
     public function __construct(?RequestInterface $request = null)
     {
-        if ($request !== null) {
+        if ($request instanceof RequestInterface) {
             assert($request instanceof IncomingRequest);
 
             $this->request = $request;
@@ -92,7 +95,7 @@ class Negotiate
 
         // If no charset is shown as a match, ignore the directive
         // as allowed by the RFC, and tell it a default value.
-        if (empty($match)) {
+        if ($match === '') {
             return 'utf-8';
         }
 
@@ -153,11 +156,11 @@ class Negotiate
         bool $strictMatch = false,
         bool $matchLocales = false
     ): string {
-        if (empty($supported)) {
+        if ($supported === []) {
             throw HTTPException::forEmptySupportedNegotiations();
         }
 
-        if (empty($header)) {
+        if ($header === null || $header === '') {
             return $strictMatch ? '' : $supported[0];
         }
 
@@ -230,7 +233,7 @@ class Negotiate
         }
 
         // Sort to get the highest results first
-        usort($results, static function ($a, $b) {
+        usort($results, static function ($a, $b): int {
             if ($a['q'] === $b['q']) {
                 $aAst = substr_count($a['value'], '*');
                 $bAst = substr_count($b['value'], '*');
@@ -273,7 +276,7 @@ class Negotiate
     protected function match(array $acceptable, string $supported, bool $enforceTypes = false, $matchLocales = false): bool
     {
         $supported = $this->parseHeader($supported);
-        if (is_array($supported) && count($supported) === 1) {
+        if (count($supported) === 1) {
             $supported = $supported[0];
         }
 

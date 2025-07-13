@@ -56,7 +56,7 @@
                         </p>
 
                         <p>
-                            <?php echo nl2br(link_it(process_images_from_content($message_info->message))); ?>
+                            <?php echo custom_nl2br(link_it(process_images_from_content($message_info->message))); ?>
                         </p>
 
                         <div class="comment-image-box clearfix">

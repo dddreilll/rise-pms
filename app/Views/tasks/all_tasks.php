@@ -1,4 +1,4 @@
-<div id="page-content" class="page-wrapper clearfix grid-button all-tasks-view">
+<div id="page-content" class="page-wrapper clearfix grid-button all-tasks-view xs-full-width">
 
     <ul class="nav nav-tabs bg-white title" role="tablist">
         <li class="title-tab my-tasks"><h4 class="pl15 pt10 pr15"><?php echo app_lang("tasks"); ?></h4></li>
@@ -8,13 +8,8 @@
         <div class="tab-title clearfix no-border">
             <div class="title-button-group">
                 <?php
-                if ($login_user->user_type == "staff") {
-                    echo modal_anchor("", "<i data-feather='edit-2' class='icon-16'></i> " . app_lang('batch_update'), array("class" => "btn btn-info text-white hide batch-update-btn", "title" => app_lang('batch_update')));
-                    echo js_anchor("<i data-feather='check-square' class='icon-16 ml15'></i> " . app_lang("batch_update"), array("class" => "btn btn-default hide batch-active-btn"));
-                    echo js_anchor("<i data-feather='x' class='icon-16'></i> " . app_lang("cancel_selection"), array("class" => "hide btn btn-default batch-cancel-btn"));
-                }
                 if ($can_create_tasks) {
-                    echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-outline-light", "title" => app_lang('manage_labels'), "data-post-type" => "task"));
+                    echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-default", "title" => app_lang('manage_labels'), "data-post-type" => "task"));
                     echo modal_anchor(get_uri("tasks/import_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang('import_tasks'), array("class" => "btn btn-default", "title" => app_lang('import_tasks')));
                     echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_multiple_tasks'), array("class" => "btn btn-default", "title" => app_lang('add_multiple_tasks'), "data-post-add_type" => "multiple"));
                     echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_task'), array("class" => "btn btn-default", "title" => app_lang('add_task')));
@@ -25,9 +20,9 @@
 
     </ul>
 
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0 xs-no-bottom-margin">
         <div class="table-responsive" id="task-table-container">
-            <table id="task-table" class="display" cellspacing="0" width="100%">            
+            <table id="task-table" class="display xs-hide-dtr-control no-title" cellspacing="0" width="100%">            
             </table>
         </div>
     </div>
@@ -70,13 +65,13 @@ if (isset($selected_priority_id) && $selected_priority_id) {
     $(document).ready(function () {
 
         var showOption = true,
-                idColumnClass = "w10p",
+                showIdColumn = true,
                 titleColumnClass = "";
 
         if (isMobile()) {
             showOption = false;
-            idColumnClass = "w25p";
-            titleColumnClass = "w75p";
+            showIdColumn = false;
+            titleColumnClass = "w75p all";
         }
 
         var ignoreSavedFilter = false;
@@ -91,13 +86,30 @@ if (isset($selected_priority_id) && $selected_priority_id) {
             deadline_expired = true;
         }
 
+        var batchUpdateUrl = "<?php echo get_uri("tasks/batch_update_modal_form"); ?>";
+        var selectionHandler = {batchUpdateUrl: batchUpdateUrl, hideButton: true};
+        if("<?php echo $login_user->user_type == "client"; ?>"){
+            selectionHandler = false;
+        }
+
+        var mobileView = 0;
+        if (isMobile()) {
+            mobileView = 1;
+        }
+
+        var idColumnClass = "";
+        if ("<?php echo get_setting("show_the_status_checkbox_in_tasks_list"); ?>" === "1") {
+            idColumnClass = "w10p";
+        }
+
+        var dynamicDates = getDynamicDates();
         $("#task-table").appTable({
-            source: '<?php echo_uri("tasks/all_tasks_list_data") ?>',
+            source: '<?php echo_uri("tasks/all_tasks_list_data") ?>' + "/0/" + mobileView,
             serverSide: true,
             order: [[1, "desc"]],
             smartFilterIdentity: "all_tasks_list", //a to z and _ only. should be unique to avoid conflicts 
             ignoreSavedFilter: ignoreSavedFilter,
-            responsive: false, //hide responsive (+) icon
+            selectionHandler: selectionHandler,
             filterDropdown: [
                 {name: "quick_filter", class: "w200", showHtml: true, options: <?php echo view("tasks/quick_filters_dropdown"); ?>},
                 {name: "context", class: "w200", options: <?php echo $contexts_dropdown; ?>, onChangeCallback: function (value, filterParams) {
@@ -137,10 +149,10 @@ if (isset($selected_priority_id) && $selected_priority_id) {
             singleDatepicker: [{name: "deadline", class: "w200", defaultText: "<?php echo app_lang('deadline') ?>",
                     options: [
                         {value: "expired", text: "<?php echo app_lang('expired') ?>", isSelected: deadline_expired},
-                        {value: moment().format("YYYY-MM-DD"), text: "<?php echo app_lang('today') ?>"},
-                        {value: moment().add(1, 'days').format("YYYY-MM-DD"), text: "<?php echo app_lang('tomorrow') ?>"},
-                        {value: moment().add(7, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
-                        {value: moment().add(15, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
+                        {value: dynamicDates.today, text: "<?php echo app_lang('today') ?>"},
+                        {value: dynamicDates.tomorrow, text: "<?php echo app_lang('tomorrow') ?>"},
+                        {value: dynamicDates.in_next_7_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
+                        {value: dynamicDates.in_next_15_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
                     ]}],
             multiSelect: [
                 {
@@ -152,26 +164,27 @@ if (isset($selected_priority_id) && $selected_priority_id) {
             ],
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang('id') ?>", "class": idColumnClass, order_by: "id"},
+                {title: "<?php echo app_lang('id') ?>", visible: showIdColumn, "class": idColumnClass, order_by: "id"},
                 {title: "<?php echo app_lang('title') ?>", "class": titleColumnClass, order_by: "title"},
+                {title: "<?php echo app_lang('title') ?>", visible: false, searchable: false},
+                {title: "<?php echo app_lang('label') ?>", visible: false, searchable: false},
+                {title: "<?php echo app_lang('priority') ?>", visible: false, searchable: false},
+                {title: "<?php echo app_lang('points') ?>", visible: false, searchable: false},
                 {visible: false, searchable: false, order_by: "start_date"},
-                {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 3, visible: showOption, order_by: "start_date"},
+                {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 7, order_by: "start_date"},
                 {visible: false, searchable: false, order_by: "deadline"},
-                {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 5, visible: showOption, order_by: "deadline"},
-                {title: "<?php echo app_lang('milestone') ?>", visible: showOption, order_by: "milestone"},
-                {title: "<?php echo app_lang('related_to') ?>", visible: showOption},
-                {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", visible: showOption, order_by: "assigned_to"},
-                {title: "<?php echo app_lang('collaborators') ?>", visible: showOption},
-                {title: "<?php echo app_lang('status') ?>", visible: showOption, order_by: "status"}
+                {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 9, order_by: "deadline"},
+                {title: "<?php echo app_lang('milestone') ?>", order_by: "milestone"},
+                {title: "<?php echo app_lang('related_to') ?>"},
+                {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", order_by: "assigned_to"},
+                {title: "<?php echo app_lang('collaborators') ?>"},
+                {title: "<?php echo app_lang('status') ?>", order_by: "status"}
 <?php echo $custom_field_headers; ?>,
-                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option"}
+                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ],
-            printColumns: combineCustomFieldsColumns([1, 2, 4, 6, 7, 8, 9, 10, 12], '<?php echo $custom_field_headers; ?>'),
-            xlsColumns: combineCustomFieldsColumns([1, 2, 4, 6, 7, 8, 9, 10, 12], '<?php echo $custom_field_headers; ?>'),
+            printColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15], '<?php echo $custom_field_headers; ?>'),
+            xlsColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 15], '<?php echo $custom_field_headers; ?>'),
             rowCallback: tasksTableRowCallback, //load this function from the task_table_common_script.php 
-            onRelaodCallback: function () {
-                hideBatchTasksBtn(true);
-            },
             onInitComplete: function () {
                 if (!showOption) {
                     window.scrollTo(0, 210); //scroll to the content for mobile devices
@@ -180,6 +193,9 @@ if (isset($selected_priority_id) && $selected_priority_id) {
                     showHideTheBatchUpdateButton();
 
                 }
+            },
+            onRelaodCallback: function () {
+                showHideTheBatchUpdateButton();
             }
         });
 

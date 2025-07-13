@@ -9,13 +9,13 @@
     }
     ?>
 
-    <button id="<?php echo $upload_button_id; ?>" class="btn btn-default upload-file-button float-start round" type="button" style="color:#7988a2"><i data-feather="camera" class="icon-16"></i> <?php
+    <button id="<?php echo $upload_button_id; ?>" class="btn btn-default upload-file-button float-start round round-btn-xs" type="button"><i data-feather="paperclip" class="icon-16"></i> <span class="hidden-xs"><?php
         if (isset($upload_button_text)) {
             echo $upload_button_text;
         } else {
             echo app_lang("upload_file");
         }
-        ?>
+        ?></span>
     </button>
     <?php
 
@@ -38,7 +38,7 @@
         ));
     } else if ($show_recording && !$https) {
         ?>
-        <span class="help" data-bs-toggle="tooltip" title="<?php echo app_lang('https_required'); ?>"><span class="btn btn-default record-start-btn disabled opacity-25 ml10"><i data-feather="mic" class="icon-16"></i></span></span>
+        <span class="ml10"><span class=" help" data-bs-toggle="tooltip" title="<?php echo app_lang('https_required'); ?>"><span class="btn btn-default record-start-btn disabled opacity-25"><i data-feather="mic" class="icon-16"></i></span></span></span>
 
     <?php }
     ?>

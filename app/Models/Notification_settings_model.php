@@ -44,6 +44,8 @@ class Notification_settings_model extends Crud_model {
     }
 
     function get_notify_to_users_of_event($event = "") {
+        $event = $this->_get_clean_value($event);
+        
         if ($event) {
             $notification_settings_table = $this->db->prefixTable('notification_settings');
             $users_table = $this->db->prefixTable('users');

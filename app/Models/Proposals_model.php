@@ -22,6 +22,7 @@ class Proposals_model extends Crud_model
         $users_table = $this->db->prefixTable('users');
         $event_tracker_table = $this->db->prefixTable('event_tracker');
         $proposal_comments_table = $this->db->prefixTable('proposal_comments');
+        $projects_table = $this->db->prefixTable('projects');
 
         $where = "";
         $id = $this->_get_clean_value($options, "id");
@@ -90,7 +91,7 @@ class Proposals_model extends Crud_model
         $sql = "SELECT $proposals_table.*, $clients_table.currency, $clients_table.currency_symbol, $clients_table.company_name, $clients_table.is_lead,
            CONCAT($users_table.first_name, ' ',$users_table.last_name) AS signer_name, $users_table.email AS signer_email,
            $proposal_value_calculation AS proposal_value, tax_table.percentage AS tax_percentage, tax_table2.percentage AS tax_percentage2, event_tracker_table.last_email_read_time,
-           (SELECT COUNT($proposal_comments_table.id) as total_comments FROM $proposal_comments_table WHERE $proposal_comments_table.proposal_id=$proposals_table.id AND $proposal_comments_table.deleted=0) AS total_comments
+           (SELECT COUNT($proposal_comments_table.id) as total_comments FROM $proposal_comments_table WHERE $proposal_comments_table.proposal_id=$proposals_table.id AND $proposal_comments_table.deleted=0) AS total_comments, $projects_table.title AS project_title
            $select_custom_fieds
 
         FROM $proposals_table
@@ -100,6 +101,7 @@ class Proposals_model extends Crud_model
         LEFT JOIN (SELECT $taxes_table.* FROM $taxes_table) AS tax_table2 ON tax_table2.id = $proposals_table.tax_id2 
         LEFT JOIN (SELECT proposal_id, SUM(total) AS proposal_value FROM $proposal_items_table WHERE deleted=0 GROUP BY proposal_id) AS items_table ON items_table.proposal_id = $proposals_table.id 
         LEFT JOIN (SELECT $event_tracker_table.context_id, MAX($event_tracker_table.last_read_time) AS last_email_read_time FROM $event_tracker_table WHERE context='proposal' GROUP BY context_id) AS event_tracker_table ON event_tracker_table.context_id=$proposals_table.id
+        LEFT JOIN $projects_table ON $projects_table.id= $proposals_table.project_id
         $join_custom_fieds
         WHERE $proposals_table.deleted=0 $where $event_tracker_where $custom_fields_where";
         return $this->db->query($sql);
@@ -111,6 +113,8 @@ class Proposals_model extends Crud_model
         $proposals_table = $this->db->prefixTable('proposals');
         $clients_table = $this->db->prefixTable('clients');
         $taxes_table = $this->db->prefixTable('taxes');
+
+        $proposal_id = $this->_get_clean_value($proposal_id);
 
         $item_sql = "SELECT SUM($proposal_items_table.total) AS proposal_subtotal
         FROM $proposal_items_table
@@ -185,6 +189,8 @@ class Proposals_model extends Crud_model
     {
         $proposals_table = $this->db->prefixTable('proposals');
 
+        $value = $this->_get_clean_value($value);
+        
         $sql = "ALTER TABLE $proposals_table AUTO_INCREMENT=$value;";
 
         return $this->db->query($sql);
@@ -194,6 +200,7 @@ class Proposals_model extends Crud_model
     {
         $proposals_table = $this->db->prefixTable('proposals');
 
+        $id = $this->_get_clean_value($id);
         $now = get_current_utc_time();
 
         $sql = "UPDATE $proposals_table

@@ -103,8 +103,9 @@
             }
         });
 
+        var dynamicDates = getDynamicDates();
         setDatePicker("#next_recurring_date", {
-            startDate: moment().add(1, 'days').format("YYYY-MM-DD") //set min date = tomorrow
+            startDate: dynamicDates.tomorrow //set min date = tomorrow
         });
 
         $('[data-bs-toggle="tooltip"]').tooltip();

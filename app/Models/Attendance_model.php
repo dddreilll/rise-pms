@@ -12,6 +12,8 @@ class Attendance_model extends Crud_model {
     }
 
     function current_clock_in_record($user_id) {
+        $user_id = $this->_get_clean_value($user_id);
+        
         $attendnace_table = $this->db->prefixTable('attendance');
         $sql = "SELECT $attendnace_table.*
         FROM $attendnace_table
@@ -25,7 +27,8 @@ class Attendance_model extends Crud_model {
     }
 
     function log_time($user_id, $note = "") {
-        $user_id = $user_id ? $this->db->escapeString($user_id) : $user_id;
+
+        $user_id = $this->_get_clean_value(array("user_id" => $user_id), "user_id");
 
         $current_clock_record = $this->current_clock_in_record($user_id);
 

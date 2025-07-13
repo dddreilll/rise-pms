@@ -26,9 +26,9 @@ $total_after_discount_row = '<tr>
     foreach ($contract_items as $item) {
         ?>
         <tr style="background-color: #f4f4f4; ">
-            <td style="width: 45%; border: 1px solid #fff; padding: 10px; line-break: anywhere;"><?php echo $item->title; ?>
+            <td style="width: 45%; border: 1px solid #fff; padding: 10px; hyphens: auto;"><?php echo $item->title; ?>
                 <br />
-                <span style="color: #888; font-size: 90%;"><?php echo nl2br($item->description ? process_images_from_content($item->description) : ""); ?></span>
+                <span style="color: #888; font-size: 90%; line-height: 16px;"><?php echo custom_nl2br($item->description ? process_images_from_content($item->description) : ""); ?></span>
             </td>
             <td style="text-align: center; width: 15%; border: 1px solid #fff;"> <?php echo $item->quantity . " " . $item->unit_type; ?></td>
             <td style="text-align: right; width: 20%; border: 1px solid #fff;"> <?php echo to_currency($item->rate, $item->currency_symbol); ?></td>

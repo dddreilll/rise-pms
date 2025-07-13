@@ -91,8 +91,7 @@ class Task_priority extends Security_Controller {
             $edit . $delete
         );
     }
-
 }
 
-/* End of file task_priority.php */
-/* Location: ./app/controllers/task_priority.php */
+/* End of file Task_priority.php */
+/* Location: ./app/Controllers/Task_priority.php */

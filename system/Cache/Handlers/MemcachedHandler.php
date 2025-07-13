@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -20,6 +22,8 @@ use Memcached;
 
 /**
  * Mamcached cache handler
+ *
+ * @see \CodeIgniter\Cache\Handlers\MemcachedHandlerTest
  */
 class MemcachedHandler extends BaseHandler
 {
@@ -42,6 +46,9 @@ class MemcachedHandler extends BaseHandler
         'raw'    => false,
     ];
 
+    /**
+     * Note: Use `CacheFactory::getHandler()` to instantiate.
+     */
     public function __construct(Cache $config)
     {
         $this->prefix = $config->prefix;
@@ -185,6 +192,8 @@ class MemcachedHandler extends BaseHandler
 
     /**
      * {@inheritDoc}
+     *
+     * @return never
      */
     public function deleteMatching(string $pattern)
     {

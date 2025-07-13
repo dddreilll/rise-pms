@@ -14,7 +14,7 @@
             ],
             dateRangeType: "yearly",
             columns: [
-                {title: '<?php echo app_lang("applicant") ?>', "class": "w30p"},
+                {title: '<?php echo app_lang("applicant") ?>', "class": "w30p all"},
                 {title: '<?php echo app_lang("leave_type") ?>'},
                 {title: '<?php echo app_lang("total_leave_yearly") ?>'}
             ],

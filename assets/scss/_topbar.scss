@@ -1,11 +1,12 @@
 .navbar-nav {
     .nav-link {
-        padding: 15px 15px !important;
+        padding: 21px 15px !important;
+        color: $light-default-text-color;
     }
 
     .nav-item{
         #user-dropdown{
-            padding: 10px 14px !important;
+            padding: 17px 14px !important;
         }
         .dropdown-toggle{
             &:after{
@@ -18,7 +19,7 @@
         margin-left: 1em;
 
         .form-check-label, .form-check-input{
-            color: #4e5e6a;
+            color: $light-default-text-color;
             cursor: pointer;
         }
     }
@@ -33,7 +34,9 @@
     top: 0;
     right: 0;
     left: 250px;
-    min-height: 65px;
+    min-height: 66px;
+    border-bottom: 1px solid $light-default-border;
+    padding: 0;
 }
 
 .logo-collapsed{

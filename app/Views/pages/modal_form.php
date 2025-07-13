@@ -30,7 +30,11 @@
                         "id" => "page_content",
                         "name" => "content",
                         "value" => process_images_from_content($model_info->content, false),
-                        "class" => "form-control"
+                        "class" => "form-control",
+                        "data-toolbar" => "page_builder_toolbar",
+                        "data-encode_ajax_post_data" => "1",
+                        "data-height" => 350,
+                        "data-encode_ajax_post_data" => "1"
                     ));
                     ?>
                 </div>
@@ -136,19 +140,12 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $("#add-page-form").appForm({
-            beforeAjaxSubmit: function (data) {
-                $.each(data, function (index, obj) {
-                    if (obj.name === "content") {
-                        data[index]["value"] = encodeAjaxPostData(getWYSIWYGEditorHTML("#page_content"));
-                    }
-                });
-            },
             onSuccess: function (result) {
                 $("#pages-table").appTable({newData: result.data, dataId: result.id});
             }
         });
 
-        initWYSIWYGEditor("#page_content", {height: 250});
+        initWYSIWYGEditor("#page_content");
         setTimeout(function () {
             $("#title").focus();
         }, 200);

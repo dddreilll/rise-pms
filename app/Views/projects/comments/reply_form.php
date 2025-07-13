@@ -25,8 +25,8 @@ if (isset($comment_id)) {
                 "data-msg-required" => app_lang("field_required"),
                 "data-rich-text-editor" => true,
                 "data-mention" => true,
-                "data-mention-source" => get_uri("projects/get_member_suggestion_to_mention"),
-                "data-mention-project_id" => $project_id
+                "data-mention_source" => get_uri("projects/get_member_suggestion_to_mention"),
+                "data-mention_project_id" => $project_id
             ));
             ?>
             <?php echo view("includes/dropzone_preview"); ?>

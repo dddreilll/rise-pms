@@ -28,9 +28,9 @@
             order: [[0, "dasc"]],
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("due_date") ?>", "class": "text-center w100", "iDataSort": 0},
-                {title: "<?php echo app_lang("title") ?>"},
-                {title: "<?php echo app_lang("progress") ?>", "class": "text-center w30p"},
+                {title: "<?php echo app_lang("due_date") ?>", "class": "text-center w100 all", "iDataSort": 0},
+                {title: "<?php echo app_lang("title") ?>", "class": "all"},
+                {title: "<?php echo app_lang("progress") ?>", "class": "text-center w30p all"},
                 {visible: optionVisibility, title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ],
             printColumns: [1, 2]

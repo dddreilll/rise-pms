@@ -2,7 +2,7 @@
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
 
-    <div class="card rounded-bottom">
+    <div class="card rounded-top-0">
         <?php if (isset($page_type) && $page_type === "full") { ?>
             <div class="page-title clearfix">
                 <h1><?php echo app_lang('payments'); ?></h1>
@@ -29,9 +29,9 @@
             source: '<?php echo_uri("invoice_payments/payment_list_data_of_client/" . $client_id) ?>',
             order: [[1, "desc"]],
             columns: [
-                {title: '<?php echo app_lang("invoice_id") ?> ', "class": "w10p"},
+                {title: '<?php echo app_lang("invoice_id") ?> ', "class": "w10p all"},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("payment_date") ?> ', "class": "w15p", "iDataSort": 1},
+                {title: '<?php echo app_lang("payment_date") ?> ', "class": "w15p all", "iDataSort": 1},
                 {title: '<?php echo app_lang("payment_method") ?>', "class": "w15p"},
                 {title: '<?php echo app_lang("note") ?>'},
                 {title: '<?php echo app_lang("amount") ?>', "class": "text-right w15p"}

@@ -4,8 +4,12 @@ namespace App\Controllers;
 
 class Notes extends Security_Controller {
 
+    protected $Note_category_model;
+
     function __construct() {
         parent::__construct();
+
+        $this->Note_category_model = model('App\Models\Note_category_model');
     }
 
     protected function validate_access_to_note($note_info, $edit_mode = false) {
@@ -46,8 +50,7 @@ class Notes extends Security_Controller {
         }
     }
 
-    //load note list view
-    function index() {
+    private function can_access_notes() {
         $this->check_module_availability("module_note");
 
         if ($this->login_user->user_type == "client") {
@@ -55,11 +58,36 @@ class Notes extends Security_Controller {
                 app_redirect("forbidden");
             }
         }
+    }
 
-        return $this->template->rander("notes/index");
+    //load note list view
+    function index() {
+        $this->can_access_notes();
+
+        $options = array("user_id" => $this->login_user->id);
+        $note_categories = $this->Note_category_model->get_details($options)->getResult();
+        $note_categories_dropdown = array(array("id" => "", "text" => "- " . app_lang("category") . " -"));
+
+        if ($note_categories) {
+            foreach ($note_categories as $note_category) {
+                $note_categories_dropdown[] = array("id" => $note_category->id, "text" => $note_category->name);
+            }
+        }
+
+        $view_data["note_categories_dropdown"] = json_encode($note_categories_dropdown);
+
+        $view_data['labels_dropdown'] = json_encode($this->make_labels_dropdown("note", "", true));
+
+        return $this->template->rander("notes/index", $view_data);
     }
 
     function modal_form() {
+        $this->can_access_notes();
+
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
+
         $view_data['model_info'] = $this->Notes_model->get_one($this->request->getPost('id'));
         $view_data['project_id'] = $this->request->getPost('project_id') ? $this->request->getPost('project_id') : $view_data['model_info']->project_id;
         $view_data['client_id'] = $this->request->getPost('client_id') ? $this->request->getPost('client_id') : $view_data['model_info']->client_id;
@@ -71,10 +99,24 @@ class Notes extends Security_Controller {
         }
 
         $view_data['label_suggestions'] = $this->make_labels_dropdown("note", $view_data['model_info']->labels, false);
+
+        $note_categories = $this->Note_category_model->get_details(array("user_id" => $this->login_user->id))->getResult();
+        $note_categories_dropdown = array("" => "- " . app_lang("category") . " -");
+
+        if ($note_categories) {
+            foreach ($note_categories as $note_category) {
+                $note_categories_dropdown[$note_category->id] = $note_category->name;
+            }
+        }
+
+        $view_data["note_categories_dropdown"] = $note_categories_dropdown;
+
         return $this->template->view('notes/modal_form', $view_data);
     }
 
     function save() {
+        $this->can_access_notes();
+
         $this->validate_submitted_data(array(
             "id" => "numeric",
             "title" => "required",
@@ -89,15 +131,20 @@ class Notes extends Security_Controller {
         $files_data = move_files_from_temp_dir_to_permanent_dir($target_path, "note");
         $new_files = unserialize($files_data);
 
+        $labels = $this->request->getPost('labels');
+        validate_list_of_numbers($labels);
+
         $data = array(
             "title" => $this->request->getPost('title'),
             "description" => $this->request->getPost('description'),
             "created_by" => $this->login_user->id,
-            "labels" => $this->request->getPost('labels'),
+            "labels" => $labels,
+            "color" => $this->request->getPost('color'),
             "project_id" => $this->request->getPost('project_id') ? $this->request->getPost('project_id') : 0,
             "client_id" => $this->request->getPost('client_id') ? $this->request->getPost('client_id') : 0,
             "user_id" => $this->request->getPost('user_id') ? $this->request->getPost('user_id') : 0,
-            "is_public" => $this->request->getPost('is_public') ? $this->request->getPost('is_public') : 0
+            "is_public" => $this->request->getPost('is_public') ? $this->request->getPost('is_public') : 0,
+            "category_id" => $this->request->getPost('category_id') ? $this->request->getPost('category_id') : 0
         );
 
         if ($id) {
@@ -118,17 +165,25 @@ class Notes extends Security_Controller {
             $data['created_at'] = get_current_utc_time();
         }
 
-        $data = clean_data($data);
-
         $save_id = $this->Notes_model->ci_save($data, $id);
+
+        $data = $this->_row_data($save_id);
+        $is_grid = $this->request->getPost('is_grid') ? true : false;
+        if ($is_grid) {
+            $note_info = $this->Notes_model->get_details(array("id" => $save_id))->getRow();
+            $data = view("notes/grid/note", array("note" => $note_info, "data_only" => true));
+        }
+
         if ($save_id) {
-            echo json_encode(array("success" => true, "data" => $this->_row_data($save_id), 'id' => $save_id, 'message' => app_lang('record_saved')));
+            echo json_encode(array("success" => true, "data" => $data, 'id' => $save_id, 'message' => app_lang('record_saved')));
         } else {
             echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
         }
     }
 
     function delete() {
+        $this->can_access_notes();
+
         $this->validate_submitted_data(array(
             "id" => "required|numeric"
         ));
@@ -156,8 +211,18 @@ class Notes extends Security_Controller {
     }
 
     function list_data($type = "", $id = 0) {
+        $this->can_access_notes();
+
         validate_numeric_value($id);
-        $options = array();
+
+        $this->validate_submitted_data(array(
+            "category_id" => "numeric"
+        ));
+
+        $options = array(
+            "category_id" => $this->request->getPost("category_id"),
+            "label_id" => $this->request->getPost('label_id'),
+        );
 
         if ($type == "project" && $id) {
             $options["created_by"] = $this->login_user->id;
@@ -191,11 +256,12 @@ class Notes extends Security_Controller {
             $public_icon = "<i data-feather='globe' class='icon-16'></i> ";
         }
 
-        $title = modal_anchor(get_uri("notes/view/" . $data->id), $public_icon . $data->title, array("title" => app_lang('note'), "data-post-id" => $data->id));
+        $title = "<span class='note-color-tag' style='background-color: " . ($data->color ? $data->color : "#83c340") . "'></span>";
+        $title .= modal_anchor(get_uri("notes/view/" . $data->id), $public_icon . $data->title, array("title" => app_lang('note'), "data-post-id" => $data->id, "class" => "text-break-space w250"));
 
         if ($data->labels_list) {
             $note_labels = make_labels_view_data($data->labels_list, true);
-            $title .= "<br />" . $note_labels;
+            $title .= "<div>" . $note_labels . "</div>";
         }
 
         $files_link = "";
@@ -216,7 +282,7 @@ class Notes extends Security_Controller {
         $actions = modal_anchor(get_uri("notes/view/" . $data->id), "<i data-feather='cloud-lightning' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('note_details'), "data-modal-title" => app_lang("note"), "data-post-id" => $data->id));
         if ($data->created_by == $this->login_user->id || $this->login_user->is_admin || $data->client_id) {
             $actions = modal_anchor(get_uri("notes/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_note'), "data-post-id" => $data->id))
-                    . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_note'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("notes/delete"), "data-action" => "delete-confirmation"));
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_note'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("notes/delete"), "data-action" => "delete-confirmation"));
         }
 
 
@@ -224,6 +290,7 @@ class Notes extends Security_Controller {
             $data->created_at,
             format_to_relative_time($data->created_at),
             $title,
+            $data->category_name ? $data->category_name : "-",
             $file_download_link . $files_link,
             $actions
         );
@@ -246,6 +313,8 @@ class Notes extends Security_Controller {
         if ($id) {
             validate_numeric_value($id);
             $note_info = $this->Notes_model->get_one($id);
+            $this->validate_access_to_note($note_info);
+
             $files = unserialize($note_info->files);
             $file = get_array_value($files, $key);
 
@@ -272,11 +341,161 @@ class Notes extends Security_Controller {
     function download_files($id) {
         validate_numeric_value($id);
 
-        $files = $this->Notes_model->get_one($id)->files;
+        $note_info = $this->Notes_model->get_one($id);
+        $this->validate_access_to_note($note_info);
+
+        $files = $note_info->files;
         return $this->download_app_files(get_setting("timeline_file_path"), $files);
     }
 
+    function categories() {
+        $this->can_access_notes();
+        return $this->template->rander("notes/category/index");
+    }
+
+
+    function category_list_data() {
+        $this->can_access_notes();
+        $options = array("user_id" => $this->login_user->id);
+        $list_data = $this->Note_category_model->get_details($options)->getResult();
+        $result = array();
+        foreach ($list_data as $data) {
+            $result[] = $this->_make_category_row($data);
+        }
+
+        echo json_encode(array("data" => $result));
+    }
+
+    private function _category_row_data($id) {
+        $options = array("id" => $id);
+        $data = $this->Note_category_model->get_details($options)->getRow();
+
+        return $this->_make_category_row($data);
+    }
+
+    private function _make_category_row($data) {
+        $options = modal_anchor(get_uri("notes/category_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_category'), "data-post-id" => $data->id));
+        $options .= js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_category'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("notes/delete_category"), "data-action" => "delete"));
+
+        return array(
+            $data->name,
+            $options
+        );
+    }
+
+    function category_modal_form() {
+        $this->can_access_notes();
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
+
+        $id = $this->request->getPost('id');
+        if ($id && !$this->can_access_this_category($id)) {
+            app_redirect("forbidden");
+        }
+
+        $view_data['model_info'] = $this->Note_category_model->get_one($id);
+        return $this->template->view('notes/category/modal_form', $view_data);
+    }
+
+    private function can_access_this_category($category_id) {
+        return $this->Note_category_model->get_one($category_id)->user_id == $this->login_user->id;
+    }
+
+    function save_category() {
+        $this->can_access_notes();
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
+
+        $id = $this->request->getPost("id");
+        if ($id && !$this->can_access_this_category($id)) {
+            app_redirect("forbidden");
+        }
+
+        $data = array(
+            "name" => $this->request->getPost('name')
+        );
+
+        if (!$id) {
+            $data["user_id"] = $this->login_user->id;
+        }
+
+        $save_id = $this->Note_category_model->ci_save($data, $id);
+
+        if ($save_id) {
+            echo json_encode(array("success" => true, "data" => $this->_category_row_data($save_id), 'id' => $save_id, 'message' => app_lang('record_saved')));
+        } else {
+
+            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+        }
+    }
+
+    function delete_category() {
+        $this->can_access_notes();
+        $id = $this->request->getPost('id');
+        $this->validate_submitted_data(array(
+            "id" => "numeric"
+        ));
+
+        if ($id && !$this->can_access_this_category($id)) {
+            app_redirect("forbidden");
+        }
+
+        if ($this->request->getPost('undo')) {
+            if ($this->Note_category_model->delete($id, true)) {
+                echo json_encode(array("success" => true, "data" => $this->_category_row_data($id), "message" => app_lang('record_undone')));
+            } else {
+                echo json_encode(array("success" => false, app_lang('error_occurred')));
+            }
+        } else {
+            if ($this->Note_category_model->delete($id)) {
+                echo json_encode(array("success" => true, 'message' => app_lang('record_deleted')));
+            } else {
+                echo json_encode(array("success" => false, 'message' => app_lang('record_cannot_be_deleted')));
+            }
+        }
+    }
+
+    function grid() {
+        $this->can_access_notes();
+
+        $options = array("user_id" => $this->login_user->id);
+        $note_categories = $this->Note_category_model->get_details($options)->getResult();
+        $note_categories_dropdown = array(array("id" => "", "text" => "- " . app_lang("category") . " -"));
+
+        if ($note_categories) {
+            foreach ($note_categories as $note_category) {
+                $note_categories_dropdown[] = array("id" => $note_category->id, "text" => $note_category->name);
+            }
+        }
+
+        $view_data["note_categories_dropdown"] = json_encode($note_categories_dropdown);
+
+        $view_data['labels_dropdown'] = json_encode($this->make_labels_dropdown("note", "", true));
+
+        return $this->template->rander("notes/grid/index", $view_data);
+    }
+
+    function grid_data() {
+        $this->can_access_notes();
+        $this->validate_submitted_data(array(
+            "category_id" => "numeric"
+        ));
+
+        $options = array(
+            "category_id" => $this->request->getPost("category_id"),
+            "label_id" => $this->request->getPost('label_id'),
+            "created_by" => $this->login_user->id, //the grid view is only available on personal private notes for now
+            "my_notes" => true,
+            "search" => $this->request->getPost('search')
+        );
+
+        $view_data["notes"] = $this->Notes_model->get_details($options)->getResult();
+
+        return $this->template->view('notes/grid/grid_view', $view_data);
+    }
 }
 
-/* End of file notes.php */
-/* Location: ./app/controllers/notes.php */
+/* End of file Notes.php */
+/* Location: ./app/Controllers/Notes.php */

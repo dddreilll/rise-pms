@@ -12,7 +12,7 @@ class Google_calendar_events {
         $this->ci = new App_Controller();
 
         //load resources
-        require_once(APPPATH . "ThirdParty/Google/google-api-php-client-2-15-0/autoload.php");
+        require_once(APPPATH . "ThirdParty/Google/2-18-1/autoload.php");
     }
 
     //authorize connection
@@ -344,11 +344,12 @@ class Google_calendar_events {
         $user_google_calendar_gmail = get_setting('user_' . $user_id . '_google_calendar_gmail');
 
         //create/get google calendar label
-        $label_data = array("title" => app_lang("google_calendar_event"), "color" => "#2d9cdb", "context" => "event", "user_id" => $user_id);
+        $label_data = array("title" => app_lang("google_calendar_event"), "context" => "event", "user_id" => $user_id);
         $existing_label = $this->ci->Labels_model->get_one_where(array_merge($label_data, array("deleted" => 0)));
         if ($existing_label->id) {
             $label_id = $existing_label->id;
         } else {
+            $label_data["color"] = "#2d9cdb";
             $label_id = $this->ci->Labels_model->ci_save($label_data);
         }
 

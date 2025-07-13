@@ -1,25 +1,22 @@
 <div class="card">
     <div class="card-header title-tab">
         <h4 class="float-start"><?php echo app_lang('tasks'); ?></h4>
-        <div class="title-button-group">
+        <div class="title-button-group grid-button-xs">
             <?php
             if ($login_user->user_type == "staff" && $can_edit_tasks) {
-                echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-outline-light", "title" => app_lang('manage_labels'), "data-post-type" => "task"));
-                echo modal_anchor("", "<i data-feather='edit' class='icon-16'></i> " . app_lang('batch_update'), array("class" => "btn btn-info text-white hide batch-update-btn", "title" => app_lang('batch_update'), "data-post-project_id" => $project_id));
-                echo js_anchor("<i data-feather='check-square' class='icon-16'></i> " . app_lang("batch_update"), array("class" => "btn btn-outline-light batch-active-btn"));
-                echo js_anchor("<i data-feather='x-square' class='icon-16'></i> " . app_lang("cancel_selection"), array("class" => "hide btn btn-outline-light batch-cancel-btn"));
+                echo modal_anchor(get_uri("labels/modal_form"), "<i data-feather='tag' class='icon-16'></i> " . app_lang('manage_labels'), array("class" => "btn btn-default", "title" => app_lang('manage_labels'), "data-post-type" => "task"));
             }
             if ($can_create_tasks) {
-                echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_multiple_tasks'), array("class" => "btn btn-outline-light", "title" => app_lang('add_multiple_tasks'), "data-post-project_id" => $project_id, "data-post-add_type" => "multiple"));
-                echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_task'), array("class" => "btn btn-outline-light", "title" => app_lang('add_task'), "data-post-project_id" => $project_id));
+                echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_multiple_tasks'), array("class" => "btn btn-default hidden-xs", "title" => app_lang('add_multiple_tasks'), "data-post-project_id" => $project_id, "data-post-add_type" => "multiple"));
+                echo modal_anchor(get_uri("tasks/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_task'), array("class" => "btn btn-default", "title" => app_lang('add_task'), "data-post-project_id" => $project_id));
             }
             ?>
         </div>
     </div>
     <div class="table-responsive">
-        <table id="task-table" class="display" width="100%">            
+        <table id="task-table" class="display" width="100%">
         </table>
-    </div>    
+    </div>
 </div>
 
 <?php
@@ -55,20 +52,20 @@ foreach ($task_statuses as $status) {
         }
 
         var showResponsiveOption = true,
-                idColumnClass = "w10p",
-                titleColumnClass = "",
+                showIdColumn = true,
+                titleColumnClass = "all",
                 optionColumnClass = "w100";
-        if (isMobile()) {
-            showResponsiveOption = false;
-            milestoneVisibility = false;
-            idColumnClass = "w20p";
-            titleColumnClass = "w60p";
-            optionColumnClass = "w20p";
+        if(isMobile()) {
+            showIdColumn = false;            
         }
 
+        var idColumnClass = "";
+        if ("<?php echo get_setting("show_the_status_checkbox_in_tasks_list"); ?>" === "1") {
+            idColumnClass = "w10p";
+        }
 
         var rowCallback = function (nRow, aData, iDisplayIndex, iDisplayIndexFull) {
-                $('td:eq(0)', nRow).attr("style", "border-left:5px solid " + aData[0] + " !important;");
+                $('td:eq(0)', nRow).attr("style", "border-left-color:" + aData[0] + " !important;").addClass('list-status-border');
                 //add activated sub task filter class
                 setTimeout(function () {
                     var searchValue = $('#task-table').closest(".dataTables_wrapper").find("input[type=search]").val();
@@ -77,8 +74,6 @@ foreach ($task_statuses as $status) {
                     }
                 }, 50);
             };
-
-
 
 
         if (userType === "client") {
@@ -95,7 +90,6 @@ foreach ($task_statuses as $status) {
                 serverSide: true,
                 order: [[1, "desc"]],
                 filterDropdown: filterDropdown,
-                responsive: false, //hide responsive (+) icon
                 multiSelect: [
                     {
                         name: "status_id",
@@ -106,22 +100,26 @@ foreach ($task_statuses as $status) {
                 ],
                 columns: [
                     {visible: false, searchable: false},
-                    {title: "<?php echo app_lang('id') ?>", "class": idColumnClass, order_by: "id"},
+                    {title: "<?php echo app_lang('id') ?>", visible: showIdColumn, "class": idColumnClass, order_by: "id"},
                     {title: "<?php echo app_lang('title') ?>", "class": titleColumnClass, order_by: "title"},
+                    {title: "<?php echo app_lang('title') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('label') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('priority') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('points') ?>", visible: false, searchable: false},
                     {visible: false, searchable: false, order_by: "start_date"},
-                    {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 3, visible: showResponsiveOption, order_by: "start_date"},
+                    {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 7, order_by: "start_date"},
                     {visible: false, searchable: false, order_by: "deadline"},
-                    {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 5, visible: showResponsiveOption, order_by: "deadline"},
+                    {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 9, order_by: "deadline"},
                     {title: "<?php echo app_lang('milestone') ?>", visible: milestoneVisibility, order_by: "milestone"},
                     {visible: false, searchable: false},
                     {visible: false, searchable: false},
                     {visible: false, searchable: false},
-                    {title: "<?php echo app_lang('status') ?>", visible: showResponsiveOption, order_by: "status"}
+                    {title: "<?php echo app_lang('status') ?>", order_by: "status"}
                     <?php echo $custom_field_headers; ?>,
                     {title: '<i data-feather="menu" class="icon-16"></i>', visible: optionVisibility, "class": "text-center option " + optionColumnClass}
                 ],
-                printColumns: combineCustomFieldsColumns([1, 2, 4, 6, 7, 12], '<?php echo $custom_field_headers; ?>'),
-                xlsColumns: combineCustomFieldsColumns([1, 2, 4, 6, 7, 12], '<?php echo $custom_field_headers; ?>'),
+                printColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 15], '<?php echo $custom_field_headers; ?>'),
+                xlsColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 15], '<?php echo $custom_field_headers; ?>'),
                 rowCallback: tasksTableRowCallback //load this function from the task_table_common_script.php 
             });
         } else {
@@ -138,21 +136,25 @@ foreach ($task_statuses as $status) {
                 filterDropdown.push({name: "assigned_to", class: "w200", options: <?php echo $assigned_to_dropdown; ?>});
             }
             filterDropdown.push(<?php echo $custom_field_filters; ?>);
+
+            var batchUpdateUrl = "<?php echo get_uri("tasks/batch_update_modal_form"); ?>";
+
+            var dynamicDates = getDynamicDates();
             $("#task-table").appTable({
                 source: '<?php echo_uri("tasks/list_data/project/" . $project_id) ?>',
                 serverSide: true,
                 order: [[1, "desc"]],
                 smartFilterIdentity: "project_tasks_list", //a to z and _ only. should be unique to avoid conflicts 
-                contextMeta: {contextId: "<?php echo $project_id; ?>", dependencies: ["milestone_id"]}, //useful to seperate instance related filters. Ex. Milestones are different for each projects. 
-                responsive: false, //hide responsive (+) icon
+                contextMeta: {contextId: "<?php echo $project_id; ?>", dependencies: ["milestone_id"]}, //useful to seperate instance related filters. Ex. Milestones are different for each projects.
+                selectionHandler: {postData:{project_id: "<?php echo $project_id; ?>"}, batchUpdateUrl: batchUpdateUrl},
                 filterDropdown: filterDropdown,
                 singleDatepicker: [{name: "deadline", defaultText: "<?php echo app_lang('deadline') ?>", class: "w200",
                         options: [
                             {value: "expired", text: "<?php echo app_lang('expired') ?>"},
-                            {value: moment().format("YYYY-MM-DD"), text: "<?php echo app_lang('today') ?>"},
-                            {value: moment().add(1, 'days').format("YYYY-MM-DD"), text: "<?php echo app_lang('tomorrow') ?>"},
-                            {value: moment().add(7, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
-                            {value: moment().add(15, 'days').format("YYYY-MM-DD"), text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
+                            {value: dynamicDates.today, text: "<?php echo app_lang('today') ?>"},
+                            {value: dynamicDates.tomorrow, text: "<?php echo app_lang('tomorrow') ?>"},
+                            {value: dynamicDates.in_next_7_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 7); ?>"},
+                            {value: dynamicDates.in_next_15_days, text: "<?php echo sprintf(app_lang('in_number_of_days'), 15); ?>"}
                         ]}],
                 multiSelect: [
                     {
@@ -165,26 +167,27 @@ foreach ($task_statuses as $status) {
                 ],
                 columns: [
                     {visible: false, searchable: false},
-                    {title: "<?php echo app_lang('id') ?>", "class": idColumnClass, order_by: "id"},
-                    {title: "<?php echo app_lang('title') ?>", "class": titleColumnClass, order_by: "title"},
+                    {title: "<?php echo app_lang('id') ?>", visible: showIdColumn, "class": idColumnClass, order_by: "id"},
+                    {title: "<?php echo app_lang('title') ?>", "class": "all", order_by: "title"},
+                    {title: "<?php echo app_lang('title') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('label') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('priority') ?>", visible: false, searchable: false},
+                    {title: "<?php echo app_lang('points') ?>", visible: false, searchable: false},
                     {visible: false, searchable: false, order_by: "start_date"},
-                    {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 3, visible: showResponsiveOption, order_by: "start_date"},
+                    {title: "<?php echo app_lang('start_date') ?>", "iDataSort": 7, order_by: "start_date"},
                     {visible: false, searchable: false, order_by: "deadline"},
-                    {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 5, visible: showResponsiveOption, order_by: "deadline"},
-                    {title: "<?php echo app_lang("milestone") ?>", visible: showResponsiveOption, order_by: "milestone"},
+                    {title: "<?php echo app_lang('deadline') ?>", "iDataSort": 9, order_by: "deadline"},
+                    {title: "<?php echo app_lang("milestone") ?>", order_by: "milestone"},
                     {visible: false, searchable: false},
-                    {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", visible: showResponsiveOption, order_by: "assigned_to"},
+                    {title: "<?php echo app_lang('assigned_to') ?>", "class": "min-w150", order_by: "assigned_to"},
                     {title: "<?php echo app_lang('collaborators') ?>", visible: showResponsiveOption},
-                    {title: "<?php echo app_lang('status') ?>", visible: showResponsiveOption, order_by: "status"}
+                    {title: "<?php echo app_lang('status') ?>", order_by: "status"}
                     <?php echo $custom_field_headers; ?>,
                     {title: '<i data-feather="menu" class="icon-16"></i>', visible: optionVisibility, "class": "text-center option " + optionColumnClass}
                 ],
-                printColumns: combineCustomFieldsColumns([1, 2, 4, 6, 7, 9, 10, 12], '<?php echo $custom_field_headers; ?>'),
-                xlsColumns: combineCustomFieldsColumns([1, 2, 4, 6, 8, 9, 10], '<?php echo $custom_field_headers; ?>'),
-                rowCallback: tasksTableRowCallback, //load this function from the task_table_common_script.php 
-                onRelaodCallback: function () {
-                    hideBatchTasksBtn();
-                }
+                printColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 13, 14, 15], '<?php echo $custom_field_headers; ?>'),
+                xlsColumns: combineCustomFieldsColumns([1, 3, 4, 5, 6, 8, 10, 11, 13, 14, 15], '<?php echo $custom_field_headers; ?>'),
+                rowCallback: tasksTableRowCallback, //load this function from the task_table_common_script.php
             });
         }
     });

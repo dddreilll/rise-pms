@@ -28,7 +28,7 @@
                     <div class="card">
                         <div class="page-body p15 help-category-box">
                             <h4><?php echo $category->title; ?></h4>
-                            <p class="text-off"><?php echo nl2br($category->description ? process_images_from_content($category->description) : ""); ?></p>
+                            <p class="text-off"><?php echo custom_nl2br($category->description ? process_images_from_content($category->description) : ""); ?></p>
                             <span class="anchor"><?php echo $category->total_articles . " " . app_lang("articles"); ?></span>
                         </div>
                     </div>

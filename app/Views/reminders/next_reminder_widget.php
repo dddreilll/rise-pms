@@ -18,6 +18,12 @@
                         $today = get_today_date();
                         $tomorrow = get_tomorrow_date();
 
+                        if ($next_reminder->recurring) {
+                            $next_recurring_time = $next_reminder->next_recurring_time;
+                            $next_reminder->start_date = format_to_date($next_recurring_time, false);
+                            $next_reminder->start_time = format_to_time($next_recurring_time, false);
+                        }
+
                         if ($next_reminder->start_date === $today) {
                             echo format_to_time($next_reminder->start_date . " " . $next_reminder->start_time, false); //If reminder is today, then show only time.
                         } else if ($next_reminder->start_date === $tomorrow) {

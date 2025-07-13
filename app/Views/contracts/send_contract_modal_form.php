@@ -70,18 +70,24 @@
                         "id" => "message",
                         "name" => "message",
                         "value" => process_images_from_content($message, false),
-                        "class" => "form-control"
+                        "class" => "form-control",
+                        "data-height" => 400,
+                        "data-toolbar" => "no_toolbar",
+                        "data-encode_ajax_post_data" => "1"
                     ));
                     ?>
                 </div>
             </div>
         </div>
-        <div class="form-group ml15">
-            <?php
-            echo form_checkbox("attach_pdf", "1", true, "id='attach_pdf' class='form-check-input'");
-            ?>            
-            <label for="attach_pdf"><?php echo app_lang('attach_pdf') . ' ' . anchor(get_uri("contracts/download_pdf/" . $contract_info->id . "/download"), preg_replace('/[^A-Za-z0-9\-]/', '-', get_contract_id($contract_info->id)) . ".pdf", array("target" => "_blank", "id" => "attachment-url")); ?></label>
-        </div>
+
+        <?php if ($has_pdf_access) { ?>
+            <div class="form-group ml15">
+                <?php
+                echo form_checkbox("attach_pdf", "1", true, "id='attach_pdf' class='form-check-input'");
+                ?>
+                <label for="attach_pdf"><?php echo app_lang('attach_pdf') . ' ' . anchor(get_uri("contracts/download_pdf/" . $contract_info->id . "/download"), preg_replace('/[^A-Za-z0-9\-]/', '-', get_contract_id($contract_info->id)) . ".pdf", array("target" => "_blank", "id" => "attachment-url")); ?></label>
+            </div>
+        <?php } ?>
 
     </div>
 </div>
@@ -94,21 +100,15 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         $('#send-contract-form .select2').select2();
         $("#send-contract-form").appForm({
-            beforeAjaxSubmit: function (data) {
-                var custom_message = encodeAjaxPostData(getWYSIWYGEditorHTML("#message"));
-                $.each(data, function (index, obj) {
-                    if (obj.name === "message") {
-                        data[index]["value"] = custom_message;
-                    }
-                });
-            },
-            onSuccess: function (result) {
+            onSuccess: function(result) {
                 if (result.success) {
-                    appAlert.success(result.message, {duration: 10000});
+                    appAlert.success(result.message, {
+                        duration: 10000
+                    });
                     updateContractStatusBar(result.contract_id);
                 } else {
                     appAlert.error(result.message);
@@ -116,22 +116,19 @@
             }
         });
 
-        initWYSIWYGEditor("#message", {height: 400, toolbar: []});
+        initWYSIWYGEditor("#message");
 
         //load template view on changing of client contact
-        $("#contact_id").select2().on("change", function () {
+        $("#contact_id").select2().on("change", function() {
             var contact_id = $(this).val();
             if (contact_id) {
-                $("#message").summernote("destroy");
-                $("#message").val("");
                 appLoader.show();
                 $.ajax({
                     url: "<?php echo get_uri('contracts/get_send_contract_template/' . $contract_info->id) ?>" + "/" + contact_id + "/json",
                     dataType: "json",
-                    success: function (result) {
+                    success: function(result) {
                         if (result.success) {
-                            $("#message").val(result.message_view);
-                            initWYSIWYGEditor("#message", {height: 400, toolbar: []});
+                            setWYSIWYGEditorHTML("#message", result.message_view);
                             appLoader.hide();
                         }
                     }

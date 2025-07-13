@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -16,6 +18,8 @@ use Exception;
 
 /**
  * RedirectException
+ *
+ * @deprecated Use \CodeIgniter\HTTP\Exceptions\RedirectException instead
  */
 class RedirectException extends Exception implements HTTPExceptionInterface
 {

@@ -1,13 +1,10 @@
 <div class="modal-body clearfix">
     <div class="container-fluid">
-        <div class="card"
-             <div class="table-responsive">
-            <table id="filters-table" class="display" cellspacing="0" width="100%">            
+        <div class="table-responsive">
+            <table id="filters-table" class="display" cellspacing="0" width="100%">
             </table>
         </div>
     </div>
-
-</div>
 </div>
 
 <div class="modal-footer">
@@ -17,14 +14,20 @@
 <script type="text/javascript">
     $(document).ready(function () {
         var context = "<?php echo $context; ?>";
+
+        var optionClass = "w250";
+        if(isMobile()){
+            optionClass = "";
+        }
+
         $("#filters-table").appTable({
             source: '<?php echo_uri("filters/list_data/" . $context . "/" . $context_id) ?>',
             order: [[0, 'asc']],
             columns: [
-                {title: "<?php echo app_lang('title') ?> "},
+                {title: "<?php echo app_lang('title') ?> ", "class": "all"},
                 {title: "<?php echo app_lang('bookmark') ?> ", "class": "text-center"},
                 {title: "<?php echo app_lang('bookmark_icon') ?> ", "class": "text-center"},
-                {title: "<i data-feather='menu' class='icon-16'></i>", "class": "text-center option w250"}
+                {title: "<i data-feather='menu' class='icon-16'></i>", "class": "text-center option " + optionClass}
             ]
         });
 

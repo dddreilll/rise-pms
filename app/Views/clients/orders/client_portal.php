@@ -17,15 +17,24 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+
+        var idColumnClass = "w10p",
+            invoiceColumnClass = "w20p";
+
+        if (isMobile()) {
+            idColumnClass = "";
+            invoiceColumnClass = "";
+        }
+
         $("#order-table").appTable({
             source: '<?php echo_uri("orders/order_list_data_of_client/" . $client_id) ?>',
             order: [[0, "desc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("order") ?>", "class": "w10p", "iDataSort": 0},
+                {title: "<?php echo app_lang("order") ?>", "class": idColumnClass + " all", "iDataSort": 0},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("invoices") ?>", "class": "w20p"},
+                {title: "<?php echo app_lang("invoices") ?>", "class": invoiceColumnClass + " all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("order_date") ?>", "iDataSort": 4, "class": "w15p"},
                 {title: "<?php echo app_lang("amount") ?>", "class": "text-right w20p"},
@@ -33,7 +42,7 @@
 <?php echo $custom_field_headers; ?>,
                 {visible: false}
             ],
-            summation: [{column: 5, dataType: 'currency'}]
+            summation: [{column: 6, dataType: 'currency'}]
         });
     });
 </script>

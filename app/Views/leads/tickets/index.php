@@ -2,7 +2,7 @@
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
 
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <?php if (isset($page_type) && $page_type === "full") { ?>
             <div class="page-title clearfix">
                 <h1><?php echo app_lang('tickets'); ?></h1>
@@ -44,7 +44,7 @@
             columns: [
                 {visible: false, searchable: false},
                 {title: '<?php echo app_lang("ticket_id") ?>', "class": "w10p"},
-                {title: '<?php echo app_lang("title") ?>'},
+                {title: '<?php echo app_lang("title") ?>', "class": "all"},
                 {visible: false, searchable: false},
                 {title: '<?php echo app_lang("project") ?>', "class": "w20p", visible: projectVisibility},
                 {title: '<?php echo app_lang("ticket_type") ?>', "class": "w20p"},

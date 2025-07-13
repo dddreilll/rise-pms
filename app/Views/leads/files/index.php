@@ -1,4 +1,4 @@
-<div class="card no-border-top-radius">
+<div class="card border-top-0 rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('files'); ?></h4>
         <div class="title-button-group">
@@ -24,7 +24,7 @@
             order: [[0, "desc"]],
             columns: [
                 {title: '<?php echo app_lang("id") ?>'},
-                {title: '<?php echo app_lang("file") ?>'},
+                {title: '<?php echo app_lang("file") ?>', "class": "all file-name-section"},
                 {title: '<?php echo app_lang("size") ?>'},
                 {title: '<?php echo app_lang("uploaded_by") ?>'},
                 {title: '<?php echo app_lang("created_date") ?>'},

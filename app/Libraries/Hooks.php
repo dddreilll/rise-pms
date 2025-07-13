@@ -32,4 +32,42 @@ class Hooks {
         $Orders_model->ci_save($order_data, $invoice_info->order_id);
     }
 
+    public function check_automations($hook_data) {
+        $Automations = new Automations();
+
+        $id = get_array_value($hook_data, "id");
+        $table_name = get_array_value($hook_data, "table_without_prefix");
+        $data = get_array_value($hook_data, "data");
+
+        $event_name = "";
+
+        if ($table_name == "ticket_comments") {
+            $this->_modify_data_for_the_event_new_ticket_created_by_imap_email($event_name, $data, $id);
+        }
+
+        if ($event_name) {
+            log_message('notice', 'Automation: -- Inital trigger. Event - ' . $event_name . ', id - ' . $id);
+            $Automations->trigger_automations($event_name, $data, $id);
+        }
+    }
+
+    private function _modify_data_for_the_event_new_ticket_created_by_imap_email(&$event_name, &$data, &$id) {
+        $ticket_id = get_array_value($data, "ticket_id");
+
+        if ($ticket_id) {
+            $Tickets_model = model("App\Models\Tickets_model");
+            $ticket_info = $Tickets_model->get_one($ticket_id);
+
+            if ($ticket_info && $ticket_info->creator_email) {
+
+                $event_name = "new_ticket_created_by_imap_email";
+                $id = $ticket_info->id;
+
+                $new_data = array();
+                $new_data["title"] = $ticket_info->title;
+                $new_data["description"] = get_array_value($data, "description");
+                $data = $new_data;
+            }
+        }
+    }
 }

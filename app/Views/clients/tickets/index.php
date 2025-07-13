@@ -2,7 +2,7 @@
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
 
-    <div class="card rounded-bottom">
+    <div class="card rounded-top-0">
         <?php if (isset($page_type) && $page_type === "full") { ?>
             <div class="page-title clearfix">
                 <h1><?php echo app_lang('tickets'); ?></h1>
@@ -45,24 +45,26 @@
 
         $("#ticket-table").appTable({
             source: '<?php echo_uri("tickets/ticket_list_data_of_client/" . $client_id) ?>',
-            order: [[6, "desc"]],
+            order: [[9, "desc"]],
             radioButtons: radioButtons,
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("ticket_id") ?>', "iDataSort": 0, "class": "w10p"},
-                {title: '<?php echo app_lang("title") ?>'},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("project") ?>', "class": "w20p", visible: projectVisibility},
-                {title: '<?php echo app_lang("ticket_type") ?>', "class": "w20p"},
-                {title: '<?php echo app_lang("assigned_to") ?>', visible: userType == "staff" ? true : false}, //show only to team members
+                {title: "<?php echo app_lang("ticket_id") ?>", "iDataSort": 0, "class": "w10p"},
+                {title: "<?php echo app_lang("title") ?>", "class": "all"},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("last_activity") ?>', "iDataSort": 7, "class": "w15p"},
-                {title: '<?php echo app_lang("status") ?>', "class": "w10p"}
+                {title: "<?php echo app_lang("project") ?>", "class": "w20p", visible: projectVisibility},
+                {title: "<?php echo app_lang("ticket_type") ?>", "class": "w20p"},
+                {title: "<?php echo app_lang("labels") ?>", visible: userType == "staff" ? true : false}, //show only to team members
+                {title: "<?php echo app_lang("assigned_to") ?>", visible: userType == "staff" ? true : false}, //show only to team members
+                {visible: false, searchable: false},
+                {title: "<?php echo app_lang("last_activity") ?>", "iDataSort": 9, "class": "w15p"},
+                {title: "<?php echo app_lang("status") ?>", "class": "w10p"}
 <?php echo $custom_field_headers; ?>
             ],
-            printColumns: combineCustomFieldsColumns([1, 2, 4, 5, 6, 8, 9], '<?php echo $custom_field_headers; ?>'),
-            xlsColumns: combineCustomFieldsColumns([1, 2, 4, 5, 6, 8, 9], '<?php echo $custom_field_headers; ?>')
+            printColumns: combineCustomFieldsColumns([2, 3, 5, 6, 10, 11], '<?php echo $custom_field_headers; ?>'),
+            xlsColumns: combineCustomFieldsColumns([2, 3, 5, 6, 10, 11], '<?php echo $custom_field_headers; ?>')
         });
     });
 </script>

@@ -1,4 +1,4 @@
-<div class="clearfix default-bg">
+<div class="clearfix default-bg details-view-container">
     <div class="row">
         <div class="col-md-9 d-flex">
             <div class="card p15 w-100 pt0">
@@ -14,7 +14,7 @@
                             <div class="tab-content">
                                 <div role="tabpanel" class="tab-pane fade" id="proposal-items">
 
-                                    <div class="p15 b-t mb15 card">
+                                    <div class="p15 mb15">
                                         <div class="clearfix p20">
                                             <!-- small font size is required to generate the pdf, overwrite that for screen -->
                                             <style type="text/css"> .invoice-meta {
@@ -43,7 +43,7 @@
                                                 <div class="col-md-3">
                                                     <?php echo view('proposals/proposal_parts/proposal_to', $data); ?>
                                                 </div>
-                                                <div class="col-md-4 text-right">
+                                                <div class="col-md-4 text-right info-section">
                                                     <?php echo view('proposals/proposal_parts/proposal_info', $data); ?>
                                                 </div>
                                             </div>
@@ -61,7 +61,7 @@
                                             </div>
                                             <?php if ($is_proposal_editable) { ?>
                                                 <div class="float-start ml15 mt20 mb20">
-                                                    <?php echo modal_anchor(get_uri("proposals/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-info text-white", "title" => app_lang('add_item'), "data-post-proposal_id" => $proposal_info->id)); ?>
+                                                    <?php echo modal_anchor(get_uri("proposals/item_modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_item'), array("class" => "btn btn-primary text-white", "title" => app_lang('add_item'), "data-post-proposal_id" => $proposal_info->id)); ?>
                                                 </div>
                                             <?php } ?>
                                             <div class="float-end pr15" id="proposal-total-section">
@@ -69,7 +69,7 @@
                                             </div>
                                         </div>
 
-                                        <p class="b-t b-info pt10 m15"><?php echo nl2br($proposal_info->note ? process_images_from_content($proposal_info->note) : ""); ?></p>
+                                        <p class="b-t b-info pt10 m15"><?php echo custom_nl2br($proposal_info->note ? process_images_from_content($proposal_info->note) : ""); ?></p>
 
                                         <?php
                                         if (get_setting("enable_comments_on_proposals") && !($proposal_info->status === "draft")) {

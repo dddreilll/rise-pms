@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\ReCAPTCHA;
+
 class Request_estimate extends App_Controller {
 
     function __construct() {
@@ -51,57 +53,20 @@ class Request_estimate extends App_Controller {
         }
     }
 
-    private function is_valid_recaptcha($recaptcha_post_data) {
-        //load recaptcha lib
-        require_once(APPPATH . "ThirdParty/recaptcha/autoload.php");
-        $recaptcha = new \ReCaptcha\ReCaptcha(get_setting("re_captcha_secret_key"));
-        $resp = $recaptcha->verify($recaptcha_post_data, $_SERVER['REMOTE_ADDR']);
-
-        if ($resp->isSuccess()) {
-            return true;
-        } else {
-
-            $error = "";
-            foreach ($resp->getErrorCodes() as $code) {
-                $error = $code;
-            }
-
-            return $error;
-        }
-    }
-
     //save estimate request from client
     function save_estimate_request() {
-
-
         $form_id = $this->request->getPost('form_id');
         $assigned_to = $this->request->getPost('assigned_to');
 
         $this->validate_submitted_data(array(
-            "company_name" => "required",
-            "form_id" => "required|numeric"
+            "form_id" => "required|numeric",
+            "email" => "valid_email"
         ));
 
         //check if there reCaptcha is enabled
         //if reCaptcha is enabled, check the validation
-        if (get_setting("re_captcha_secret_key")) {
-
-            $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-            if ($response !== true) {
-
-                if ($response) {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                } else {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                }
-
-                return false;
-            }
-        }
-
-
-
+        $ReCAPTCHA = new ReCAPTCHA();
+        $ReCAPTCHA->validate_recaptcha();
 
         $options = array("related_to" => "estimate_form-" . $form_id);
         $form_fields = $this->Custom_fields_model->get_details($options)->getResult();
@@ -113,7 +78,7 @@ class Request_estimate extends App_Controller {
         $email = $this->request->getPost('email');
         $user_info = $this->Users_model->get_one_where(array("email" => $email, "deleted" => 0));
 
-        if ($user_info->id) {
+        if ($user_info->client_id) {
             //created by existing client/lead
             $request_data = array(
                 "estimate_form_id" => $form_id,
@@ -125,9 +90,13 @@ class Request_estimate extends App_Controller {
                 "status" => "new"
             );
         } else {
+            $company_name = $this->request->getPost('company_name');
+            $first_name = $this->request->getPost('first_name');
+            $last_name = $this->request->getPost('last_name');
+
             //unknown client
             $leads_data = array(
-                "company_name" => $this->request->getPost('company_name'),
+                "company_name" => $company_name,
                 "address" => $this->request->getPost('address'),
                 "city" => $this->request->getPost('city'),
                 "state" => $this->request->getPost('state'),
@@ -140,17 +109,25 @@ class Request_estimate extends App_Controller {
                 "owner_id" => $assigned_to ? $assigned_to : 0
             );
 
+            if ($company_name) {
+                $leads_data["type"] = "organization";
+            } else {
+                $leads_data["type"] = "person";
+                $leads_data["company_name"] = $first_name . " " . $last_name;
+            }
+
             $leads_data = clean_data($leads_data);
+
             $lead_id = $this->Clients_model->ci_save($leads_data);
 
-            if ($lead_id) {
+            if ($lead_id && ($first_name || $last_name || $email)) {
                 //lead created, create a contact on that lead
                 $lead_contact_data = array(
-                    "first_name" => $this->request->getPost('first_name'),
-                    "last_name" => $this->request->getPost('last_name'),
+                    "first_name" => $first_name,
+                    "last_name" => $last_name,
                     "client_id" => $lead_id,
                     "user_type" => "lead",
-                    "email" => trim($this->request->getPost('email')),
+                    "email" => trim($email),
                     "created_at" => get_current_utc_time(),
                     "is_primary_contact" => 1
                 );
@@ -225,7 +202,7 @@ class Request_estimate extends App_Controller {
         if ($data->required) {
             $required = "*";
         }
-        
+
         $title = "";
         if ($data->title_language_key) {
             $title = app_lang($data->title_language_key);
@@ -240,7 +217,7 @@ class Request_estimate extends App_Controller {
             $placeholder = $data->placeholder;
         }
 
-        $field = "<label for='custom_field_$data->id' data-id='$data->id' class='field-row'>$title $required</label>";
+        $field = "<label for='custom_field_$data->id' data-id='$data->id' class='field-row text-break-space'>$title $required</label>";
 
         $field .= "<div class='form-group'>" . $this->template->view("custom_fields/input_" . $data->field_type, array("field_info" => $data, "placeholder" => $placeholder)) . "</div>";
 
@@ -251,10 +228,9 @@ class Request_estimate extends App_Controller {
             $field,
             $data->sort,
             modal_anchor(get_uri("estimate_requests/estimate_form_field_modal_form/" . $estimate_form_id), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_form'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/estimate_form_field_delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("estimate_requests/estimate_form_field_delete"), "data-action" => "delete"))
         );
     }
-
 }
 
 /* End of file quotations.php */

@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Libraries\ReCAPTCHA;
+
 class External_tickets extends App_Controller {
 
     function __construct() {
@@ -24,25 +26,6 @@ class External_tickets extends App_Controller {
         return $this->template->rander("external_tickets/index", $view_data);
     }
 
-    private function is_valid_recaptcha($recaptcha_post_data) {
-        //load recaptcha lib
-        require_once(APPPATH . "ThirdParty/recaptcha/autoload.php");
-        $recaptcha = new \ReCaptcha\ReCaptcha(get_setting("re_captcha_secret_key"));
-        $resp = $recaptcha->verify($recaptcha_post_data, $_SERVER['REMOTE_ADDR']);
-
-        if ($resp->isSuccess()) {
-            return true;
-        } else {
-
-            $error = "";
-            foreach ($resp->getErrorCodes() as $code) {
-                $error = $code;
-            }
-
-            return $error;
-        }
-    }
-
     //save external ticket
     function save() {
         if (!get_setting("enable_embedded_form_to_get_tickets")) {
@@ -57,21 +40,8 @@ class External_tickets extends App_Controller {
 
         //check if there reCaptcha is enabled
         //if reCaptcha is enabled, check the validation
-        if (get_setting("re_captcha_secret_key")) {
-
-            $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-            if ($response !== true) {
-
-                if ($response) {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                } else {
-                    echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                }
-
-                return false;
-            }
-        }
+        $ReCAPTCHA = new ReCAPTCHA();
+        $ReCAPTCHA->validate_recaptcha();
 
         $now = get_current_utc_time();
 
@@ -99,6 +69,8 @@ class External_tickets extends App_Controller {
             $ticket_data["requested_by"] = 0;
             $ticket_data["creator_name"] = $this->request->getPost('name') ? $this->request->getPost('name') : "";
         }
+
+        $ticket_data = clean_data($ticket_data);
 
         $ticket_id = $this->Tickets_model->ci_save($ticket_data);
 
@@ -147,7 +119,6 @@ class External_tickets extends App_Controller {
 
         return $this->template->view('external_tickets/embedded_code_modal_form', $view_data);
     }
-
 }
 
 /* End of file External_tickets.php */

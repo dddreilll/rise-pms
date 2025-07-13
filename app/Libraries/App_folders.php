@@ -3,14 +3,29 @@
 namespace App\Libraries;
 
 //limitation: Can be used for only one kind of folder, for a controller. 
-trait App_folders
-{
+trait App_folders {
 
     abstract private function _folder_items();
 
     abstract private function _folder_config();
 
     abstract private function _shareable_options();
+
+    abstract private function _get_file_path($file_info);
+
+    abstract private function _get_file_info($id);
+
+    abstract private function _download_file($id);
+
+    abstract private function _delete_file($id);
+
+    abstract private function _move_file_to_another_folder($file_id, $folder_id);
+
+    abstract private function _get_all_files_of_folder($folder_id, $context_id);
+
+    abstract private function _can_manage_folder($folder_id = 0, $context_id = 0);
+
+    abstract private function _can_upload_file($folder_id = 0, $context_id = 0);
 
     //access pattern 
     //9 = Full access (read, upload, modify, delete)
@@ -31,10 +46,8 @@ trait App_folders
     private $show_file_preview_sidebar = false;
     private $permissions_value_memory = null;
     private $root_folders_default_permissions = "";
-    private $global_files_path = "";
 
-    private function init()
-    {
+    private function init() {
         if (!$this->Folders_model) {
             $this->Folders_model = model('App\Models\Folders_model');
         }
@@ -47,8 +60,7 @@ trait App_folders
             "add_files_modal_post_data",
             "file_preview_url",
             "show_file_preview_sidebar",
-            "root_folders_default_permissions",
-            "global_files_path"
+            "root_folders_default_permissions"
         );
 
         $this->_set_configs($configs);
@@ -58,8 +70,7 @@ trait App_folders
         }
     }
 
-    private function _set_configs($configs)
-    {
+    private function _set_configs($configs) {
         $folder_config = $this->_folder_config();
         foreach ($configs as $config_name) {
             if (isset($folder_config->$config_name)) {
@@ -68,37 +79,45 @@ trait App_folders
         }
     }
 
-    private function init_permissions_value_memory()
-    {
+    private function init_permissions_value_memory() {
 
         $team_members_list = array();
         $team_list = array();
         $clients_list = array();
         $client_groups_list = array();
 
-        if (is_null($this->permissions_value_memory)) {
-            foreach ($this->Users_model->get_team_members_id_and_name(array("exclude_admins" => true))->getResult() as $team_member) {
-                $team_members_list[$team_member->id] = $team_member->user_name;
+        $shareable_options = $this->_shareable_options();
+
+        if (is_null($this->permissions_value_memory) && count($shareable_options)) {
+
+            if (in_array("member", $shareable_options)) {
+                foreach ($this->Users_model->get_team_members_id_and_name(array("exclude_admins" => true))->getResult() as $team_member) {
+                    $team_members_list[$team_member->id] = $team_member->user_name;
+                }
             }
 
-            foreach ($this->Team_model->get_id_and_title()->getResult() as $team) {
-                $team_list[$team->id] = $team->title;
+            if (in_array("team", $shareable_options)) {
+                foreach ($this->Team_model->get_id_and_title()->getResult() as $team) {
+                    $team_list[$team->id] = $team->title;
+                }
             }
 
-            foreach ($this->Clients_model->get_clients_id_and_name(array("limit" => 2000))->getResult() as $client) {
-                $clients_list[$client->id] = $client->name;
+            if (in_array("client", $shareable_options)) {
+                foreach ($this->Clients_model->get_clients_id_and_name(array("limit" => 2000))->getResult() as $client) {
+                    $clients_list[$client->id] = $client->name;
+                }
             }
 
-            foreach ($this->Client_groups_model->get_id_and_title()->getResult() as $group) {
-                $client_groups_list[$group->id] = $group->title;
+            if (in_array("client_group", $shareable_options)) {
+                foreach ($this->Client_groups_model->get_id_and_title()->getResult() as $group) {
+                    $client_groups_list[$group->id] = $group->title;
+                }
             }
-
             $this->permissions_value_memory = array("member" => $team_members_list, "team" => $team_list, "client" => $clients_list, "client_group" => $client_groups_list);
         }
     }
 
-    function _get_icon_type($item = "")
-    {
+    function _get_icon_type($item = "") {
         $icons = array(
             "all_team_members" => "users",
             "project_members" => "users",
@@ -116,10 +135,18 @@ trait App_folders
         }
     }
 
-    function explore($folder_id = "", $tab_view = false, $view_from = "", $client_id = 0)
-    {
+    function explore($folder_id = "", $tab_view = false, $view_from = "", $context_id = 0) {
         $this->check_module_availability("module_file_manager");
-        $data = $this->_get_folder_window_data($folder_id, 0, $client_id);
+
+        $context = "";
+        if ($view_from == "project_view") {
+            $context = "project";
+        } else if ($view_from == "client_view" || $view_from == "client_details_view") {
+            $context = "client";
+        }
+
+        $data = $this->_get_folder_window_data($folder_id, 0, $context, $context_id);
+
 
         $data["view_type"] = $tab_view;
         $data["view_from"] = $view_from;
@@ -131,8 +158,7 @@ trait App_folders
         }
     }
 
-    function folder_modal_form()
-    {
+    function folder_modal_form() {
         $id = $this->request->getPost('id');
         $parent_id = $this->request->getPost('parent_id');
         $context = $this->request->getPost('context');
@@ -152,7 +178,7 @@ trait App_folders
             $model_info->context_id = $context_id;
         }
 
-        if (!$this->can_manage_folders($parent_id, $id, $model_info->context, $model_info->context_id)) {
+        if (!$this->_can_create_folder($model_info->parent_id, $model_info->context_id)) {
             app_redirect("forbidden");
         }
 
@@ -162,15 +188,16 @@ trait App_folders
         return $this->template->view('app_folders/folder_modal_form', $view_data);
     }
 
-    function get_folder_info()
-    {
+    function get_folder_info() {
         $this->validate_submitted_data(array(
-            "id" => "required"
+            "id" => "numeric|required"
         ));
+        $this->init();
         $id = $this->request->getPost('id');
-        $client_id = $this->request->getPost('client_id');
 
-        $folder_info_content = $this->_get_folder_info($id, $client_id);
+        $folder_info = $this->Folders_model->get_one($id);
+
+        $folder_info_content = $this->_get_folder_info($id, $folder_info->context, $folder_info->context_id);
         if ($folder_info_content) {
             echo json_encode(array("success" => true, "content" => $folder_info_content));
         } else {
@@ -178,12 +205,11 @@ trait App_folders
         }
     }
 
-    private function _get_folder_info($id, $client_id = 0)
-    {
+    private function _get_folder_info($id, $context = "", $context_id = 0) {
         $this->init();
         $this->init_permissions_value_memory();
 
-        $data = $this->_get_folder_window_data("", $id, $client_id);
+        $data = $this->_get_folder_window_data("", $id, $context, $context_id);
 
         if (!$data) {
             return false;
@@ -211,61 +237,32 @@ trait App_folders
         return $this->template->view('app_folders/folder_info', $view_data, true);
     }
 
-    function get_file_info()
-    {
+    function get_folder_file_info() {
         $id = $this->request->getPost('id');
-        $client_id = $this->request->getPost('client_id');
-
         $this->validate_submitted_data(array(
-            "id" => "required"
+            "id" => "required|numeric"
         ));
-
         $this->init();
-        $General_files_model = model('App\Models\General_files_model');
-        $file_info = $General_files_model->get_details(array("id" => $id))->getRow();
-        $view_data["controller_slag"] = $this->controller_slag;
-        $view_data["global_files_path"] = $this->global_files_path;
-        $view_data["client_files_path"] = get_general_file_path("client", $client_id);
 
-        if ($file_info->context == "global_files") {
-            $file_path = $this->global_files_path;
-            $view_data["global_files_path"] = $file_path;
-            $view_data["client_files_path"] = "";
-        } else {
-            $file_path = get_general_file_path("client", $client_id);
-            $view_data["global_files_path"] = "";
-            $view_data["client_files_path"] = $file_path;
-        }
+        $file_info = $this->_get_file_info($id);
+        if ($file_info) {
+            $view_data = get_file_preview_common_data($file_info, $this->_get_file_path($file_info));
 
-        //For file preview
-        $view_data['can_comment_on_files'] = false;
+            $view_data['file_preview_url'] = $this->file_preview_url . "/" . $id;
+            $view_data['show_file_preview_sidebar'] = $this->show_file_preview_sidebar;
 
-        $file_url = get_source_url_of_file(make_array_of_file($file_info), $file_path);
-
-        $view_data["file_url"] = $file_url;
-        $view_data["is_image_file"] = is_image_file($file_info->file_name);
-        $view_data["is_google_preview_available"] = is_google_preview_available($file_info->file_name);
-        $view_data["is_viewable_video_file"] = is_viewable_video_file($file_info->file_name);
-        $view_data["is_google_drive_file"] = ($file_info->file_id && $file_info->service_type == "google") ? true : false;
-        $view_data["is_iframe_preview_available"] = is_iframe_preview_available($file_info->file_name);
-
-        $view_data["file_info"] = $file_info;
-        $view_data["client_id"] = $client_id;
-
-        if ($view_data["file_info"]) {
             echo json_encode(array("success" => true, "content" => $this->template->view('app_folders/file_info', $view_data, true)));
         } else {
             echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
         }
     }
 
-    function save_folder()
-    {
+    function save_folder() {
         $this->init();
 
         $id = $this->request->getPost('id');
         $this->validate_submitted_data(array(
-            "title" => "required"
+            "title" => "required|string"
         ));
 
         $parent_id = $this->request->getPost('parent_id');
@@ -273,7 +270,7 @@ trait App_folders
         $context = $parent_folder_info->context ? $parent_folder_info->context : $this->request->getPost('context');
         $context_id = $parent_folder_info->context_id ? $parent_folder_info->context_id : $this->request->getPost('context_id');
 
-        if (!$this->can_manage_folders($parent_id, $id, $context, $context_id)) {
+        if (!$this->_can_create_folder($parent_id, $context_id)) {
             app_redirect("forbidden");
         }
 
@@ -292,20 +289,25 @@ trait App_folders
 
         $permissions = $this->root_folders_default_permissions ? $this->root_folders_default_permissions : "";
 
-        $folder_data = array(
-            "title" => $this->request->getPost('title'),
-            "parent_id" => $parent_id,
-            "level" => $level,
-            "permissions" => $permissions
-        );
 
-        if (!$id) {
+        if ($id) {
+            $folder_data = array(
+                "title" => $this->request->getPost('title')
+            );
+        } else {
             $folder_id = substr(md5($context), -7) . "-" . substr(md5($context_id ? $context_id : "0"), -5) . "-" . substr(md5($created_by), -4) . "-" . substr(md5($parent_id ? $parent_id : "root"), -5) . "-" . make_random_string(11);
-            $folder_data["folder_id"] = $folder_id;
-            $folder_data["context"] = $context;
-            $folder_data["context_id"] = $context_id;
-            $folder_data["created_by"] = $this->login_user->id;
-            $folder_data["created_at"] = $now;
+
+            $folder_data = array(
+                "title" => $this->request->getPost('title'),
+                "parent_id" => $parent_id,
+                "level" => $level,
+                "permissions" => $permissions,
+                "folder_id" => $folder_id,
+                "context" => $context,
+                "context_id" => $context_id,
+                "created_by" => $this->login_user->id,
+                "created_at" => $now
+            );
         }
 
         $save_id = $this->Folders_model->ci_save($folder_data, $id);
@@ -317,8 +319,7 @@ trait App_folders
         }
     }
 
-    function folder_permissions_modal_form()
-    {
+    function folder_permissions_modal_form() {
 
         $id = $this->request->getPost('id');
 
@@ -328,6 +329,10 @@ trait App_folders
 
         $this->init();
         $model_info = $this->Folders_model->get_one($id);
+
+        if (!$model_info || !$this->_can_create_folder($model_info->id, $model_info->context_id)) {
+            redirect("forbidden");
+        }
 
         $view_data["model_info"] = $model_info;
         $view_data["controller_slag"] = $this->controller_slag;
@@ -363,8 +368,7 @@ trait App_folders
         return $this->template->view('app_folders/folder_permissions_modal_form', $view_data);
     }
 
-    private function _extract_permissions_data($permissions = "")
-    {
+    private function _extract_permissions_data($permissions = "") {
         if (!$permissions) {
             $permissions = "";
         }
@@ -464,8 +468,7 @@ trait App_folders
         return $result;
     }
 
-    private function _get_permission_options()
-    {
+    private function _get_permission_options() {
         $shareable_options = $this->_shareable_options();
 
         $dropdown = array();
@@ -524,8 +527,7 @@ trait App_folders
         return $dropdown;
     }
 
-    function save_folder_permissions()
-    {
+    function save_folder_permissions() {
         $this->init();
 
         $id = $this->request->getPost('id');
@@ -538,9 +540,16 @@ trait App_folders
         $permissions = $this->_prepare_permissions_text($permissions, "upload_only");
         $permissions = $this->_prepare_permissions_text($permissions, "read_only");
 
+        validate_share_with_value($permissions);
+
         $folder_data = array(
             "permissions" => $permissions //there should have a comman at the end of each permission
         );
+
+        $model_info = $this->Folders_model->get_one($id);
+        if (!$model_info || !$this->_can_create_folder($model_info->id, $model_info->context_id)) {
+            redirect("forbidden");
+        }
 
         $save_id = $this->Folders_model->ci_save($folder_data, $id);
 
@@ -553,8 +562,7 @@ trait App_folders
         }
     }
 
-    private function _prepare_permissions_text($permissions, $name)
-    {
+    private function _prepare_permissions_text($permissions, $name) {
         $value = $this->request->getPost($name);
         if ($value) {
             if (get_last_letter($value) != ",") {
@@ -568,20 +576,29 @@ trait App_folders
         return $permissions;
     }
 
-    private function _get_folder_window_data($folder_id = "", $id = 0, $client_id = 0)
-    {
+    private function _get_folder_window_data($folder_id = "", $id = 0, $context = "", $context_id = 0, $view_from = "") {
         $this->init();
 
         $data = array();
         $data["has_full_access"] = false;
 
-        $options = $this->_preapare_folder_params($client_id);
+        $client_id = 0;
+        if ($context == "client") {
+            $client_id = $context_id;
+        }
+
+        $project_id = 0;
+        if ($context == "project") {
+            $project_id = $context_id;
+        }
+
+        $options = $this->_preapare_folder_params($context, $context_id);
 
         $options["folder_id"] = $folder_id;
         $options["id"] = $id;
 
         if ($this->login_user->is_admin) {
-            if (!$client_id) {
+            if (!$client_id && !$project_id) {
                 $options["has_full_access"] = true;
             }
 
@@ -590,6 +607,7 @@ trait App_folders
                 $options["show_root_folders_only"] = true;
             }
         }
+
 
         $folder_details = $this->Folders_model->get_folder_details($options);
 
@@ -609,27 +627,44 @@ trait App_folders
         $data["has_upload_permission"] = false;
         $data["can_manage_folder_access_permissions"] = false;
 
-        if ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank >= 6) || ($folder_info && $folder_info->context == "client" && ($this->login_user->user_type == "client" && $this->login_user->client_id == $folder_info->context_id) || $data["can_edit_clients"])) {
+        $folder_primary_id = 0;
+        if ($folder_info && $folder_info->id) {
+            $folder_primary_id = $folder_info->id;
+        }
+
+        if ($this->_can_create_folder($folder_primary_id, $context_id)) {
             $data["has_write_permission"] = true;
         }
 
-        if ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank >= 3) || (!$folder_info && $this->login_user->user_type == "client" && get_setting("client_can_add_files")) || ($folder_info && $folder_info->context == "client" && ($this->login_user->user_type == "client" && get_setting("client_can_add_files") && $this->login_user->client_id == $folder_info->context_id) || ($data["can_edit_clients"] && $this->login_user->user_type == "staff"))) {
+        if ($this->_can_upload_file($folder_primary_id, $context_id)) {
             $data["has_upload_permission"] = true;
         }
 
-        if ($this->login_user->user_type == "staff" && ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank == 9))) {
+        if ($this->_can_manage_folder($folder_primary_id, $context_id)) {
             $data["can_manage_folder_access_permissions"] = true;
         }
 
+        // if ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank >= 6) || ($folder_info && $folder_info->context == "client" && ($this->login_user->user_type == "client" && $this->login_user->client_id == $folder_info->context_id) || $data["can_edit_clients"])) {
+        //     $data["has_write_permission"] = true;
+        // }
+
+        // if ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank >= 3) || (!$folder_info && $this->login_user->user_type == "client" && get_setting("client_can_add_files")) || ($folder_info && $folder_info->context == "client" && ($this->login_user->user_type == "client" && get_setting("client_can_add_files") && $this->login_user->client_id == $folder_info->context_id) || ($data["can_edit_clients"] && $this->login_user->user_type == "staff"))) {
+        //     $data["has_upload_permission"] = true;
+        // }
+
+        // if ($this->login_user->user_type == "staff" && ($data["has_full_access"] || ($folder_info && $folder_info->actual_permission_rank == 9))) {
+        //     $data["can_manage_folder_access_permissions"] = true;
+        // }
+
         $folder_main_id = $folder_info ? $folder_info->id : "";
 
-        $data["folder_items"] = $this->_folder_items($folder_main_id, $options['context'], $client_id);
+        $data["folder_items"] = $this->_folder_items($folder_main_id, $options['context'], $context_id);
 
         $data["folder_item_type"] = $this->folder_item_type;
         $data["controller_slag"] = $this->controller_slag;
         $data["show_left_menu"] = $this->show_left_menu;
 
-        $data["add_files_button"] = $this->_get_add_files_button($folder_main_id, $client_id);
+        $data["add_files_button"] = $this->_get_add_files_button($folder_main_id, $context, $context_id);
 
         $data["file_preview_url"] = $this->file_preview_url;
         $data["file_preview_link_attributes"] = $this->_get_file_preview_link_attributes();
@@ -638,12 +673,14 @@ trait App_folders
         $data["folder_details"] = false;
 
         $data["client_id"] = $client_id;
+        $data["project_id"] = $project_id;
+
+        $data["view_from"] = $view_from;
 
         return $data;
     }
 
-    private function _get_file_preview_link_attributes()
-    {
+    private function _get_file_preview_link_attributes() {
 
         $file_preview_link_attr = array(
             "data-sidebar" => "0",
@@ -658,13 +695,13 @@ trait App_folders
         return $file_preview_link_attr;
     }
 
-    private function _get_add_files_button($folder_id, $client_id = 0)
-    {
+    private function _get_add_files_button($folder_id, $context = "", $context_id = 0) {
         $add_files_button_attr = array(
             "id" => "file-manager-add-files-button",
             "class" => "btn btn-default",
             "title" => app_lang('add_files'),
-            "data-post-client_id" => $client_id
+            "data-post-context" => $context,
+            "data-post-context_id" => $context_id
         );
 
         foreach ($this->add_files_modal_post_data as $post_data_key => $post_data_value) {
@@ -676,9 +713,19 @@ trait App_folders
         return modal_anchor($this->add_files_modal_url, '<i data-feather="file-plus" class="icon-16 mr5"></i>' . app_lang('add_files'), $add_files_button_attr);
     }
 
-    function get_folder_items($folder_id = "", $client_id = 0)
-    {
-        $data = $this->_get_folder_window_data($folder_id, 0, $client_id);
+    function get_folder_items($folder_id = "", $client_id = 0, $project_id = 0, $view_from = "") {
+        $context = "";
+        $context_id = 0;
+
+        if ($client_id) {
+            $context = "client";
+            $context_id = $client_id;
+        } else if ($project_id) {
+            $context = "project";
+            $context_id = $project_id;
+        }
+
+        $data = $this->_get_folder_window_data($folder_id, 0, $context, $context_id, $view_from);
 
         echo json_encode(array(
             "success" => true,
@@ -687,8 +734,7 @@ trait App_folders
         ));
     }
 
-    function delete_folder()
-    {
+    function delete_folder() {
         $this->init();
         $this->validate_submitted_data(array(
             "id" => "required|numeric"
@@ -696,23 +742,21 @@ trait App_folders
 
         $id = $this->request->getPost('id');
 
-        if (!$this->can_manage_folders($id)) {
+        $folder_info = $this->Folders_model->get_one($id);
+
+        if (!$folder_info || !$this->_can_manage_folder($id, $folder_info->context_id)) {
             app_redirect("forbidden");
         }
 
         // Get all subfolders and subfiles
-        $all_subitems = $this->_get_all_subitems($id);
+        $all_subitems = $this->_get_all_subitems($id, $folder_info->context_id);
 
         // Delete all subfolders and subfiles
         foreach ($all_subitems as $item) {
             if ($item->type == "folder") {
                 $this->Folders_model->delete($item->id);
-            } else {
-                if ($this->General_files_model->delete($item->id)) {
-                    $file_info = $this->General_files_model->get_one($item->id);
-                    //delete the files
-                    delete_app_files($this->_get_file_path(), array(make_array_of_file($file_info)));
-                }
+            } else if ($item->type == "file") {
+                $this->_delete_file($item->id);
             }
         }
 
@@ -724,8 +768,7 @@ trait App_folders
         }
     }
 
-    private function _get_all_subitems($folder_id)
-    {
+    private function _get_all_subitems($folder_id, $context_id = 0) {
         $subitems = array();
         // Get all subfolders 
         $subfolders = $this->Folders_model->get_all_where(array("parent_id" => $folder_id))->getResult();
@@ -735,11 +778,11 @@ trait App_folders
                 "type" => "folder"
             );
             // Get subitems of subfolders
-            $subitems = array_merge($subitems, $this->_get_all_subitems($subfolder->id));
+            $subitems = array_merge($subitems, $this->_get_all_subitems($subfolder->id, $context_id));
         }
 
         // Get all subfiles
-        $subfiles = $this->General_files_model->get_all_where(array("folder_id" => $folder_id))->getResult();
+        $subfiles = $this->_get_all_files_of_folder($folder_id, $context_id);
         foreach ($subfiles as $subfile) {
             $subitems[] = (object) array(
                 "id" => $subfile->id,
@@ -750,11 +793,9 @@ trait App_folders
         return $subitems;
     }
 
-
     /* add-remove favorites from folder */
 
-    function add_remove_favorites($type = "add", $folder_id = 0)
-    {
+    function add_remove_favorites($type = "add", $folder_id = 0) {
         $this->init();
         if ($folder_id) {
             validate_numeric_value($folder_id);
@@ -767,11 +808,10 @@ trait App_folders
         }
     }
 
-    function get_favourite_folders($client_id = 0)
-    {
+    function get_favourite_folders($context = "", $context_id = 0) {
         $this->init();
         $controller_slag = $this->controller_slag;
-        $options = $this->_preapare_folder_params($client_id);
+        $options = $this->_preapare_folder_params($context, $context_id);
 
         $data = $this->Folders_model->get_favourite_folders($this->login_user->id, $options)->getResult();
 
@@ -781,14 +821,16 @@ trait App_folders
         ));
     }
 
-
-    private function _preapare_folder_params($client_id = 0)
-    {
+    private function _preapare_folder_params($context = "", $context_id = 0) {
         $options = array("context" => "file_manager");
         if ($this->login_user->user_type == "staff") {
-            if ($client_id) {
-                $options["login_client_id"] = $client_id;
+            if ($context == "client" && $context_id) {
+                $options["login_client_id"] = $context_id;
                 $options["context"] = "client";
+            } else if ($context == "project" && $context_id) {
+                $options["project_id"] = $context_id;
+                $options["context"] = "project";
+                $this->show_file_preview_sidebar = true;
             } else {
                 if ($this->login_user->is_admin) {
                     $options["has_full_access"] = true;
@@ -798,17 +840,21 @@ trait App_folders
                 }
             }
         } else if ($this->login_user->user_type == "client") {
-            $options["login_client_id"] = $this->login_user->client_id;
-            $client_info = $this->Clients_model->get_one($this->login_user->client_id);
-            $options["client_group_ids"] = $client_info->group_ids ? $client_info->group_ids : "";
-            $options["context"] = "client_portal";
+            if ($context == "project" && $context_id) {
+                $options["project_id"] = $context_id;
+                $options["context"] = "project";
+            } else {
+                $options["login_client_id"] = $this->login_user->client_id;
+                $options["context"] = "client_portal";
+                // $client_info = $this->Clients_model->get_one($this->login_user->client_id);
+                // $options["client_group_ids"] = $client_info->group_ids ? $client_info->group_ids : "";
+            }
         }
+
         return $options;
     }
 
-
-    function move_folder_or_file_modal_form()
-    {
+    function move_folder_or_file_modal_form() {
         $this->init();
 
         $view_data["folder_id"] = $this->request->getPost('folder_id');
@@ -819,14 +865,14 @@ trait App_folders
         } else {
             $folder_id = $this->request->getPost('folder_id');
         }
+        $context = $this->request->getPost('context');
+        $context_id = $this->request->getPost('context_id');
 
-        if (!$this->can_manage_folders($folder_id)) {
+        if (!$this->_can_manage_folder($folder_id, $context_id)) {
             app_redirect("forbidden");
         }
 
-        $client_id = $this->request->getPost('client_id');
-
-        $options = $this->_preapare_folder_params($client_id);
+        $options = $this->_preapare_folder_params($context, $context_id);
         $options["get_moveable_folders"] = true;
 
         $folder_details = $this->Folders_model->get_folder_details($options);
@@ -843,8 +889,7 @@ trait App_folders
         return $this->template->view('app_folders/move_folder_or_file_modal_form', $view_data);
     }
 
-    private function _get_hierarchical_folder($folders, $parent_id = 0)
-    {
+    private function _get_hierarchical_folder($folders, $parent_id = 0) {
         $this->init();
         $result = array();
 
@@ -858,20 +903,28 @@ trait App_folders
         return $result;
     }
 
-    function move_file_or_folder()
-    {
+    function move_file_or_folder() {
         $this->init();
+
+        $this->validate_submitted_data(array(
+            "folder_id" => "numeric",
+            "file_id" => "numeric",
+            "parent_id" => "numeric"
+        ));
+
 
         $folder_id = $this->request->getPost('folder_id');
         $file_id = $this->request->getPost('file_id');
         $parent_id = $this->request->getPost('parent_id');
 
         if ($file_id) {
-            if (!$this->can_manage_folders($parent_id)) {
+            $file_info = $this->_get_file_info($file_id);
+            if (!$this->_can_manage_folder($parent_id, $file_info->context_id)) {
                 app_redirect("forbidden");
             }
         } else {
-            if (!$this->can_manage_folders($folder_id)) {
+            $folder_info = $this->Folders_model->get_one($folder_id);
+            if (!$this->_can_manage_folder($folder_id, $folder_info->context_id)) {
                 app_redirect("forbidden");
             }
         }
@@ -899,21 +952,17 @@ trait App_folders
             );
 
             $save_id = $this->Folders_model->ci_save($folder_data, $folder_id);
+            if ($save_id) {
+                echo json_encode(array("success" => true, "data" => "", 'message' => app_lang('record_saved')));
+            } else {
+                echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+            }
         } else {
-            $file_data = array("folder_id" => $parent_id);
-
-            $save_id = $this->General_files_model->ci_save($file_data, $file_id);
-        }
-
-        if ($save_id) {
-            echo json_encode(array("success" => true, "data" => "", 'message' => app_lang('record_saved')));
-        } else {
-            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
+            $this->_move_file_to_another_folder($file_id, $parent_id);
         }
     }
 
-    private function get_folder_details($folder_id)
-    {
+    private function get_folder_details($folder_id) {
         $this->init();
 
         $model_info = $this->Folders_model->get_one($folder_id);
@@ -932,184 +981,22 @@ trait App_folders
         return $folder_info;
     }
 
-    private function can_manage_folders($parent_folder_id = 0, $folder_id = 0, $context = "", $context_id = 0)
-    {
-        if ($this->login_user->is_admin) {
-            return true;
-        } else {
-
-            $id = $parent_folder_id ? $parent_folder_id : $folder_id;
-            if (!$id && $context !== "client") {
-                return false;
-            } else if (!$id && $context === "client" && $context_id) {
-                //client can create folder on root for client related files 
-                if ($this->login_user->user_type == "client" && $this->login_user->client_id == $context_id) {
-                    return true;
-                } else if ($this->login_user->user_type == "staff") {
-                    return true;
-                }
-            } else if ($context === "client" && $this->login_user->user_type == "staff" && $this->can_edit_clients($context_id)) {
-                return true;
-            }
-
-            $folder_info = $this->get_folder_details($id);
-
-            if ($folder_info && ($folder_info->actual_permission_rank == 6 || $folder_info->actual_permission_rank == 9) || ($folder_info->context == "client" && $this->login_user->user_type == "client" && $this->login_user->client_id == $folder_info->context_id)) {
-                return true;
-            }
-        }
+    function download_folder_file($id) {
+        validate_numeric_value($id);
+        return $this->_download_file($id);
     }
 
-    function get_file_modal_form()
-    {
-        $view_data['model_info'] = $this->General_files_model->get_one($this->request->getPost('id'));
-        $view_data['folder_id'] = $this->request->getPost('folder_id');
-        $view_data['client_id'] = $this->request->getPost('client_id');
-
-        if ($this->login_user->user_type === "client" && !get_setting("client_can_add_files")) {
-            app_redirect("forbidden");
-        }
-
-        return $this->template->view('file_manager/file_modal_form', $view_data);
-    }
-
-    function save_file()
-    {
-        $this->init();
+    function delete_folder_file() {
+        $id = $this->request->getPost('id');
 
         $this->validate_submitted_data(array(
-            "id" => "numeric"
+            "id" => "numeric|required"
         ));
 
-        if ($this->login_user->user_type === "client" && !get_setting("client_can_add_files")) {
-            app_redirect("forbidden");
-        }
-
-        $folder_id = $this->request->getPost('folder_id');
-        $client_id = $this->request->getPost('client_id');
-
-        $folder_info = $this->Folders_model->get_one($folder_id);
-
-        $context = "global_files";
-        $context_id = 0;
-
-        if ($client_id) {
-            if ($folder_id) {
-                if ($folder_info->context == "file_manager") {
-                    $context = "global_files";
-                    $client_id = 0;
-                } else {
-                    $context = "client";
-                    $context_id = $folder_info->context_id;
-                }
-            } else {
-                $context = "client";
-                $client_id = $client_id;
-                $context_id = $client_id;
-            }
-        } else {
-            $context = "global_files";
-        }
-
-        $files = $this->request->getPost("files");
-        $success = false;
-        $now = get_current_utc_time();
-
-        if ($context == "client") {
-            $target_path = getcwd() . "/" . get_general_file_path("client", $client_id);
-        } else {
-            $target_path = getcwd() . "/" . $this->_get_file_path();
-        }
-
-        //process the fiiles which has been uploaded by dropzone
-        if ($files && get_array_value($files, 0)) {
-            foreach ($files as $file) {
-                $file_name = $this->request->getPost('file_name_' . $file);
-                $file_info = move_temp_file($file_name, $target_path);
-                if ($file_info) {
-                    $data = array(
-                        "file_name" => get_array_value($file_info, 'file_name'),
-                        "file_id" => get_array_value($file_info, 'file_id'),
-                        "service_type" => get_array_value($file_info, 'service_type'),
-                        "description" => $this->request->getPost('description_' . $file),
-                        "file_size" => $this->request->getPost('file_size_' . $file),
-                        "created_at" => $now,
-                        "uploaded_by" => $this->login_user->id,
-                        "folder_id" => $folder_id,
-                        "context" => $context,
-                        "context_id" => $context_id,
-                        "client_id" => $client_id
-                    );
-
-                    $success = $this->General_files_model->ci_save($data);
-                } else {
-                    $success = false;
-                }
-            }
-        }
-
-
-        if ($success) {
-            echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
-        } else {
-            echo json_encode(array("success" => false, 'message' => app_lang('error_occurred')));
-        }
-    }
-
-    function get_view_file($file_id = 0, $client_id = 0)
-    {
-        $file_info = $this->General_files_model->get_details(array("id" => $file_id))->getRow();
-
-        if ($file_info) {
-            $view_data['can_comment_on_files'] = false;
-            $file_url = get_source_url_of_file(make_array_of_file($file_info), $this->_get_file_path($client_id, $file_info->context), $file_info->context);
-
-            $view_data["file_url"] = $file_url;
-            $view_data["is_image_file"] = is_image_file($file_info->file_name);
-            $view_data["is_iframe_preview_available"] = is_iframe_preview_available($file_info->file_name);
-            $view_data["is_google_preview_available"] = is_google_preview_available($file_info->file_name);
-            $view_data["is_viewable_video_file"] = is_viewable_video_file($file_info->file_name);
-            $view_data["is_google_drive_file"] = ($file_info->file_id && $file_info->service_type == "google") ? true : false;
-            $view_data["is_iframe_preview_available"] = is_iframe_preview_available($file_info->file_name);
-
-            $view_data["file_info"] = $file_info;
-            $view_data['file_id'] = clean_data($file_id);
-            return $this->template->view("file_manager/view_file", $view_data);
-        } else {
-            show_404();
-        }
-    }
-
-    function delete_file()
-    {
-
-        $id = $this->request->getPost('id');
-        $info = $this->General_files_model->get_one($id);
-
-        if ($this->login_user->user_type === "client") {
-            app_redirect("forbidden");
-        }
-
-        if ($this->General_files_model->delete($id)) {
-
-            //delete the files
-            delete_app_files($this->_get_file_path(), array(make_array_of_file($info)));
-
+        if ($this->_delete_file($id)) {
             echo json_encode(array("success" => true, 'message' => app_lang('record_deleted')));
         } else {
             echo json_encode(array("success" => false, 'message' => app_lang('record_cannot_be_deleted')));
         }
-    }
-
-    /* download a file */
-
-    function download_file($id, $client_id = 0)
-    {
-        $file_info = $this->General_files_model->get_one($id);
-
-        //serilize the path
-        $file_data = serialize(array(make_array_of_file($file_info)));
-
-        return $this->download_app_files($this->_get_file_path($client_id, $file_info->context), $file_data);
     }
 }

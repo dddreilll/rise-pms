@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\Paypal;
 use App\Libraries\Paytm;
+use App\Libraries\ReCAPTCHA;
 
 class Store extends Security_Controller {
 
@@ -105,7 +106,7 @@ class Store extends Security_Controller {
         ));
 
         $model_info = $this->Items_model->get_details(array("id" => $this->request->getPost('id'), "login_user_id" => (isset($this->login_user->id) ? $this->login_user->id : 0), "created_by_hash" => $this->get_cookie_hash()))->getRow();
-       
+
         if (!get_setting("visitors_can_see_store_before_login") && $this->login_user->user_type == "client" && !$model_info->show_in_client_portal) {
             show_404();
         }
@@ -149,6 +150,8 @@ class Store extends Security_Controller {
             "item_id" => $id
         );
 
+        $order_item_data = clean_data($order_item_data);
+
         $save_id = $this->Order_items_model->ci_save($order_item_data);
 
         if ($save_id) {
@@ -191,8 +194,7 @@ class Store extends Security_Controller {
             if (!$order_item_info->order_id) {
                 //on processing order, check if the item is created by the login user
                 if (!(
-                        (isset($this->login_user->id) && $order_item_info->created_by === $this->login_user->id) || $order_item_info->created_by_hash === $this->get_cookie_hash())
-                ) {
+                    (isset($this->login_user->id) && $order_item_info->created_by === $this->login_user->id) || $order_item_info->created_by_hash === $this->get_cookie_hash())) {
                     app_redirect("forbidden");
                 }
             } else {
@@ -268,6 +270,8 @@ class Store extends Security_Controller {
             "total" => $item_info->rate * $quantity
         );
 
+        $data = clean_data($data);
+
         $this->Order_items_model->ci_save($data, $item_info->id);
 
         $options = array("id" => $id);
@@ -290,9 +294,13 @@ class Store extends Security_Controller {
             return true;
         } else {
             if (!(get_setting("module_order") && get_setting("visitors_can_see_store_before_login") && get_setting("accept_order_before_login"))) {
-                app_redirect('signin?redirect=' . get_uri("store/process_order"));
+                $this->to_process_redirect_to_signin_page();
             }
         }
+    }
+
+    function to_process_redirect_to_signin_page() {
+        app_redirect('signin?redirect=' . get_uri("store/process_order"));
     }
 
     function process_order() {
@@ -401,6 +409,8 @@ class Store extends Security_Controller {
             $order_item_data["order_id"] = $order_id;
         }
 
+        $order_item_data = clean_data($order_item_data);
+
         $order_item_id = $this->Order_items_model->ci_save($order_item_data, $id);
         if ($order_item_id) {
 
@@ -413,6 +423,8 @@ class Store extends Security_Controller {
                     "unit_type" => $this->request->getPost('order_unit_type'),
                     "rate" => unformat_currency($this->request->getPost('order_item_rate'))
                 );
+                $order_item_data = clean_data($order_item_data);
+
                 $this->Items_model->ci_save($library_item_data);
             }
 
@@ -439,9 +451,14 @@ class Store extends Security_Controller {
                 $sort_item = explode("-", $value); //extract id and sort value
 
                 $id = get_array_value($sort_item, 0);
+                validate_numeric_value($id);
+
                 $sort = get_array_value($sort_item, 1);
+                validate_numeric_value($sort);
 
                 $data = array("sort" => $sort);
+                $data = clean_data($data);
+
                 $this->Order_items_model->ci_save($data, $id);
             }
         }
@@ -490,25 +507,6 @@ class Store extends Security_Controller {
         }
     }
 
-    private function is_valid_recaptcha($recaptcha_post_data) {
-        //load recaptcha lib
-        require_once(APPPATH . "ThirdParty/recaptcha/autoload.php");
-        $recaptcha = new \ReCaptcha\ReCaptcha(get_setting("re_captcha_secret_key"));
-        $resp = $recaptcha->verify($recaptcha_post_data, $_SERVER['REMOTE_ADDR']);
-
-        if ($resp->isSuccess()) {
-            return true;
-        } else {
-
-            $error = "";
-            foreach ($resp->getErrorCodes() as $code) {
-                $error = $code;
-            }
-
-            return $error;
-        }
-    }
-
     function place_order() {
         $this->check_access_to_store();
         $this->check_accept_order_before_login_permission();
@@ -525,21 +523,8 @@ class Store extends Security_Controller {
         } else {
             //check if there reCaptcha is enabled
             //if reCaptcha is enabled, check the validation
-            if (get_setting("re_captcha_secret_key")) {
-
-                $response = $this->is_valid_recaptcha($this->request->getPost("g-recaptcha-response"));
-
-                if ($response !== true) {
-
-                    if ($response) {
-                        echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_error-" . $response)));
-                    } else {
-                        echo json_encode(array('success' => false, 'message' => app_lang("re_captcha_expired")));
-                    }
-
-                    return false;
-                }
-            }
+            $ReCAPTCHA = new ReCAPTCHA();
+            $ReCAPTCHA->validate_recaptcha();
 
             $client_data = $this->create_new_client();
             $client_id = get_array_value($client_data, "client_id");
@@ -562,6 +547,8 @@ class Store extends Security_Controller {
         );
 
         $order_data["files"] = $files_data;
+
+        $order_data = clean_data($order_data);
 
         $order_id = $this->Orders_model->ci_save($order_data);
 
@@ -652,13 +639,17 @@ class Store extends Security_Controller {
     }
 
     private function create_new_client() {
+        $this->validate_submitted_data(array(
+            "email" => "valid_email"
+        ));
+
         //match with the existing email
         $email = trim($this->request->getPost('email'));
         $user_info = $this->Users_model->get_one_where(array("email" => $email, "deleted" => 0));
 
         if ($user_info->id) {
             //an user is already exists, ask user to login
-            echo json_encode(array("success" => false, 'message' => app_lang("account_already_exists_for_your_mail") . " " . anchor("signin?redirect=" . get_uri("store/process_order"), app_lang("signin"))));
+            echo json_encode(array("success" => false, 'message' => app_lang("account_already_exists_for_your_mail") . " " . anchor(get_uri("store/to_process_redirect_to_signin_page"), app_lang("signin"))));
             exit();
         }
 
@@ -666,7 +657,7 @@ class Store extends Security_Controller {
 
         //check duplicate company name, if found then show an error message
         if (get_setting("disallow_duplicate_client_company_name") == "1" && $this->Clients_model->is_duplicate_company_name($company_name)) {
-            echo json_encode(array("success" => false, 'message' => app_lang("account_already_exists_for_your_company_name") . " " . anchor(get_uri("signin?redirect=" . get_uri("store/process_order")), app_lang('signin'), array("class" => "text-white text-off"))));
+            echo json_encode(array("success" => false, 'message' => app_lang("account_already_exists_for_your_company_name") . " " . anchor(get_uri("store/to_process_redirect_to_signin_page"), app_lang('signin'), array("class" => "text-white text-off"))));
             return false;
         }
 
@@ -691,6 +682,7 @@ class Store extends Security_Controller {
         $first_name = $this->request->getPost('first_name');
         $last_name = $this->request->getPost('last_name');
         $password = $this->request->getPost('password');
+        $password = clean_data($password);
 
         $client_contact_data = array(
             "first_name" => $first_name,
@@ -712,15 +704,15 @@ class Store extends Security_Controller {
         $email_template = $this->Email_templates_model->get_final_template("new_client_greetings"); //use default template since creating new client
 
         $parser_data["SIGNATURE"] = $email_template->signature;
-        $parser_data["CONTACT_FIRST_NAME"] = $first_name;
-        $parser_data["CONTACT_LAST_NAME"] = $last_name;
+        $parser_data["CONTACT_FIRST_NAME"] = get_array_value($client_contact_data, "first_name");
+        $parser_data["CONTACT_LAST_NAME"] = get_array_value($client_contact_data, "last_name");
 
         $Company_model = model('App\Models\Company_model');
         $company_info = $Company_model->get_one_where(array("is_default" => true));
         $parser_data["COMPANY_NAME"] = $company_info->name;
 
         $parser_data["DASHBOARD_URL"] = base_url();
-        $parser_data["CONTACT_LOGIN_EMAIL"] = $email;
+        $parser_data["CONTACT_LOGIN_EMAIL"] = get_array_value($client_contact_data, "email");
         $parser_data["CONTACT_LOGIN_PASSWORD"] = $password;
         $parser_data["LOGO_URL"] = get_logo_url();
 
@@ -738,7 +730,6 @@ class Store extends Security_Controller {
         }
         return $clients_dropdown;
     }
-
 }
 
 /* End of file Store.php */

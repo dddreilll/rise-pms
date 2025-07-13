@@ -55,6 +55,19 @@
 
     AppLanugage.fileSizeTooLong = "<?php echo app_lang('file_size_too_large'); ?>";
     AppLanugage.somethingWentWrong = "<?php echo app_lang('something_went_wrong'); ?>";
+    AppLanugage.selectRange = "<?php echo app_lang('select_range'); ?>";
 
+
+    AppLanugage.monthly = "<?php echo app_lang('monthly'); ?>";
+    AppLanugage.yearly = "<?php echo app_lang('yearly'); ?>";
+    AppLanugage.custom = "<?php echo app_lang('custom'); ?>";
+    AppLanugage.dynamic = "<?php echo app_lang('dynamic'); ?>";
+
+    AppLanugage.batchUpdate = "<?php echo app_lang('batch_update'); ?>";
+    AppLanugage.selectAll = "<?php echo app_lang('select_all'); ?>";
+    AppLanugage.selectSpecific = "<?php echo app_lang('select_specific'); ?>";
+    AppLanugage.clearSelection = "<?php echo app_lang('clear_selection'); ?>";
+    AppLanugage.downloadSelectedItems = "<?php echo app_lang('download_selected_items'); ?>";
+    AppLanugage.deleteSelectedItems = "<?php echo app_lang('delete_selected_items'); ?>";
 
 </script>

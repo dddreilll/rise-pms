@@ -12,7 +12,7 @@ if ($total_team_members) {
         <i data-feather="users" class="icon-16"></i> &nbsp;<?php echo app_lang("team_members_overview"); ?>
     </div>
     <div class="rounded-bottom">
-        <div class="box pt-3">
+        <div class="box pt10">
 
             <div class="box-content">
                 <a href="<?php echo get_uri('team_members/index'); ?>" class="text-default">
@@ -35,7 +35,7 @@ if ($total_team_members) {
                 </a>
             </div>
         </div>
-        <div class="box pb-3">
+        <div class="box pb10">
             <div class="box-content">
                 <a href="<?php echo get_uri('attendance/index/members_clocked_in'); ?>" class="text-default">
                     <div class="pt-3 pb-3 text-center">

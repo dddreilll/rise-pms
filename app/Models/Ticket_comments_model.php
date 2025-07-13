@@ -15,6 +15,8 @@ class Ticket_comments_model extends Crud_model {
         $tickets_table = $this->db->prefixTable('tickets');
         $ticket_comments_table = $this->db->prefixTable('ticket_comments');
         $users_table = $this->db->prefixTable('users');
+        $pin_comments_table = $this->db->prefixTable('pin_comments');
+
         $where = "";
         $sort = "ASC";
 
@@ -38,7 +40,13 @@ class Ticket_comments_model extends Crud_model {
             $where .= " AND $ticket_comments_table.is_note=$is_note";
         }
 
-        $sql = "SELECT $ticket_comments_table.*, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS created_by_user, $users_table.image as created_by_avatar, $users_table.user_type, $tickets_table.creator_name, $tickets_table.creator_email
+        $extra_select = "";
+        $login_user_id = $this->_get_clean_value($options, "login_user_id");
+        if ($login_user_id) {
+            $extra_select = ", (SELECT count($pin_comments_table.id) FROM $pin_comments_table WHERE $pin_comments_table.ticket_comment_id=$ticket_comments_table.id AND $pin_comments_table.deleted=0 AND $pin_comments_table.pinned_by=$login_user_id) as pinned_comment_status";
+        }
+
+        $sql = "SELECT $ticket_comments_table.*, CONCAT($users_table.first_name, ' ',$users_table.last_name) AS created_by_user, $users_table.image as created_by_avatar, $users_table.user_type, $tickets_table.creator_name, $tickets_table.creator_email $extra_select
         FROM $ticket_comments_table
         LEFT JOIN $users_table ON $users_table.id= $ticket_comments_table.created_by
         LEFT JOIN $tickets_table ON $tickets_table.id= $ticket_comments_table.ticket_id
@@ -47,5 +55,4 @@ class Ticket_comments_model extends Crud_model {
 
         return $this->db->query($sql);
     }
-
 }

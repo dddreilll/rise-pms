@@ -35,7 +35,7 @@ class Invoices_model extends Crud_model {
         if ($client_id) {
             $where .= " AND $invoices_table.client_id=$client_id";
         }
-        $subscription_id = get_array_value($options, "subscription_id");
+        $subscription_id = $this->_get_clean_value($options, "subscription_id");
         if ($subscription_id) {
             $where .= " AND $invoices_table.subscription_id=$subscription_id";
         }
@@ -97,7 +97,7 @@ class Invoices_model extends Crud_model {
         } else if ($status === "partially_paid") {
             $where .= " AND $invoices_table.type = 'invoice' AND IFNULL(payments_table.payment_received,0)>0 AND IFNULL(payments_table.payment_received,0)<$invoices_table.invoice_total-$tolarance";
         } else if ($status === "fully_paid") {
-            $where .= " AND $invoices_table.type = 'invoice' AND TRUNCATE(IFNULL(payments_table.payment_received,0),2)>=$invoices_table.invoice_total-$tolarance";
+            $where .= " AND $invoices_table.type = 'invoice' AND TRUNCATE(IFNULL(payments_table.payment_received,0),2)>=$invoices_table.invoice_total-$tolarance AND $invoices_table.status ='not_paid'";
         } else if ($status === "overdue") {
             $where .= " AND $invoices_table.type = 'invoice' AND $invoices_table.status ='not_paid' AND $invoices_table.due_date<'$now' AND TRUNCATE(IFNULL(payments_table.payment_received,0),2)<$invoices_table.invoice_total-$tolarance";
         } else if ($status === "cancelled") {
@@ -174,6 +174,8 @@ class Invoices_model extends Crud_model {
         $invoice_payments_table = $this->db->prefixTable('invoice_payments');
         $clients_table = $this->db->prefixTable('clients');
         $invoices_table = $this->db->prefixTable('invoices');
+
+        $invoice_id = $this->_get_clean_value($invoice_id);
 
         $result = $this->get_invoice_total_meta($invoice_id);
 
@@ -328,12 +330,11 @@ class Invoices_model extends Crud_model {
         if (!$return_only || $return_only == "payments" || $return_only == "due") {
             $payments_result = $this->db->query($payments)->getResult();
             foreach ($payments_result as $payment) {
-                if($currency){
+                if ($currency) {
                     $payments_total += $payment->total ? $payment->total : 0;  //no need to convert since user will see currency wise total. 
-                }else{
+                } else {
                     $payments_total += get_converted_amount($payment->currency, $payment->total);
                 }
-               
             }
         }
 
@@ -344,12 +345,11 @@ class Invoices_model extends Crud_model {
             $invoices_result = $this->db->query($invoices)->getResult();
             foreach ($invoices_result as $invoice) {
                 $invoices_count += $invoice->count;
-                if($currency){
+                if ($currency) {
                     $invoices_total += $invoice->total ? $invoice->total : 0; //no need to convert since user will see currency wise total. 
-                }else{
+                } else {
                     $invoices_total += get_converted_amount($invoice->currency, $invoice->total);
                 }
-               
             }
         }
 
@@ -359,12 +359,11 @@ class Invoices_model extends Crud_model {
             $drafts_result = $this->db->query($draft)->getResult();
             foreach ($drafts_result as $draft) {
                 $draft_count += $draft->count;
-                if($currency){
+                if ($currency) {
                     $draft_total += $draft->total ? $draft->total : 0;
-                }else{
+                } else {
                     $draft_total += get_converted_amount($draft->currency, $draft->total);
                 }
-               
             }
         }
 
@@ -374,12 +373,11 @@ class Invoices_model extends Crud_model {
             $fully_paid_result = $this->db->query($fully_paid)->getResult();
             foreach ($fully_paid_result as $fully_paid) {
                 $fully_paid_count += $fully_paid->count;
-                if($currency){
-                    $fully_paid_total += $fully_paid->total ? $fully_paid->total: 0;
-                }else{
+                if ($currency) {
+                    $fully_paid_total += $fully_paid->total ? $fully_paid->total : 0;
+                } else {
                     $fully_paid_total += get_converted_amount($fully_paid->currency, $fully_paid->total);
                 }
-                
             }
         }
 
@@ -389,12 +387,11 @@ class Invoices_model extends Crud_model {
             $partially_paid_result = $this->db->query($partially_paid)->getResult();
             foreach ($partially_paid_result as $partially_paid) {
                 $partially_paid_count += $partially_paid->count;
-                if($currency){
+                if ($currency) {
                     $partially_paid_total += $partially_paid->total ? $partially_paid->total : 0;
-                }else{
+                } else {
                     $partially_paid_total += get_converted_amount($partially_paid->currency, $partially_paid->total);
                 }
-                
             }
         }
 
@@ -404,12 +401,11 @@ class Invoices_model extends Crud_model {
             $not_paid_result = $this->db->query($not_paid)->getResult();
             foreach ($not_paid_result as $not_paid) {
                 $not_paid_count += $not_paid->count;
-                if($currency){
+                if ($currency) {
                     $not_paid_total += $not_paid->total ? $not_paid->total : 0;
-                }else{
+                } else {
                     $not_paid_total += get_converted_amount($not_paid->currency, $not_paid->total);
                 }
-                
             }
         }
 
@@ -420,13 +416,11 @@ class Invoices_model extends Crud_model {
             foreach ($overdue_result as $overdue) {
                 $overdue_count += $overdue->count;
 
-                if($currency){
-                    $overdue_total += $overdue->total ? $overdue->total: 0;
-                }else{
+                if ($currency) {
+                    $overdue_total += $overdue->total ? $overdue->total : 0;
+                } else {
                     $overdue_total += get_converted_amount($overdue->currency, $overdue->total);
                 }
-
-               
             }
         }
 
@@ -457,7 +451,7 @@ class Invoices_model extends Crud_model {
 
     //update invoice status
     function update_invoice_status($invoice_id = 0, $status = "not_paid") {
-        $status = $status ? $this->db->escapeString($status) : $status;
+        $status = $this->_get_clean_value(array("status" => $status), "status");
         $status_data = array("status" => $status);
         return $this->ci_save($status_data, $invoice_id);
     }
@@ -465,6 +459,7 @@ class Invoices_model extends Crud_model {
     //get the recurring invoices which are ready to renew as on a given date
     function get_renewable_invoices($date) {
         $invoices_table = $this->db->prefixTable('invoices');
+        $date = $this->_get_clean_value($date);
 
         $sql = "SELECT * FROM $invoices_table
                         WHERE $invoices_table.deleted=0 AND $invoices_table.recurring=1
@@ -494,18 +489,11 @@ class Invoices_model extends Crud_model {
         return $this->db->query($sql)->getRow()->label_groups;
     }
 
-    //get invoice last id
-    function get_last_invoice_id() {
-        $invoices_table = $this->db->prefixTable('invoices');
-
-        $sql = "SELECT MAX($invoices_table.id) AS last_id FROM $invoices_table";
-
-        return $this->db->query($sql)->getRow()->last_id;
-    }
 
     //save initial number of invoice
     function save_initial_number_of_invoice($value) {
         $invoices_table = $this->db->prefixTable('invoices');
+        $value = $this->_get_clean_value($value);
 
         $sql = "ALTER TABLE $invoices_table AUTO_INCREMENT=$value;";
 
@@ -513,7 +501,8 @@ class Invoices_model extends Crud_model {
     }
 
     function get_invoice_total_meta($invoice_id) {
-        $id = $this->db->escapeString($invoice_id);
+        $id = $this->_get_clean_value($invoice_id);
+
         $invoices_table = $this->db->prefixTable('invoices');
         $invoice_items_table = $this->db->prefixTable('invoice_items');
         $info = $this->get_sales_total_meta($id, $invoices_table, $invoice_items_table);
@@ -569,7 +558,7 @@ class Invoices_model extends Crud_model {
         $selected_currency = get_array_value($options, "currency");
         $default_currency = get_setting("default_currency");
         $currency = $selected_currency ? $selected_currency : get_setting("default_currency");
-        $currency = $this->db->escapeString($currency);
+        $currency = $this->_get_clean_value(array("currency" => $currency), "currency");
 
         $where .= ($currency == $default_currency) ? " AND ($clients_table.currency='$default_currency' OR $clients_table.currency='' OR $clients_table.currency IS NULL)" : " AND $clients_table.currency='$currency'";
 
@@ -586,30 +575,30 @@ class Invoices_model extends Crud_model {
         return $result;
     }
 
-    //get invoice last display id
-    function get_last_invoice_display_id() {
-        $invoices_table = $this->db->prefixTable('invoices');
-
-        $sql = "SELECT $invoices_table.id, $invoices_table.display_id
-                FROM $invoices_table
-                WHERE $invoices_table.deleted=0
-                ORDER BY $invoices_table.id DESC
-                LIMIT 1";
-
-        return $this->db->query($sql)->getRow()->display_id;
-    }
-
     //get the last sequence number for a given year
-    function get_last_invoice_sequence($year) {
+    function get_last_invoice_sequence($year = 0) {
         $invoices_table = $this->db->prefixTable('invoices');
+        $year = $this->_get_clean_value($year);
+
+        $where = "";
+        if ($year) {
+            $where =  " AND $invoices_table.number_year=$year ";
+        }
 
         $sql = "SELECT MAX($invoices_table.number_sequence) AS last_sequence
                FROM $invoices_table
-               WHERE $invoices_table.number_year=$year";
+               WHERE $invoices_table.deleted=0 $where";
 
         $result = $this->db->query($sql)->getRow()->last_sequence;
 
         return $result ? $result : 0;
     }
 
+    function delete_permanently_with_sub_items($id) {
+        if ($this->delete_permanently($id)) {
+            $invoice_items_table = $this->db->prefixTable('invoice_items');
+            $this->db->query("DELETE FROM $invoice_items_table WHERE $invoice_items_table.invoice_id=$id");
+            return true;
+        }
+    }
 }

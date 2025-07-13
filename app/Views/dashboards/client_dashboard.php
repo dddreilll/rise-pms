@@ -1,3 +1,5 @@
+<?php echo view("dashboards/install_pwa"); ?>
+
 <div id="page-content" class="page-wrapper clearfix">
     <?php
     if (count($dashboards) && !get_setting("disable_dashboard_customization_by_clients")) {

@@ -7,7 +7,7 @@
 </nav>
 
 
-<p class="mb20"><?php echo nl2br($category_info->description ? process_images_from_content($category_info->description) : ""); ?></p>
+<p class="mb20"><?php echo custom_nl2br($category_info->description ? process_images_from_content($category_info->description) : ""); ?></p>
 <?php
 foreach ($articles as $article) {
 

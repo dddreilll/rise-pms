@@ -1,8 +1,14 @@
-<div class="card">
+<div>
     <ul id="project-files-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
-        <li class="nav-item title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("files"); ?></h4></li>
+        <li class="nav-item title-tab">
+            <h4 class="pl15 pt10 pr15"><?php echo app_lang("files"); ?></h4>
+        </li>
 
-        <li class="nav-item"><a class="nav-link" id="files-button" role="presentation" href="javascript:;" data-bs-target="#files"><?php echo app_lang("files"); ?></a></li>
+        <li class="nav-item"><a class="nav-link" id="files-button" role="presentation" href="javascript:;" data-bs-target="#files-list"><?php echo app_lang("files_list"); ?></a></li>
+
+        <?php if (get_setting("module_file_manager") == "1") { ?>
+            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("projects/explore/" . $folder_id . "/1/project_view/" . $project_id); ?>" data-bs-target="#folder-tab" data-post-view_from="project_view"><?php echo app_lang('folders'); ?></a></li>
+        <?php } ?>
 
         <?php if ($login_user->user_type === "staff") { ?>
             <li class="nav-item"><a class="nav-link" role="presentation" href="<?php echo_uri("projects/file_category/$project_id"); ?>" data-bs-target="#files-category"><?php echo app_lang('category'); ?></a></li>
@@ -26,12 +32,15 @@
     </ul>
 
     <div class="tab-content">
-        <div role="tabpanel" class="tab-pane fade" id="files">
-            <div class="table-responsive">
-                <table id="project-file-table" class="display" width="100%">            
-                </table>
+        <div role="tabpanel" class="tab-pane fade" id="files-list">
+            <div class="card border-top-0 rounded-top-0">
+                <div class="table-responsive">
+                    <table id="project-file-table" class="display" width="100%">
+                    </table>
+                </div>
             </div>
         </div>
+        <div role="tabpanel" class="tab-pane fade default-bg" id="folder-tab"></div>
         <div role="tabpanel" class="tab-pane fade" id="files-category"></div>
     </div>
 
@@ -39,15 +48,15 @@
 
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         //we have to add values of selected files for multiple download
         var fields = [];
 
-        $('body').on('click', '[data-act=download-multiple-file-checkbox]', function () {
+        $('body').on('click', '[data-act=download-multiple-file-checkbox]', function() {
 
             var checkbox = $(this).find("span"),
-                    file_id = $(this).attr("data-id");
+                file_id = $(this).attr("data-id");
 
             checkbox.addClass("inline-loader");
 
@@ -83,7 +92,7 @@
         });
 
         //trigger download operation for multiple download
-        $("#download-multiple-file-btn").click(function () {
+        $("#download-multiple-file-btn").click(function() {
             $(this).addClass("hide");
             $("#select-un-select-all-file-btn").addClass("hide");
             $("[data-act=download-multiple-file-checkbox]").find("span").removeClass("checkbox-checked");
@@ -92,7 +101,7 @@
         });
 
         //trigger delete operation for multiple delete
-        $("#delete-multiple-file-btn").click(function () {
+        $("#delete-multiple-file-btn").click(function() {
             $(this).addClass("hide");
             $("#select-un-select-all-file-btn").addClass("hide");
             $("#download-multiple-file-btn").addClass("hide");
@@ -104,11 +113,15 @@
                 url: $(this).attr("href"),
                 type: 'POST',
                 dataType: 'json',
-                success: function (result) {
+                success: function(result) {
                     if (result.success) {
                         appLoader.hide();
-                        appAlert.warning(result.message, {duration: 10000});
-                        $("#project-file-table").appTable({reload: true});
+                        appAlert.warning(result.message, {
+                            duration: 10000
+                        });
+                        $("#project-file-table").appTable({
+                            reload: true
+                        });
                     } else {
                         appAlert.error(result.message);
                     }
@@ -117,7 +130,7 @@
         });
 
         //select/un-select all files
-        $("#select-un-select-all-file-btn").click(function () {
+        $("#select-un-select-all-file-btn").click(function() {
             //either it's select/un-select operation
             //removing this first is necessary
             $("[data-act=download-multiple-file-checkbox]").find("span").removeClass("checkbox-checked");
@@ -136,33 +149,36 @@
                 $(this).attr("is-selected", "1");
                 $("#download-multiple-file-btn").removeClass("hide");
                 $("#delete-multiple-file-btn").removeClass("hide");
-                $("[data-act=download-multiple-file-checkbox]").each(function () {
+                $("[data-act=download-multiple-file-checkbox]").each(function() {
                     $(this).trigger("click");
                 });
             }
         });
 
         var userType = "<?php echo $login_user->user_type; ?>",
-                showUploadeBy = true;
+            showUploadeBy = true;
         if (userType == "client") {
             showUploadeBy = false;
         }
 
         $("#project-file-table").appTable({
             source: '<?php echo_uri("projects/files_list_data/" . $project_id) ?>',
-            order: [[0, "desc"]],
-            filterDropdown: [
-                {name: "category_id", class: "w200", options: <?php echo $file_categories_dropdown; ?>}
-                , <?php echo $custom_field_filters; ?>
+            order: [
+                [0, "desc"]
             ],
+            filterDropdown: [{
+                name: "category_id",
+                class: "w200",
+                options: <?php echo $file_categories_dropdown; ?>
+            }, <?php echo $custom_field_filters; ?>],
             columns: [
                 {title: '<?php echo app_lang("id") ?>'},
-                {title: '<?php echo app_lang("file") ?>'},
+                {title: '<?php echo app_lang("file") ?>', "class": "all file-name-section"},
                 {title: '<?php echo app_lang("category") ?>'},
                 {title: '<?php echo app_lang("size") ?>'},
                 {visible: showUploadeBy, title: '<?php echo app_lang("uploaded_by") ?>'},
                 {title: '<?php echo app_lang("created_date") ?>'}
-<?php echo $custom_field_headers; ?>,
+                <?php echo $custom_field_headers; ?>,
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w150"}
             ],
             printColumns: combineCustomFieldsColumns([0, 1, 2, 3, 4, 5], '<?php echo $custom_field_headers; ?>'),
@@ -171,23 +187,44 @@
 
         //change the add button attributes on changing tab panel
         var addButton = $("#file_or_category_add_button");
-        $(".nav-tabs li").click(function () {
+        $(".nav-tabs li").click(function() {
             var activeField = $(this).find("a").attr("data-bs-target");
-            if (activeField === "#files") {
+            if (activeField === "#files-list") {
+                addButton.removeClass("hide");
                 addButton.attr("title", "<?php echo app_lang("add_files"); ?>");
                 addButton.attr("data-title", "<?php echo app_lang("add_files"); ?>");
                 addButton.attr("data-action-url", "<?php echo get_uri("projects/file_modal_form"); ?>");
 
                 addButton.html("<?php echo "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_files'); ?>");
             } else if (activeField === "#files-category") {
+                addButton.removeClass("hide");
                 addButton.attr("title", "<?php echo app_lang("add_category"); ?>");
                 addButton.attr("data-title", "<?php echo app_lang("add_category"); ?>");
                 addButton.attr("data-action-url", "<?php echo get_uri("projects/file_category_modal_form"); ?>");
 
                 addButton.html("<?php echo "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_category'); ?>");
+            } else {
+                addButton.addClass("hide");
             }
 
             feather.replace();
+        });
+
+        setTimeout(function() {
+            var tab = "<?php echo $tab; ?>";
+            if (tab === "file_manager" || "<?php echo $folder_id; ?>" != 0) {
+                $("[data-bs-target='#folder-tab']").trigger("click");
+            }
+        }, 150);
+
+        $("[data-bs-target='#folder-tab']").click(function() {
+            // Check if this is not page view and $tab is not containing "file_manager"
+            if (!window.location.href.includes('file_manager')) {
+                var browserState = {
+                    Url: window.location.href + '/file_manager/#'
+                };
+                history.pushState(browserState, "", browserState.Url);
+            }
         });
 
     });

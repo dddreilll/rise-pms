@@ -8,7 +8,7 @@
         </div>
         <div class="col-sm-9 col-lg-10">
 
-            <div class="card no-border clearfix">
+            <div class="card clearfix">
 
                 <ul id="custom-field-tab" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title scrollable-tabs" role="tablist">
                     <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang("custom_fields"); ?></h4></li>
@@ -62,7 +62,7 @@
 
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane fade clearfix" id="custom-field-clients">
-                        <div class="card mb0 p20">
+                        <div class="mb0 p20">
                             <div class="table-responsive general-form">
                                 <table id="custom-field-table-clients" class="display no-thead b-t b-b-only no-hover" cellspacing="0" width="100%">            
                                 </table>

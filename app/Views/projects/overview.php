@@ -23,7 +23,7 @@
                 <?php if ($project_info->estimate_id) { ?>
                     <div class="col-md-12 col-sm-12">
                         <?php echo view("projects/estimates/index"); ?>
-                    </div> 
+                    </div>
                 <?php } ?>
 
                 <?php if ($project_info->order_id) { ?>
@@ -32,16 +32,22 @@
                     </div>
                 <?php } ?>
 
+                <?php if ($project_info->proposal_id) { ?>
+                    <div class="col-md-12 col-sm-12">
+                        <?php echo view("projects/proposals/index"); ?>
+                    </div>
+                <?php } ?>
+
                 <?php if ($can_add_remove_project_members) { ?>
                     <div class="col-md-12 col-sm-12">
                         <?php echo view("projects/project_members/index"); ?>
-                    </div>  
+                    </div>
                 <?php } ?>
 
                 <?php if ($can_access_clients && $project_info->project_type === "client_project") { ?>
                     <div class="col-md-12 col-sm-12">
                         <?php echo view("projects/client_contacts/index"); ?>
-                    </div>  
+                    </div>
                 <?php } ?>
 
                 <div class="col-md-12 col-sm-12">

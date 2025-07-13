@@ -74,6 +74,24 @@ class Project_files_model extends Crud_model {
             $where .= " AND $project_files_table.category_id=$category_id";
         }
 
+        //in the project details view
+        //  - in root (show the project files where don't have any folder id and context = project and project_id is the project_id)  
+        //  - in a folder (show the project files with the folder id and context = project and project_id is the project_id)
+        //  - in the list view (show the project files where project_id is the project_id)
+
+        $folder_id = $this->_get_clean_value($options, "folder_id");
+        $context_type = $this->_get_clean_value($options, "context_type");
+
+        if ($project_id && $context_type) { // project details view
+            if ($folder_id) {
+                //in a folder in the project details page
+                $where .= " AND $project_files_table.folder_id=$folder_id AND $project_files_table.project_id = $project_id ";
+            } else {
+                //root in the project details page
+                $where .= " AND $project_files_table.folder_id=0 AND $project_files_table.project_id = $project_id ";
+            }
+        }
+
         //prepare custom fild binding query
         $custom_fields = get_array_value($options, "custom_fields");
         $custom_field_filter = get_array_value($options, "custom_field_filter");
@@ -88,12 +106,13 @@ class Project_files_model extends Crud_model {
         LEFT JOIN $file_category_table ON $file_category_table.id= $project_files_table.category_id
         $join_custom_fieds
         WHERE $project_files_table.deleted=0 $where $custom_fields_where";
+
         return $this->db->query($sql);
     }
 
     function get_files($ids = array()) {
         $string_of_ids = implode(",", $ids);
-        $string_of_ids = $string_of_ids ? $this->db->escapeString($string_of_ids) : $string_of_ids;
+        $string_of_ids = $this->_get_clean_value(array("string_of_ids" => $string_of_ids), "string_of_ids");
 
         $project_files_table = $this->db->prefixTable("project_files");
         $sql = "SELECT * FROM $project_files_table WHERE deleted=0 AND FIND_IN_SET($project_files_table.id, '$string_of_ids')";
@@ -101,5 +120,4 @@ class Project_files_model extends Crud_model {
             return $this->db->query($sql);
         }
     }
-
 }

@@ -1,23 +1,27 @@
 <?php if ($single_post) { ?>
     <style type="text/css">
-        #timeline-content{
+        #timeline-content {
             max-width: 700px;
             margin: auto;
         }
+
         #timeline:before {
             content: none;
         }
+
         #timeline .post-content {
-            width:100%;
+            width: 100%;
             padding: 0 !important;
         }
-        #timeline > .post-content:first-child{
+
+        #timeline>.post-content:first-child {
             padding-top: 0 !important;
         }
-        #timeline  .post-content .post-date:before{
+
+        #timeline .post-content .post-date:before {
             content: none;
         }
-    </style> 
+    </style>
     <div class="box">
         <div class="box-content">
             <div id="timeline-content" class="page-wrapper clearfix mb20">
@@ -28,7 +32,7 @@
             }
 
             foreach ($posts as $post) {
-                ?>
+            ?>
                 <div id="post-content-container-<?php echo $post->id; ?>" class="post-content">
                     <div class="post clearfix">
                         <?php if (!$single_post) { ?>
@@ -58,7 +62,7 @@
                                         <?php if ($login_user->is_admin || $post->created_by == $login_user->id) { ?>
                                             <div class="flex-shrink-0">
                                                 <span class="float-end dropdown">
-                                                    <div class="text-off dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="true" >
+                                                    <div class="text-off dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="true">
                                                         <i data-feather="chevron-down" class="icon"></i>
                                                     </div>
                                                     <ul class="dropdown-menu" role="menu">
@@ -72,7 +76,7 @@
                                 </div>
 
                                 <p>
-                                    <?php echo $post->description ? nl2br(convert_comment_link(link_it(process_images_from_content($post->description)))) : ""; ?>
+                                    <?php echo $post->description ? custom_nl2br(convert_comment_link(link_it(process_images_from_content($post->description)))) : ""; ?>
                                 </p>
 
                                 <?php
@@ -116,18 +120,18 @@
                         </div>
                     </div>
                 </div>
-                <?php
+            <?php
             }
             ?>
             <?php if ($single_post === "single_post") { ?>
             </div>
         </div>
     </div>
-    <?php
-}
-if ($result_remaining > 0) {
-    $next_container_id = "load" . $next_page_offset;
-    ?>
+<?php
+            }
+            if ($result_remaining > 0) {
+                $next_container_id = "load" . $next_page_offset;
+?>
     <div id="<?php echo $next_container_id; ?>">
         <div class="clearfix"></div>
     </div>
@@ -135,22 +139,21 @@ if ($result_remaining > 0) {
     <div id="loader-<?php echo $next_container_id; ?>">
         <div class="text-center ml30">
             <?php
-            echo ajax_anchor(get_uri("timeline/load_more_posts/" . $next_page_offset), app_lang("load_more"), array("class" => "btn btn-default load-more mt15 p10 spinning-btn pr0", "data-remove-on-success" => "#loader-" . $next_container_id, "title" => app_lang("load_more"), "data-inline-loader" => "1", "data-real-target" => "#" . $next_container_id));
+                echo ajax_anchor(get_uri("timeline/load_more_posts/" . $next_page_offset), app_lang("load_more"), array("class" => "btn btn-default load-more mt15 p10 spinning-btn pr0", "data-remove-on-success" => "#loader-" . $next_container_id, "title" => app_lang("load_more"), "data-inline-loader" => "1", "data-real-target" => "#" . $next_container_id));
             ?>
         </div>
     </div>
-    <?php
-}
-if ($is_first_load) {
-    echo "</div>";
-}
+<?php
+            }
+            if ($is_first_load) {
+                echo "</div>";
+            }
 ?>
 
-<script type="text/javascript">
-    $(document).ready(function () {
-        var type = "<?php echo $single_post; ?>";
-        if (type === "single_post") {
+<?php if ($single_post == "single_post") { ?>
+    <script type="text/javascript">
+        $(document).ready(function() {
             $(".view-replies").trigger("click");
-        }
-    });
-</script>
+        });
+    </script>
+<?php }; ?>

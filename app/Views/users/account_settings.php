@@ -10,36 +10,37 @@
     }
     echo form_open(get_uri($url . "/save_account_settings/" . $user_info->id), array("id" => "account-info-form", "class" => "general-form dashed-row white", "role" => "form"));
     ?>
-    <div class="card">
+    <div class="card border-top-0 rounded-top-0">
         <div class=" card-header">
             <h4><?php echo app_lang('account_settings'); ?></h4>
         </div>
         <div class="card-body">
             <input type="hidden" name="first_name" value="<?php echo $user_info->first_name; ?>" />
             <input type="hidden" name="last_name" value="<?php echo $user_info->last_name; ?>" />
-            <div class="form-group">
-                <div class="row">
-                    <label for="email" class=" col-md-2"><?php echo app_lang('email'); ?></label>
-                    <div class=" col-md-10">
-                        <?php
-                        echo form_input(array(
-                            "id" => "email",
-                            "name" => "email",
-                            "value" => $user_info->email,
-                            "class" => "form-control",
-                            "placeholder" => app_lang('email'),
-                            "autocomplete" => "off",
-                            "data-rule-email" => true,
-                            "data-msg-email" => app_lang("enter_valid_email"),
-                            "data-rule-required" => true,
-                            "data-msg-required" => app_lang("field_required"),
-                        ));
-                        ?>
+
+            <?php if (($user_info->id == $login_user->id) || $login_user->is_admin) { ?>
+                <div class="form-group">
+                    <div class="row">
+                        <label for="email" class=" col-md-2"><?php echo app_lang('email'); ?></label>
+                        <div class=" col-md-10">
+                            <?php
+                            echo form_input(array(
+                                "id" => "email",
+                                "name" => "email",
+                                "value" => $user_info->email,
+                                "class" => "form-control",
+                                "placeholder" => app_lang('email'),
+                                "autocomplete" => "off",
+                                "data-rule-email" => true,
+                                "data-msg-email" => app_lang("enter_valid_email"),
+                                "data-rule-required" => true,
+                                "data-msg-required" => app_lang("field_required"),
+                            ));
+                            ?>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <?php if (($user_info->id == $login_user->id) || $login_user->is_admin) { ?> 
                 <div class="form-group">
                     <div class="row">
                         <label for="password" class=" col-md-2"><?php echo app_lang('password'); ?></label>
@@ -76,7 +77,7 @@
                         </div>
                     </div>
                 </div>
-            <?php } ?> 
+            <?php } ?>
 
             <?php if ($user_info->user_type === "staff" && ($login_user->is_admin || (!$user_info->is_admin && get_array_value($login_user->permissions, "can_manage_user_role_and_permissions") && $login_user->id !== $user_info->id))) { ?>
                 <div class="form-group">
@@ -88,9 +89,9 @@
                                 echo "<div class='ml15'>" . app_lang("admin") . "</div>";
                             } else {
                                 echo form_dropdown("role", $role_dropdown, array($user_info->role_id), "class='select2' id='user-role'");
-                                ?>
+                            ?>
                                 <div id="user-role-help-block" class="help-block ml10 <?php echo $user_info->role_id === "admin" ? "" : "hide" ?>"><i data-feather="alert-triangle" class="icon-16 text-warning"></i> <?php echo app_lang("admin_user_has_all_power"); ?></div>
-                                <?php
+                            <?php
                             }
                             ?>
                         </div>
@@ -150,18 +151,20 @@
 </div>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
         $("#account-info-form").appForm({
             isModal: false,
-            onSuccess: function (result) {
-                appAlert.success(result.message, {duration: 10000});
+            onSuccess: function(result) {
+                appAlert.success(result.message, {
+                    duration: 10000
+                });
             }
         });
         $("#account-info-form .select2").select2();
 
 
         //show/hide asmin permission help message
-        $("#user-role").change(function () {
+        $("#user-role").change(function() {
             if ($(this).val() === "admin") {
                 $("#user-role-help-block").removeClass("hide");
             } else {
@@ -170,7 +173,7 @@
         });
 
         //show/hide disable login help message
-        $("#disable_login").click(function () {
+        $("#disable_login").click(function() {
             if ($(this).is(":checked")) {
                 $("#disable-login-help-block").removeClass("hide");
             } else {
@@ -179,7 +182,7 @@
         });
 
         //show/hide user status help message
-        $("#user_status").click(function () {
+        $("#user_status").click(function() {
             if ($(this).is(":checked")) {
                 $("#user-status-help-block").removeClass("hide");
             } else {
@@ -188,7 +191,7 @@
         });
 
         //the checkbox will be enable if anyone enter the password
-        $("#password").change(function () {
+        $("#password").change(function() {
             var password = $("#password").val();
             if (password) {
                 $("#resend_login_details_section").removeClass("hide");
@@ -197,4 +200,4 @@
             }
         });
     });
-</script>    
+</script>

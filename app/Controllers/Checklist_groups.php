@@ -41,9 +41,12 @@ class Checklist_groups extends Security_Controller {
         ));
 
         $id = $this->request->getPost('id');
+        $checklists = $this->request->getPost('checklists');
+        validate_list_of_numbers($checklists);
+
         $data = array(
             "title" => $this->request->getPost('title'),
-            "checklists" => $this->request->getPost('checklists')
+            "checklists" => $checklists
         );
         $save_id = $this->Checklist_groups_model->ci_save($data, $id);
         if ($save_id) {
@@ -100,7 +103,7 @@ class Checklist_groups extends Security_Controller {
             $data->title,
             modal_anchor(get_uri("checklist_groups/checklists_list"), $total_checklists, array("title" => app_lang('checklists'), "data-post-checklists" => $data->checklists)),
             modal_anchor(get_uri("checklist_groups/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_checklist_group'), "data-post-id" => $data->id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_checklist_group'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("checklist_groups/delete"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_checklist_group'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("checklist_groups/delete"), "data-action" => "delete"))
         );
     }
 
@@ -108,7 +111,6 @@ class Checklist_groups extends Security_Controller {
         $view_data['checklists'] = $this->Checklist_template_model->get_checklists($this->request->getPost('checklists'))->getResult();
         return $this->template->view('checklist_groups/checklists_list', $view_data);
     }
-
 }
 
 /* End of file Task_checklist_groups.php */

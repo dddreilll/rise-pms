@@ -2,7 +2,8 @@
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <input type="hidden" name="folder_id" value="<?php echo $folder_id; ?>" />
-        <input type="hidden" name="client_id" value="<?php echo $client_id; ?>" />
+        <input type="hidden" name="context" value="<?php echo $context; ?>" />
+        <input type="hidden" name="context_id" value="<?php echo $context_id; ?>" />
         <?php echo view("includes/multi_file_uploader"); ?>
     </div>
 </div>

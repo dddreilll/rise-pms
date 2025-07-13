@@ -2,6 +2,7 @@
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <input type="hidden" name="project_id" value="<?php echo $project_id; ?>" />
+        <input type="hidden" name="folder_id" value="<?php echo $folder_id; ?>" />
 
         <div class="form-group">
             <div class="row">
@@ -13,7 +14,7 @@
                 </div>
             </div>
         </div>
-        <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?> 
+        <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => "col-md-3", "field_column" => " col-md-9")); ?>
         <?php if ($model_info->id) { ?>
             <input type="hidden" name="id" value="<?php echo $model_info->id; ?>" />
 
@@ -35,7 +36,7 @@
                 </div>
             </div>
 
-            <?php
+        <?php
         } else {
             echo view("includes/multi_file_uploader");
         }
@@ -50,22 +51,25 @@
 <?php echo form_close(); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
+    $(document).ready(function() {
 
         $("#file-form").appForm({
-            onSuccess: function (result) {
-                $("#project-file-table").appTable({reload: true});
+            onSuccess: function(result) {
+                if ($("#file-manager-container-card").is(":visible")) {
+                    location.reload();
+                }
+
+                $("#project-file-table").appTable({
+                    reload: true
+                });
             }
         });
 
         $("#file-form .select2").select2();
 
-<?php if ($model_info->id) { ?>
+        <?php if ($model_info->id) { ?>
             $('#file-save-button').removeAttr('disabled');
-<?php } ?>
+        <?php } ?>
 
     });
-
-
-
-</script>    
+</script>

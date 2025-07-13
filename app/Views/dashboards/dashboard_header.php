@@ -22,7 +22,7 @@ if ($dashboard_type == "custom" && $dashboard_info->id !== get_setting("staff_de
         <h4 class="float-start"><?php echo $title; ?></h4>
     </div>        
 
-    <div class="float-end clearfix">
+    <div class="float-end clearfix convert-to-dropdown-on-mobile">
         <span class="float-end dropdown dashboard-dropdown ml10">
             <div class="dropdown-toggle clickable" data-bs-toggle="dropdown" aria-expanded="true" >
                 <i data-feather="more-horizontal" class="icon-16"></i>
@@ -67,24 +67,24 @@ if ($dashboard_type == "custom" && $dashboard_info->id !== get_setting("staff_de
 </div>
 
 <script>
-    $(document).ready(function () {
-        //modify design for mobile devices
-        if (isMobile()) {
-            var $dashboardTags = $("#dashboards-color-tags"),
-                    $dashboardTagsClone = $dashboardTags.clone(),
-                    $dashboardDropdown = $(".dashboard-dropdown .dropdown-menu");
+    // $(document).ready(function () {
+    //     //modify design for mobile devices
+    //     if (isMobile()) {
+    //         var $dashboardTags = $("#dashboards-color-tags"),
+    //                 $dashboardTagsClone = $dashboardTags.clone(),
+    //                 $dashboardDropdown = $(".dashboard-dropdown .dropdown-menu");
 
-            $dashboardTags.addClass("hide");
-            $dashboardTagsClone.removeClass("float-end");
-            $dashboardTagsClone.children("span").addClass("p5 text-center inline-block");
+    //         $dashboardTags.addClass("hide");
+    //         $dashboardTagsClone.removeClass("float-end");
+    //         $dashboardTagsClone.children("span").addClass("p5 text-center inline-block");
 
-            $dashboardTagsClone.children("span").find("a").each(function () {
-                $(this).children("span").removeClass("p10").addClass("p5");
-            });
+    //         $dashboardTagsClone.children("span").find("a").each(function () {
+    //             $(this).children("span").removeClass("p10").addClass("p5");
+    //         });
 
-            var liDom = "<li id='color-tags-container-for-mobile' class='bg-off-white text-center'></li>"
-            $dashboardDropdown.prepend(liDom);
-            $("#color-tags-container-for-mobile").html($dashboardTagsClone);
-        }
-    });
+    //         var liDom = "<li id='color-tags-container-for-mobile' class='bg-off-white text-center'></li>"
+    //         $dashboardDropdown.prepend(liDom);
+    //         $("#color-tags-container-for-mobile").html($dashboardTagsClone);
+    //     }
+    // });
 </script>

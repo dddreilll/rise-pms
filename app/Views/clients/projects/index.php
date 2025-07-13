@@ -2,7 +2,7 @@
     <div id="page-content" class="page-wrapper clearfix">
     <?php } ?>
 
-    <div class="card rounded-bottom">
+    <div class="card rounded-top-0">
         <?php if (isset($page_type) && $page_type === "full") { ?>
             <div class="page-title clearfix">
                 <h1><?php echo app_lang('projects'); ?></h1>
@@ -54,14 +54,13 @@ if (isset($page_type) && $page_type === 'dashboard') {
 }
 ?>" || 0;
 
-
         var filters = [];
         var statusOptions = "";
 
         //don't show filters if hideTools is true 
         if (hideTools) {
             filters = false;
-            statusOptions = <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses, "selected_status_key" => "open")); ?>;
+            statusOptions = <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses)); ?>;
         } else {
             if (<?php echo $project_labels_dropdown; ?>) {
                 var filters = [{name: "project_label", class: "w200", options: <?php echo $project_labels_dropdown; ?>}, <?php echo $custom_field_filters; ?>];
@@ -70,7 +69,7 @@ if (isset($page_type) && $page_type === 'dashboard') {
                 var filters = [<?php echo $custom_field_filters; ?>];
             }
 
-            statusOptions = <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses, "selected_status_keys" => array("open", "completed"))); ?>;
+            statusOptions = <?php echo view("project_status/project_status_dropdown", array("project_statuses" => $project_statuses)); ?>;
         }
 
         var optionVisibility = false;
@@ -93,7 +92,7 @@ if (isset($page_type) && $page_type === 'dashboard') {
             filterDropdown: filters,
             columns: [
                 {title: '<?php echo app_lang("id") ?>', "class": "w50"},
-                {title: '<?php echo app_lang("title") ?>'},
+                {title: '<?php echo app_lang("title") ?>', "class": "all"},
                 {targets: [2], visible: false, searchable: false},
                 {title: '<?php echo app_lang("price") ?>', "class": "w10p"},
                 {visible: false, searchable: false},
@@ -101,7 +100,7 @@ if (isset($page_type) && $page_type === 'dashboard') {
                 {visible: false, searchable: false},
                 {title: '<?php echo app_lang("deadline") ?>', "class": "w10p", "iDataSort": 6},
                 {title: '<?php echo app_lang("progress") ?>', "class": "w15p"},
-                {title: '<?php echo app_lang("status") ?>', "class": "w10p"}
+                {title: '<?php echo app_lang("status") ?>', "class": "w10p "}
 <?php echo $custom_field_headers; ?>,
                 {visible: optionVisibility, title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ],

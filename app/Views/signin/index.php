@@ -3,7 +3,7 @@
     <head>
         <?php echo view('includes/head'); ?>
     </head>
-    <body>
+    <body class="public-view signin-page">
         <?php
         if (get_setting("show_background_image_in_signin_page") === "yes") {
             $background_url = get_file_from_setting("signin_page_background");

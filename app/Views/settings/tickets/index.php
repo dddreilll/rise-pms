@@ -1,5 +1,5 @@
 <?php echo form_open(get_uri("settings/save_ticket_settings"), array("id" => "ticket-settings-form", "class" => "general-form dashed-row", "role" => "form")); ?>
-<div class="card mb0">
+<div class="mb0">
 
     <div class="card-body">
         <div class="form-group">

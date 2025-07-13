@@ -13,7 +13,7 @@ foreach ($points_dropdown as $key => $value) {
                     type = $(this).attr('data-act-type'),
                     source = "",
                     select2Option = {},
-                    showbuttons = false,
+                    showButtons = false,
                     placement = "bottom",
                     editableType = "select2",
                     datepicker = {};
@@ -34,7 +34,7 @@ foreach ($points_dropdown as $key => $value) {
                 e.stopPropagation();
                 e.preventDefault();
 
-                showbuttons = true;
+                showButtons = true;
                 source = <?php echo json_encode($collaborators_dropdown); ?>;
                 select2Option = {data: source, multiple: true};
             } else if (type === "labels") {
@@ -42,7 +42,7 @@ foreach ($points_dropdown as $key => $value) {
                 e.preventDefault();
 
                 source = <?php echo json_encode($label_suggestions); ?>;
-                showbuttons = true;
+                showButtons = true;
                 select2Option = {data: source, multiple: true};
                 placement = "bottom";
             } else if (type === "start_date" || type === "deadline") {
@@ -63,7 +63,7 @@ foreach ($points_dropdown as $key => $value) {
                 e.stopPropagation();
                 e.preventDefault();
 
-                showbuttons = true;
+                showButtons = true;
                 placement = "bottom";
                 editableType = "time";
             }
@@ -72,7 +72,7 @@ foreach ($points_dropdown as $key => $value) {
                 actionType: editableType,
                 value: $(this).attr('data-value'),
                 actionUrl: '<?php echo_uri("tasks/update_task_info") ?>/' + $(this).attr('data-id') + '/' + $(this).attr('data-act-type'),
-                showbuttons: showbuttons,
+                showButtons: showButtons,
                 datepicker: datepicker,
                 select2Option: select2Option,
                 placement: placement,

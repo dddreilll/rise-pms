@@ -15,10 +15,10 @@
             ],
             columns: [
             {visible: false, searchable: false}, //sorting purpose only
-            {title: '<?php echo app_lang("month") ?>', "class": "w30p", "iDataSort": 0},
-            {title: '<?php echo app_lang("income") ?>', "class": "w20p text-right"},
-            {title: '<?php echo app_lang("expenses") ?>', "class": "w20p text-right"},
-            {title: '<?php echo app_lang("profit") ?>', "class": "w20p text-right"}
+            {title: '<?php echo app_lang("month") ?>', "class": "w30p all", "iDataSort": 0},
+            {title: '<?php echo app_lang("income") ?>', "class": "w20p text-right all"},
+            {title: '<?php echo app_lang("expenses") ?>', "class": "w20p text-right all"},
+            {title: '<?php echo app_lang("profit") ?>', "class": "w20p text-right all"}
             ],
             printColumns: [1, 2, 3, 4],
     xlsColumns: [1, 2, 3, 4],

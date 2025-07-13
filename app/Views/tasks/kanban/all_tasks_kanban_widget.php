@@ -1,11 +1,12 @@
-<div class="clearfix">
-    <div class="bg-white pb0 rounded-top" id="js-kanban-filter-container">
-        <div id="kanban-filters"></div>
+<div class="card">
+    <div class="clearfix">
+        <div class="bg-white pb0 rounded-top" id="js-kanban-filter-container">
+            <div id="kanban-filters"></div>
+        </div>
+
+        <div id="load-kanban"></div>
+
     </div>
-
-
-    <div id="load-kanban"></div>
-
 </div>
 
 <?php echo view("tasks/batch_update/batch_update_script"); ?>

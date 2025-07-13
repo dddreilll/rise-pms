@@ -107,6 +107,8 @@ class Subscriptions_model extends Crud_model {
         $clients_table = $this->db->prefixTable('clients');
         $taxes_table = $this->db->prefixTable('taxes');
 
+        $subscription_id = $this->_get_clean_value($subscription_id);
+
         $item_sql = "SELECT SUM($subscription_items_table.total) AS subscription_subtotal
         FROM $subscription_items_table
         LEFT JOIN $subscriptions_table ON $subscriptions_table.id= $subscription_items_table.subscription_id    
@@ -156,7 +158,8 @@ class Subscriptions_model extends Crud_model {
 
     //update subscription status
     function update_subscription_status($subscription_id = 0, $status = "draft") {
-        $status = $status ? $this->db->escapeString($status) : $status;
+        $status = $this->_get_clean_value(array("status" => $status), "status");
+
         $status_data = array("status" => $status);
         return $this->ci_save($status_data, $subscription_id);
     }
@@ -164,6 +167,8 @@ class Subscriptions_model extends Crud_model {
     //get the recurring subscriptions which are ready to renew as on a given date
     function get_renewable_subscriptions($date) {
         $subscriptions_table = $this->db->prefixTable('subscriptions');
+
+        $date = $this->_get_clean_value($date);
 
         $sql = "SELECT * FROM $subscriptions_table
                         WHERE $subscriptions_table.deleted=0 
@@ -206,6 +211,8 @@ class Subscriptions_model extends Crud_model {
     //save initial number of subscription
     function save_initial_number_of_subscription($value) {
         $subscriptions_table = $this->db->prefixTable('subscriptions');
+
+        $value = $this->_get_clean_value($value);
 
         $sql = "ALTER TABLE $subscriptions_table AUTO_INCREMENT=$value;";
 

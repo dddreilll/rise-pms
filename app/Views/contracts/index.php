@@ -1,43 +1,35 @@
 <div id="page-content" class="page-wrapper clearfix grid-button">
-    <div class="card clearfix">
-        <ul id="contract-tabs" data-bs-toggle="ajax-tab" class="nav nav-tabs bg-white title" role="tablist">
-            <li class="title-tab"><h4 class="pl15 pt10 pr15"><?php echo app_lang('contracts'); ?></h4></li>
-            <li><a id="monthly-contract-button" role="presentation" data-bs-toggle="tab" href="javascript:;" data-bs-target="#monthly-contracts"><?php echo app_lang("monthly"); ?></a></li>
-            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("contracts/yearly/"); ?>" data-bs-target="#yearly-contracts"><?php echo app_lang('yearly'); ?></a></li>
-            <div class="tab-title clearfix no-border contracts-page-title">
-                <div class="title-button-group">
-                    <?php echo modal_anchor(get_uri("contracts/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_contract'), array("class" => "btn btn-default", "title" => app_lang('add_contract'))); ?>
-                </div>
+    <div class="card">
+        <div class="page-title clearfix">
+            <h1><?php echo app_lang('contracts'); ?></h1>
+            <div class="title-button-group">
+                <?php echo modal_anchor(get_uri("contracts/modal_form"), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang('add_contract'), array("class" => "btn btn-default", "title" => app_lang('add_contract'))); ?>
             </div>
-        </ul>
-
-        <div class="tab-content">
-            <div role="tabpanel" class="tab-pane fade" id="monthly-contracts">
-                <div class="table-responsive">
-                    <table id="monthly-contract-table" class="display" cellspacing="0" width="100%">   
-                    </table>
-                </div>
-            </div>
-            <div role="tabpanel" class="tab-pane fade" id="yearly-contracts"></div>
+        </div>
+        <div class="table-responsive">
+            <table id="contract-table" class="display" cellspacing="0" width="100%">   
+            </table>
         </div>
     </div>
 </div>
 
 <script type="text/javascript">
-    loadContractsTable = function (selector, dateRange) {
-        $(selector).appTable({
+    $(document).ready(function () {
+        $("#contract-table").appTable({
             source: '<?php echo_uri("contracts/list_data") ?>',
+            serverSide: true,
             order: [[0, "desc"]],
-            dateRangeType: dateRange,
+            smartFilterIdentity: "contracts_list", //a to z and _ only. should be unique to avoid conflicts
+            rangeRadioButtons: [{name: "range_radio_button", selectedOption: 'monthly', options: ['monthly', 'yearly', 'custom', 'dynamic'], dynamicRanges:['this_month', 'last_month', 'next_month', 'this_year', 'last_year']}],
             filterDropdown: [{name: "status", class: "w150", options: <?php echo view("contracts/contract_statuses_dropdown"); ?>}, <?php echo $custom_field_filters; ?>],
             columns: [
-                {title: '<?php echo app_lang("contract") ?>', "class": "w100 all"},
-                {title: "<?php echo app_lang("title") ?> ", "class": "w15p all"},
-                {title: "<?php echo app_lang("client") ?>", "class": "w15p"},
+                {title: '<?php echo app_lang("contract") ?>', "class": "w100", order_by: "id"},
+                {title: "<?php echo app_lang("title") ?> ", "class": "w15p all", order_by: "title"},
+                {title: "<?php echo app_lang("client") ?>", "class": "w15p all", order_by: "company_name" },
                 {title: "<?php echo app_lang("project") ?>", "class": "w15p"},
-                {visible: false, searchable: false},
+                {visible: false, searchable: false, order_by: "contract_date"},
                 {title: "<?php echo app_lang("contract_date") ?>", "iDataSort": 4, "class": "w10p"},
-                {visible: false, searchable: false},
+                {visible: false, searchable: false, order_by: "valid_until"},
                 {title: "<?php echo app_lang("valid_until") ?>", "iDataSort": 6, "class": "w10p"},
                 {title: "<?php echo app_lang("amount") ?>", "class": "text-right w10p"},
                 {title: "<?php echo app_lang("status") ?>", "class": "text-center"}
@@ -46,12 +38,7 @@
             ],
             printColumns: combineCustomFieldsColumns([0, 1, 2, 3, 5, 7, 8, 9], '<?php echo $custom_field_headers; ?>'),
             xlsColumns: combineCustomFieldsColumns([0, 1, 2, 3, 5, 7, 8, 9], '<?php echo $custom_field_headers; ?>'),
-            summation: [{column: 8, dataType: 'currency', currencySymbol: AppHelper.settings.currencySymbol}]
+            summation: [{column: 8, fieldName: "total_contract_value", dataType: 'currency', currencySymbol: AppHelper.settings.currencySymbol}]
         });
-    };
-
-    $(document).ready(function () {
-        loadContractsTable("#monthly-contract-table", "monthly");
     });
-
 </script>

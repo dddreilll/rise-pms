@@ -22,7 +22,7 @@
             order: [[0, "desc"]],
             filterDropdown: [{name: "status", class: "w150", options: <?php echo view("contracts/contract_statuses_dropdown"); ?>}, <?php echo $custom_field_filters; ?>],
             columns: [
-                {title: '<?php echo app_lang("id") ?>', "class": "w50 all"},
+                {title: '<?php echo app_lang("id") ?>', "class": "w50"},
                 {title: "<?php echo app_lang("title") ?> ", "class": "w15p all"},
                 {title: "<?php echo app_lang("client") ?>", "class": "w15p"},
                 {title: "<?php echo app_lang("project") ?>", "class": "w15p"},

@@ -71,7 +71,10 @@ class Task_status extends Security_Controller {
                 $sort_item = explode("-", $value); //extract id and sort value
 
                 $id = get_array_value($sort_item, 0);
+                validate_numeric_value($id);
+
                 $sort = get_array_value($sort_item, 1);
+                validate_numeric_value($sort);
 
                 $data = array("sort" => $sort);
                 $this->Task_status_model->ci_save($data, $id);
@@ -130,8 +133,7 @@ class Task_status extends Security_Controller {
             $edit . $delete
         );
     }
-
 }
 
-/* End of file task_status.php */
-/* Location: ./app/controllers/task_status.php */
+/* End of file Task_status.php */
+/* Location: ./app/Controllers/Task_status.php */

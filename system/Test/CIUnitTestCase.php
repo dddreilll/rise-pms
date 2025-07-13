@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -25,8 +27,10 @@ use CodeIgniter\Test\Mock\MockEmail;
 use CodeIgniter\Test\Mock\MockSession;
 use Config\App;
 use Config\Autoload;
+use Config\Email;
 use Config\Modules;
 use Config\Services;
+use Config\Session;
 use Exception;
 use PHPUnit\Framework\TestCase;
 
@@ -48,7 +52,7 @@ abstract class CIUnitTestCase extends TestCase
      * WARNING: Do not override unless you know exactly what you are doing.
      *          This property may be deprecated in the future.
      *
-     * @var array of methods
+     * @var list<string> array of methods
      */
     protected $setUpMethods = [
         'resetFactories',
@@ -62,7 +66,7 @@ abstract class CIUnitTestCase extends TestCase
      *
      * WARNING: This property may be deprecated in the future.
      *
-     * @var array of methods
+     * @var list<string> array of methods
      */
     protected $tearDownMethods = [];
 
@@ -107,7 +111,7 @@ abstract class CIUnitTestCase extends TestCase
      * The seed file(s) used for all tests within this test case.
      * Should be fully-namespaced or relative to $basePath
      *
-     * @var array|string
+     * @var class-string<Seeder>|list<class-string<Seeder>>
      */
     protected $seed = '';
 
@@ -121,7 +125,7 @@ abstract class CIUnitTestCase extends TestCase
 
     /**
      * The namespace(s) to help us find the migration classes.
-     * Empty is equivalent to running `spark migrate --all`.
+     * `null` is equivalent to running `spark migrate --all`.
      * Note that running "all" runs migrations in date order,
      * but specifying namespaces runs them in namespace order (then date)
      *
@@ -133,8 +137,7 @@ abstract class CIUnitTestCase extends TestCase
      * The name of the database group to connect to.
      * If not present, will use the defaultGroup.
      *
-     * @var string
-     * @phpstan-var non-empty-string
+     * @var non-empty-string
      */
     protected $DBGroup = 'tests';
 
@@ -235,7 +238,7 @@ abstract class CIUnitTestCase extends TestCase
     {
         parent::setUp();
 
-        if (! $this->app) {
+        if (! $this->app instanceof CodeIgniter) {
             $this->app = $this->createApplication();
         }
 
@@ -323,7 +326,7 @@ abstract class CIUnitTestCase extends TestCase
      */
     protected function mockEmail()
     {
-        Services::injectMock('email', new MockEmail(config('Email')));
+        Services::injectMock('email', new MockEmail(config(Email::class)));
     }
 
     /**
@@ -333,7 +336,7 @@ abstract class CIUnitTestCase extends TestCase
     {
         $_SESSION = [];
 
-        $config  = config('App');
+        $config  = config(Session::class);
         $session = new MockSession(new ArrayHandler($config, '0.0.0.0'), $config);
 
         Services::injectMock('session', $session);
@@ -371,7 +374,7 @@ abstract class CIUnitTestCase extends TestCase
     {
         $this->assertTrue(
             TestLogger::didLog($level, $logMessage, false),
-            $message ?: sprintf(
+            $message !== '' ? $message : sprintf(
                 'Failed asserting that logs have a record of message containing "%s" with level "%s".',
                 $logMessage,
                 $level
@@ -438,7 +441,7 @@ abstract class CIUnitTestCase extends TestCase
      * where the result is close but not exactly equal to the
      * expected time, for reasons beyond our control.
      *
-     * @param mixed $actual
+     * @param float|int $actual
      *
      * @throws Exception
      */
@@ -476,7 +479,7 @@ abstract class CIUnitTestCase extends TestCase
             $difference = abs($expected - $actual);
 
             $this->assertLessThanOrEqual($tolerance, $difference, $message);
-        } catch (Exception $e) {
+        } catch (Exception) {
             return false;
         }
     }
@@ -494,7 +497,7 @@ abstract class CIUnitTestCase extends TestCase
     protected function createApplication()
     {
         // Initialize the autoloader.
-        Services::autoloader()->initialize(new Autoload(), new Modules());
+        service('autoloader')->initialize(new Autoload(), new Modules());
 
         $app = new MockCodeIgniter(new App());
         $app->initialize();
@@ -514,7 +517,7 @@ abstract class CIUnitTestCase extends TestCase
         foreach (xdebug_get_headers() as $emittedHeader) {
             $found = $ignoreCase
                 ? (stripos($emittedHeader, $header) === 0)
-                : (strpos($emittedHeader, $header) === 0);
+                : (str_starts_with($emittedHeader, $header));
 
             if ($found) {
                 return $emittedHeader;

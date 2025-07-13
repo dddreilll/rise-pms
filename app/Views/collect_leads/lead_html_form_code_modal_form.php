@@ -9,8 +9,7 @@
                             "id" => "lead-html-form-code",
                             "name" => "lead-html-form-code",
                             "value" => $lead_html_form_code,
-                            "class" => "form-control",
-                            "data-rich-text-editor" => false
+                            "class" => "form-control"
                         ));
                         ?>
                     </div>

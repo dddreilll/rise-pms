@@ -17,7 +17,7 @@
     <?php } ?>
     <?php if ($invoice_info->labels_list) { ?>
         <div class="col-md-12 mb15">
-            <strong><?php echo app_lang('label') . ": "; ?></strong><?php echo make_labels_view_data($invoice_info->labels_list, "", true); ?>
+            <strong><?php echo app_lang('label') . ": "; ?></strong><?php echo make_labels_view_data($invoice_info->labels_list); ?>
         </div>
     <?php } ?>
 

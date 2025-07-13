@@ -52,6 +52,8 @@ class Leads extends Security_Controller {
 
     function modal_form() {
         $lead_id = $this->request->getPost('id');
+        validate_numeric_value($lead_id);
+
         $this->validate_lead_access($lead_id);
         $view_data = $this->make_lead_modal_form_data($lead_id);
         return $this->template->view('leads/modal_form', $view_data);
@@ -127,6 +129,9 @@ class Leads extends Security_Controller {
             "company_name" => "required"
         ));
 
+        $labels = $this->request->getPost('labels');
+        validate_list_of_numbers($labels);
+
         $data = array(
             "company_name" => $this->request->getPost('company_name'),
             "type" => $this->request->getPost('account_type'),
@@ -145,7 +150,7 @@ class Leads extends Security_Controller {
             "lead_status_id" => $this->request->getPost('lead_status_id'),
             "lead_source_id" => $this->request->getPost('lead_source_id'),
             "owner_id" => $this->request->getPost('owner_id') ? $this->request->getPost('owner_id') : $this->login_user->id,
-            "labels" => $this->request->getPost('labels')
+            "labels" => $labels
         );
 
         if (!$client_id) {
@@ -259,9 +264,17 @@ class Leads extends Security_Controller {
 
         $lead_labels = make_labels_view_data($data->labels_list, true);
 
+        $phone = $data->phone ? ($data->phone . "<br/><span class='hide'>, </span>")  : "";
+        if ($data->primary_contact_phone && $data->primary_contact_phone != $data->phone) {
+            $phone .= $data->primary_contact_phone;
+        }
+        $phone = $phone ?: "-";
+
+
         $row_data = array(
-            anchor(get_uri("leads/view/" . $data->id), $data->company_name),
+            anchor(get_uri("leads/view/" . $data->id), $data->company_name, array("class" => "js-selection-id", "data-id" => $data->id)),
             $data->primary_contact ? $primary_contact : "",
+            $phone,
             $owner,
             $lead_labels,
             $data->created_date,
@@ -276,7 +289,7 @@ class Leads extends Security_Controller {
         }
 
         $row_data[] = modal_anchor(get_uri("leads/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_lead'), "data-post-id" => $data->id))
-                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_lead'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("leads/delete"), "data-action" => "delete-confirmation"));
+            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_lead'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("leads/delete"), "data-action" => "delete-confirmation"));
 
         return $row_data;
     }
@@ -394,7 +407,10 @@ class Leads extends Security_Controller {
     /* file upload modal */
 
     function file_modal_form() {
-        $view_data['model_info'] = $this->General_files_model->get_one($this->request->getPost('id'));
+        $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
+        $view_data['model_info'] = $this->General_files_model->get_one($id);
         $client_id = $this->request->getPost('client_id') ? $this->request->getPost('client_id') : $view_data['model_info']->client_id;
 
         $this->validate_lead_access($client_id);
@@ -479,10 +495,10 @@ class Leads extends Security_Controller {
         $uploaded_by = get_team_member_profile_link($data->uploaded_by, $uploaded_by);
 
         $description = "<div class='float-start'>" .
-                js_anchor(remove_file_prefix($data->file_name), array('title' => "", "data-toggle" => "app-modal", "data-sidebar" => "0", "data-url" => get_uri("leads/view_file/" . $data->id)));
+            js_anchor(remove_file_prefix($data->file_name), array('title' => "", "data-toggle" => "app-modal", "data-sidebar" => "0", "data-url" => get_uri("leads/view_file/" . $data->id), "class" => "text-break-space"));
 
         if ($data->description) {
-            $description .= "<br /><span>" . $data->description . "</span></div>";
+            $description .= "<div>" . $data->description . "</div></div>";
         } else {
             $description .= "</div>";
         }
@@ -491,7 +507,8 @@ class Leads extends Security_Controller {
 
         $options .= js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete_file'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("leads/delete_file"), "data-action" => "delete-confirmation"));
 
-        return array($data->id,
+        return array(
+            $data->id,
             "<div data-feather='$file_icon' class='mr10 float-start'></div>" . $description,
             convert_file_size($data->file_size),
             $uploaded_by,
@@ -534,6 +551,7 @@ class Leads extends Security_Controller {
     /* download a file */
 
     function download_file($id) {
+        validate_numeric_value($id);
 
         $file_info = $this->General_files_model->get_one($id);
 
@@ -554,6 +572,8 @@ class Leads extends Security_Controller {
     function delete_file() {
 
         $id = $this->request->getPost('id');
+        validate_numeric_value($id);
+
         $info = $this->General_files_model->get_one($id);
 
         if (!$info->client_id) {
@@ -1020,6 +1040,8 @@ class Leads extends Security_Controller {
 
         $view_data["contacts"] = $final_contacts;
 
+        $view_data["available_menus"] = get_available_menus_for_clients_dropdown();
+
         $view_data["team_members_dropdown"] = $this->get_team_members_dropdown();
 
         return $this->template->view('leads/migration/modal_form', $view_data);
@@ -1036,6 +1058,42 @@ class Leads extends Security_Controller {
                 "main_client_id" => "numeric",
                 "company_name" => "required"
             ));
+
+            $contacts = $this->Users_model->get_all_where(array("user_type" => "lead", "deleted" => 0, "status" => "active", "client_id" => $client_id))->getResult();
+            $found_primary_contact = false;
+            $users_data = array();
+
+            foreach ($contacts as $contact) {
+                $user_data = array();
+
+                if ($this->request->getPost('is_primary_contact_value-' . $contact->id) && !$found_primary_contact) {
+                    $user_data["is_primary_contact"] = 1;
+                    $user_data['client_permissions'] = "all";
+                    $found_primary_contact = true; // Flag that a primary contact has been found
+                } else {
+                    $user_data["is_primary_contact"] = 0;
+
+                    $can_access_everything = $this->request->getPost('can_access_everything_' . $contact->id);
+                    $specific_permissions = $this->request->getPost('specific_permissions_' . $contact->id);
+
+                    if ($can_access_everything == 1) {
+                        $user_data['client_permissions'] = 'all';
+                    } else {
+                        $user_data['client_permissions'] = $specific_permissions;
+                    }
+
+                    if (get_setting("disable_client_login")) {
+                        $user_data['client_permissions'] = get_setting("default_permissions_for_non_primary_contact");
+                    }
+                }
+
+                if (!$user_data['client_permissions']) {
+                    echo json_encode(array("success" => false, 'message' => app_lang('permission_is_required')));
+                    exit();
+                }
+
+                $users_data[$contact->id] = $user_data;
+            }
 
             $company_name = $this->request->getPost('company_name');
 
@@ -1094,7 +1152,10 @@ class Leads extends Security_Controller {
                         'email-' . $contact->id => "required|valid_email"
                     ));
 
-                    $user_data = array(
+                    $user_password = $this->request->getPost('login_password-' . $contact->id);
+                    $user_password = clean_data($user_password);
+
+                    $contact_data = array(
                         "first_name" => $this->request->getPost('first_name-' . $contact->id),
                         "last_name" => $this->request->getPost('last_name-' . $contact->id),
                         "phone" => $this->request->getPost('contact_phone-' . $contact->id),
@@ -1102,16 +1163,11 @@ class Leads extends Security_Controller {
                         "job_title" => $this->request->getPost('job_title-' . $contact->id),
                         "gender" => $this->request->getPost('gender-' . $contact->id),
                         "email" => trim($this->request->getPost('email-' . $contact->id)),
-                        "password" => md5($this->request->getPost('login_password-' . $contact->id)),
+                        "password" => $user_password ? password_hash($user_password, PASSWORD_DEFAULT) : "",
                         "user_type" => "client"
                     );
 
-                    if ($this->request->getPost('is_primary_contact_value-' . $contact->id) && !$found_primary_contact) {
-                        $user_data["is_primary_contact"] = 1;
-                        $found_primary_contact = true; //flag that, a primary contact found
-                    } else {
-                        $user_data["is_primary_contact"] = 0;
-                    }
+                    $user_data = array_merge($users_data[$contact->id], $contact_data);
 
                     if ($this->Users_model->is_email_exists($user_data["email"], $contact->id)) {
                         echo json_encode(array("success" => false, 'message' => app_lang('duplicate_email')));
@@ -1128,7 +1184,7 @@ class Leads extends Security_Controller {
                             save_custom_fields("lead_contacts", $save_contact_id, $this->login_user->is_admin, $this->login_user->user_type, 0, "client_contacts", $contact->id);
                         }
 
-                        if ($this->request->getPost('email_login_details-' . $contact->id)) {
+                        if ($this->request->getPost('email_login_details-' . $contact->id) && $user_password) {
                             $email_template = $this->Email_templates_model->get_final_template("login_info", true);
 
                             $user_language = $contact->language;
@@ -1136,7 +1192,7 @@ class Leads extends Security_Controller {
                             $parser_data["USER_FIRST_NAME"] = $user_data["first_name"];
                             $parser_data["USER_LAST_NAME"] = $user_data["last_name"];
                             $parser_data["USER_LOGIN_EMAIL"] = $user_data["email"];
-                            $parser_data["USER_LOGIN_PASSWORD"] = $this->request->getPost('login_password-' . $contact->id);
+                            $parser_data["USER_LOGIN_PASSWORD"] = $user_password;
                             $parser_data["DASHBOARD_URL"] = base_url();
                             $parser_data["LOGO_URL"] = get_logo_url();
 
@@ -1178,6 +1234,8 @@ class Leads extends Security_Controller {
     /* load contracts tab  */
 
     function contracts($client_id) {
+        validate_numeric_value($client_id);
+
         if ($client_id) {
             $this->validate_lead_access($client_id);
             $view_data["lead_info"] = $this->Clients_model->get_one($client_id);
@@ -1191,6 +1249,7 @@ class Leads extends Security_Controller {
     /* load tasks tab  */
 
     function tasks($client_id) {
+        validate_numeric_value($client_id);
         $this->validate_lead_access($client_id);
 
         $view_data["custom_field_headers"] = $this->Custom_fields_model->get_custom_field_headers_for_table("tasks", $this->login_user->is_admin, $this->login_user->user_type);
@@ -1214,7 +1273,7 @@ class Leads extends Security_Controller {
     private function _get_headers_for_import() {
         return array(
             array("name" => "name", "required" => true, "required_message" => app_lang("import_error_name_field_required")),
-            array("name"=> "type", "required" => true, "required_message" => app_lang("import_error_type_field_required"), "custom_validation" => function ($type, $row_data) {
+            array("name" => "type", "required" => true, "required_message" => app_lang("import_error_type_field_required"), "custom_validation" => function ($type, $row_data) {
                 $type = trim(strtolower($type));
                 if ($type !== "person" && $type !== "organization") {
                     return array("error" => app_lang("import_error_invalid_type"));
@@ -1225,11 +1284,11 @@ class Leads extends Security_Controller {
             array("name" => "source"),
             array("name" => "contact_first_name"),
             array("name" => "contact_last_name", "custom_validation" => function ($contact_last_name, $row_data) {
-                    //if there is contact first name then the contact last name is required
-                    if (get_array_value($row_data, "5") && !$contact_last_name) {
-                        return array("error" => app_lang("import_lead_error_contact_name"));
-                    }
-                }),
+                //if there is contact first name then the contact last name is required
+                if (get_array_value($row_data, "5") && !$contact_last_name) {
+                    return array("error" => app_lang("import_lead_error_contact_name"));
+                }
+            }),
             array("name" => "contact_email"),
             array("name" => "address"),
             array("name" => "city"),
@@ -1326,7 +1385,7 @@ class Leads extends Security_Controller {
             $column_name = $this->_get_column_name($column_index);
             if ($column_name == "name") {
                 $lead_data["company_name"] = $value;
-            } else if($column_name == "type") {
+            } else if ($column_name == "type") {
                 $type = strtolower(trim($value));
                 $lead_data["type"] = $type;
             } else if ($column_name == "contact_first_name") {
@@ -1543,6 +1602,101 @@ class Leads extends Security_Controller {
         return $row_data;
     }
 
+    /* batch update modal form */
+
+    function batch_update_modal_form() {
+        $this->access_only_allowed_members();
+        $lead_ids = $this->request->getPost("ids");
+        $view_data["lead_ids"] = clean_data($lead_ids);
+
+        $view_data["owners_dropdown"] = $this->_get_owners_dropdown();
+
+        $lead_status = array();
+        $statuses = $this->Lead_status_model->get_details()->getResult();
+        foreach ($statuses as $status) {
+            $lead_status[] = array("id" => $status->id, "text" => $status->title);
+        }
+        $view_data['lead_statuses_dropdown'] = $lead_status;
+
+        $lead_source = array();
+        $sources = $this->Lead_source_model->get_details()->getResult();
+        foreach ($sources as $source) {
+            $lead_source[] = array("id" => $source->id, "text" => $source->title);
+        }
+        $view_data['sources_dropdown'] = $lead_source;
+
+        //prepare label suggestions
+        $view_data['label_suggestions'] = $this->make_labels_dropdown("client");
+
+        return $this->template->view('leads/batch_update_modal_form', $view_data);
+    }
+
+    /* save batch update */
+
+    function save_batch_update() {
+        $this->access_only_allowed_members();
+
+        $batch_fields = $this->request->getPost("batch_fields");
+        if ($batch_fields) {
+            $allowed_fields = array("lead_status_id", "owner_id", "lead_source_id", "labels");
+
+            $fields_array = explode('-', $batch_fields);
+
+            $data = array();
+            foreach ($fields_array as $field) {
+                if (in_array($field, $allowed_fields)) {
+                    $value = $this->request->getPost($field);
+                    $data[$field] = $value;
+
+                    if ($field == "labels") {
+                        validate_list_of_numbers($value);
+                    }
+                }
+            }
+
+            $data = clean_data($data);
+
+            $lead_ids = $this->request->getPost("lead_ids");
+            if ($lead_ids) {
+                $lead_ids_array = explode('-', $lead_ids);
+
+                foreach ($lead_ids_array as $id) {
+                    $this->validate_lead_access($id);
+                    $this->Clients_model->ci_save($data, $id);
+                }
+
+                echo json_encode(array("success" => true, 'message' => app_lang('record_saved')));
+            }
+        } else {
+            echo json_encode(array('success' => false, 'message' => app_lang('no_field_has_selected')));
+            return false;
+        }
+    }
+
+    /* delete selected leads */
+
+    function delete_selected_leads() {
+        $this->access_only_allowed_members();
+        $lead_ids = $this->request->getPost("ids");
+        if ($lead_ids) {
+            $lead_ids_array = explode('-', $lead_ids);
+
+            foreach ($lead_ids_array as $id) {
+                $this->validate_lead_access($id);
+                if ($this->Clients_model->delete_client_and_sub_items($id)) {
+                    $is_success = true;
+                } else {
+                    $is_success = false;
+                }
+            }
+
+            if ($is_success) {
+                echo json_encode(array("success" => true, 'message' => app_lang('record_deleted')));
+            } else {
+                echo json_encode(array("success" => false, 'message' => app_lang('record_cannot_be_deleted')));
+            }
+        }
+    }
 }
 
 /* End of file leads.php */

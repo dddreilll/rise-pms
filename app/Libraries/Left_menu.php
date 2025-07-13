@@ -37,7 +37,7 @@ class Left_menu {
             $access_contract = get_array_value($permissions, "contract");
             $access_subscription = get_array_value($permissions, "subscription");
             $access_proposal = get_array_value($permissions, "proposal");
-            $access_order = get_array_value($permissions, "order");            
+            $access_order = get_array_value($permissions, "order");
             $access_items = ($this->ci->login_user->is_admin || $access_invoice || $access_estimate);
 
             $client_message_users = get_setting("client_message_users");
@@ -45,9 +45,9 @@ class Left_menu {
             $access_messages = ($this->ci->login_user->is_admin || get_array_value($permissions, "message_permission") !== "no" || in_array($this->ci->login_user->id, $client_message_users_array));
 
             $access_file_manager = get_array_value($permissions, "file_manager");
-            
-            
-            
+
+
+
             $manage_help_and_knowledge_base = ($this->ci->login_user->is_admin || get_array_value($permissions, "help_and_knowledge_base"));
             $access_timeline = ($this->ci->login_user->is_admin || get_array_value($permissions, "timeline_permission") !== "no");
 
@@ -90,11 +90,11 @@ class Left_menu {
             }
 
             if (get_setting("module_invoice") == "1" && ($this->ci->login_user->is_admin || $access_invoice)) {
-                $sales_submenu[] = array("name" => "invoice_payments", "url" => "invoice_payments", "class" => "dollar-sign");
+                $sales_submenu[] = array("name" => "invoice_payments", "url" => "invoice_payments", "class" => "compass");
                 $show_payments_menu = true;
             }
 
-            if ($access_items && (get_setting("module_invoice") == "1" || get_setting("module_estimate") == "1" )) {
+            if ($access_items && (get_setting("module_invoice") == "1" || get_setting("module_estimate") == "1")) {
                 $sales_submenu[] = array("name" => "items", "url" => "items", "class" => "list");
             }
 
@@ -199,7 +199,10 @@ class Left_menu {
                 $show_expenses_menu = true;
             }
 
-            $sidebar_menu["reports"] = array("name" => "reports", "url" => "reports/index", "class" => "pie-chart",
+            $sidebar_menu["reports"] = array(
+                "name" => "reports",
+                "url" => "reports/index",
+                "class" => "pie-chart",
                 "sub_pages" => array(
                     "invoices/invoices_summary",
                     "orders/orders_summary",
@@ -213,14 +216,14 @@ class Left_menu {
                 )
             );
 
-            
+
             $access_file_manager = true;
             if (get_setting("module_file_manager") == "1" && ($this->ci->login_user->is_admin || $access_file_manager)) {
                 $sidebar_menu["file_manager"] = array("name" => "files", "url" => "file_manager", "class" => "folder");
                 $show_expenses_menu = true;
             }
-            
-            
+
+
             $module_help = get_setting("module_help") == "1" ? true : false;
             $module_knowledge_base = get_setting("module_knowledge_base") == "1" ? true : false;
 
@@ -255,7 +258,10 @@ class Left_menu {
                     $main_url = "knowledge_base";
                 }
 
-                $sidebar_menu["help_and_support"] = array("name" => "help_and_support", "url" => $main_url, "class" => "help-circle",
+                $sidebar_menu["help_and_support"] = array(
+                    "name" => "help_and_support",
+                    "url" => $main_url,
+                    "class" => "help-circle",
                     "submenu" => $help_knowledge_base_menues
                 );
             }
@@ -263,7 +269,10 @@ class Left_menu {
 
 
             if ($this->ci->login_user->is_admin || get_array_value($this->ci->login_user->permissions, "can_manage_all_kinds_of_settings")) {
-                $sidebar_menu["settings"] = array("name" => "settings", "url" => "settings/general", "class" => "settings",
+                $sidebar_menu["settings"] = array(
+                    "name" => "settings",
+                    "url" => "settings/general",
+                    "class" => "settings",
                     "sub_pages" => array(
                         "email_templates/index",
                         "left_menu/index",
@@ -284,18 +293,19 @@ class Left_menu {
                         "lead_status/index",
                         "pages/index",
                         "plugins/index"
-                ));
+                    )
+                );
             }
 
             $sidebar_menu = app_hooks()->apply_filters('app_filter_staff_left_menu', $sidebar_menu);
         } else {
             //client menu
             //get the array of hidden menu
-            $hidden_client_menus = explode(",", get_setting("hidden_client_menus"));
+            $hidden_client_menus = explode(",", get_setting("hidden_client_menus") ? get_setting("hidden_client_menus") : "");
 
             //get the client contact permissions
             $users_model = $this->ci->Users_model->get_one($this->ci->login_user->id);
-            $client_permissions = explode(",", $users_model->client_permissions);
+            $client_permissions = explode(",", $users_model->client_permissions ? $users_model->client_permissions : "");
 
             $sidebar_menu[] = $dashboard_menu;
 
@@ -337,7 +347,7 @@ class Left_menu {
                     $sidebar_menu[] = array("name" => "invoices", "url" => "invoices", "class" => "file-text");
                 }
                 if ($this->ci->can_client_access("payment", false)) {
-                    $sidebar_menu[] = array("name" => "invoice_payments", "url" => "invoice_payments", "class" => "dollar-sign");
+                    $sidebar_menu[] = array("name" => "invoice_payments", "url" => "invoice_payments", "class" => "compass");
                 }
             }
 
@@ -386,17 +396,19 @@ class Left_menu {
                 $menu_name = get_array_value($menu, "name");
                 $menu_url = get_array_value($menu, "url");
 
+                //compare with controller name
                 if ($controller_name == $menu_url) {
                     $found_url_active_key = $key;
                 }
 
                 //compare with current url
                 if ($menu_url && ($menu_url === $current_url || get_uri($menu_url) === $current_url)) {
-                    $found_url_active_key = $key;
+                    $sidebar_menu[$key]["is_active_menu"] = 1;
+                    return $sidebar_menu;
                 }
 
-                //compare with controller name
-                if ($menu_name === $controller_name) {
+                // check for controller match only if no active key is set
+                if ($found_url_active_key === null && ($controller_name == $menu_url || $menu_name === $controller_name)) {
                     $found_url_active_key = $key;
                 }
 
@@ -450,15 +462,15 @@ class Left_menu {
     function get_available_items($type = "default") {
         $items_array = $this->_prepare_sidebar_menu_items($type);
 
-        //remove used items
         $default_left_menu_items = $this->_get_left_menu_from_setting($type);
 
-        foreach ($default_left_menu_items as $default_item) {
-            unset($items_array[get_array_value($default_item, "name")]);
-        }
-
-        //since all menu items will be added to the customization area when there is no item, don't show anything here
-        if (!$default_left_menu_items) {
+        if ($default_left_menu_items && is_array($default_left_menu_items) && count($default_left_menu_items)) {
+            //remove used items
+            foreach ($default_left_menu_items as $default_item) {
+                unset($items_array[get_array_value($default_item, "name")]);
+            }
+        } else {
+            //since all menu items will be added to the customization area when there is no item, don't show anything here
             $items_array = array();
         }
 
@@ -550,7 +562,13 @@ class Left_menu {
             $default_left_menu = get_setting("default_left_menu");
         }
 
-        return $default_left_menu ? json_decode(json_encode(@unserialize($default_left_menu)), true) : array();
+        $result = $default_left_menu ? json_decode(json_encode(@unserialize($default_left_menu)), true) : array();
+
+        if (!is_array($result)) {
+            $result = array();
+        }
+
+        return $result;
     }
 
     public function _get_item_data($item, $is_default_item = false) {
@@ -682,12 +700,11 @@ class Left_menu {
             if ($position) {
                 $position = $position - 1;
                 $sidebar_menu = array_slice($sidebar_menu, 0, $position, true) +
-                        array($key => $menu) +
-                        array_slice($sidebar_menu, $position, NULL, true);
+                    array($key => $menu) +
+                    array_slice($sidebar_menu, $position, NULL, true);
             }
         }
 
         return $sidebar_menu;
     }
-
 }

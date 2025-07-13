@@ -1,4 +1,4 @@
-<div class="card mb0">
+<div class="mb0">
     <div class="page-title clearfix notificatio-plate-title-area">
         <span class="float-start"><strong><?php echo app_lang('notifications'); ?></strong></span>
         <span class="float-end"><?php echo get_team_member_profile_link($login_user->id . '/my_preferences', app_lang('settings')); ?></span>

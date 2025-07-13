@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -14,7 +16,6 @@ namespace CodeIgniter\Session\Handlers;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Session\Exceptions\SessionException;
-use Config\App as AppConfig;
 use Config\Database;
 use Config\Session as SessionConfig;
 use ReturnTypeWillChange;
@@ -69,24 +70,14 @@ class DatabaseHandler extends BaseHandler
     /**
      * @throws SessionException
      */
-    public function __construct(AppConfig $config, string $ipAddress)
+    public function __construct(SessionConfig $config, string $ipAddress)
     {
         parent::__construct($config, $ipAddress);
 
-        /** @var SessionConfig|null $session */
-        $session = config('Session');
-
         // Store Session configurations
-        if ($session instanceof SessionConfig) {
-            $this->DBGroup = $session->DBGroup ?? config(Database::class)->defaultGroup;
-            // Add sessionCookieName for multiple session cookies.
-            $this->idPrefix = $session->cookieName . ':';
-        } else {
-            // `Config/Session.php` is absence
-            $this->DBGroup = $config->sessionDBGroup ?? config(Database::class)->defaultGroup;
-            // Add sessionCookieName for multiple session cookies.
-            $this->idPrefix = $config->sessionCookieName . ':';
-        }
+        $this->DBGroup = $config->DBGroup ?? config(Database::class)->defaultGroup;
+        // Add sessionCookieName for multiple session cookies.
+        $this->idPrefix = $config->cookieName . ':';
 
         $this->table = $this->savePath;
         if (empty($this->table)) {
@@ -291,12 +282,9 @@ class DatabaseHandler extends BaseHandler
     #[ReturnTypeWillChange]
     public function gc($max_lifetime)
     {
-        $separator = ' ';
-        $interval  = implode($separator, ['', "{$max_lifetime} second", '']);
-
         return $this->db->table($this->table)->where(
             'timestamp <',
-            "now() - INTERVAL {$interval}",
+            "now() - INTERVAL {$max_lifetime} second",
             false
         )->delete() ? 1 : $this->fail();
     }

@@ -13,9 +13,7 @@ class Users_model extends Crud_model {
 
     function authenticate($email, $password) {
 
-        if ($email) {
-            $email = $this->db->escapeString($email);
-        }
+        $email = $this->_get_clean_value(array("email" => $email), "email");
 
         $this->db_builder->select("id,user_type,client_id,password");
         $result = $this->db_builder->getWhere(array('email' => $email, 'status' => 'active', 'deleted' => 0, 'disable_login' => 0));
@@ -42,7 +40,7 @@ class Users_model extends Crud_model {
     private function verify_password($user_info, $password) {
         //there has two password encryption method for legacy (md5) compatibility
         //check if anyone of them is correct
-        if ((strlen($user_info->password) === 60 && password_verify($password, $user_info->password)) || $user_info->password === md5($password)) {
+        if ($user_info->password && (strlen($user_info->password) === 60 && password_verify($password, $user_info->password)) || $user_info->password === md5($password)) {
 
             if ($this->_client_can_login($user_info) !== false) {
                 $session = \Config\Services::session();
@@ -199,7 +197,7 @@ class Users_model extends Crud_model {
             $order = " ORDER BY $order_by $order_dir ";
         }
 
-        $search_by = get_array_value($options, "search_by");
+        $search_by = $this->_get_clean_value($options, "search_by");
         if ($search_by) {
             $search_by = $this->db->escapeLikeString($search_by);
 
@@ -250,8 +248,10 @@ class Users_model extends Crud_model {
 
     function is_email_exists($email, $id = 0, $client_id = 0) {
         $users_table = $this->db->prefixTable('users');
-        $id = $id ? $this->db->escapeString($id) : $id;
-        $client_id = $client_id ? $this->db->escapeString($client_id) : $client_id;
+        $id = $this->_get_clean_value($id);
+        $client_id = $this->_get_clean_value($client_id);
+
+        $email = $this->_get_clean_value($email);
 
         $where = "";
         if ($client_id) {
@@ -290,7 +290,13 @@ class Users_model extends Crud_model {
         }
     }
 
-    function get_team_members($member_ids = "") {
+    function get_team_members($member_ids) {
+
+        $member_ids = $this->_get_clean_value($member_ids);
+        if (!$member_ids) {
+            return null;
+        }
+        
         $users_table = $this->db->prefixTable('users');
         $sql = "SELECT $users_table.*
         FROM $users_table
@@ -303,6 +309,8 @@ class Users_model extends Crud_model {
         $users_table = $this->db->prefixTable('users');
         $roles_table = $this->db->prefixTable('roles');
         $team_table = $this->db->prefixTable('team');
+
+        $user_id = $this->_get_clean_value($user_id);
 
         if (!$user_id) {
             $user_id = 0;
@@ -319,39 +327,11 @@ class Users_model extends Crud_model {
         return $this->db->query($sql)->getRow();
     }
 
-    function get_team_members_and_clients($user_type = "", $user_ids = "", $exlclude_user = 0) {
-
-        $users_table = $this->db->prefixTable('users');
-        $clients_table = $this->db->prefixTable('clients');
-
-        $where = "";
-        if ($user_type) {
-            $where .= " AND $users_table.user_type='$user_type'";
-        } else {
-            $where .= " AND $users_table.user_type!='lead'";
-        }
-
-        if ($user_ids) {
-            $where .= "  AND FIND_IN_SET($users_table.id, '$user_ids')";
-        }
-
-        if ($exlclude_user) {
-            $where .= " AND $users_table.id !=$exlclude_user";
-        }
-
-        $sql = "SELECT $users_table.id,$users_table.client_id, $users_table.user_type, $users_table.first_name, $users_table.last_name, $clients_table.company_name,
-            $users_table.image,  $users_table.job_title, $users_table.last_online
-        FROM $users_table
-        LEFT JOIN $clients_table ON $clients_table.id = $users_table.client_id AND $clients_table.deleted=0
-        WHERE $users_table.deleted=0 AND $users_table.status='active' $where
-        ORDER BY $users_table.user_type, $users_table.first_name ASC";
-        return $this->db->query($sql);
-    }
-
     /* return comma separated list of user names */
 
     function user_group_names($user_ids = "") {
         $users_table = $this->db->prefixTable('users');
+        $user_ids = $this->_get_clean_value($user_ids);
 
         $sql = "SELECT GROUP_CONCAT(' ', $users_table.first_name, ' ', $users_table.last_name) AS user_group_name
         FROM $users_table
@@ -454,6 +434,7 @@ class Users_model extends Crud_model {
 
     function get_user_from_full_name($user_full_name = "", $user_type = "") {
         $users_table = $this->db->prefixTable('users');
+        $user_full_name = $this->_get_clean_value($user_full_name);
 
         $where = "";
         if ($user_type === "staff") {
@@ -474,6 +455,9 @@ class Users_model extends Crud_model {
         $users_table = $this->db->prefixTable('users');
         $clients_table = $this->db->prefixTable('clients');
 
+        $id = $this->_get_clean_value($id);
+        $email = $this->_get_clean_value($email);
+
         $sql = "SELECT $users_table.id AS user_id, $clients_table.company_name 
         FROM $users_table   
         LEFT JOIN $clients_table ON $clients_table.id = $users_table.client_id AND $clients_table.deleted=0
@@ -484,6 +468,7 @@ class Users_model extends Crud_model {
 
     function update_password($email, $password) {
         $users_table = $this->db->prefixTable('users');
+        $email = $this->_get_clean_value($email);
 
         $sql = "UPDATE $users_table SET $users_table.password='$password' WHERE $users_table.deleted=0 AND $users_table.email='$email'; ";
         $this->db->query($sql);
@@ -515,5 +500,4 @@ class Users_model extends Crud_model {
         WHERE $users_table.deleted=0 AND $users_table.user_type='staff' AND $users_table.status='active' $where";
         return $this->db->query($sql);
     }
-
 }

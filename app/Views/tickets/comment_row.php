@@ -1,12 +1,12 @@
-<div id="ticket-comment-container-<?php echo $comment->id; ?>" class="b-b p10 m0 text-break bg-white comment-container ticket-comment-container <?php echo $comment->is_note ? "note-background" : "" ?>">
+<div id="ticket-comment-<?php echo $comment->id; ?>" class="b-b p10 m0 text-break bg-white comment-highlight-section comment-container ticket-comment-container <?php echo $comment->is_note ? "note-background" : "" ?>">
     <div class="d-flex">
         <div class="flex-shrink-0 mr10">
-            <span class="avatar avatar-sm">
+            <span class="avatar avatar-xs">
                 <?php if (!$comment->created_by || $comment->created_by == 999999999) { ?>
                     <img src="<?php echo get_avatar("system_bot"); ?>" alt="..." />
                 <?php } else { ?>
                     <img src="<?php echo get_avatar($comment->created_by_avatar); ?>" alt="..." />
-                    <?php
+                <?php
                 }
                 ?>
             </span>
@@ -32,11 +32,32 @@
 
                 <?php if ($login_user->user_type == "staff") { ?>
                     <span class="float-end dropdown comment-dropdown">
-                        <div class="text-off dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="true" >
+                        <div class="text-off dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="true">
                             <i data-feather="chevron-down" class="icon-16 clickable"></i>
                         </div>
                         <ul class="dropdown-menu dropdown-menu-end" role="menu">
-                            <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/delete_comment/$comment->id"), "<i data-feather='x' class='icon-16'></i> " . app_lang('delete'), array("class" => "dropdown-item", "title" => app_lang('delete'), "data-fade-out-on-success" => "#ticket-comment-container-$comment->id")); ?> </li>
+
+                            <?php
+                            $pin_status = "";
+                            $unpin_status = "";
+
+                            if ($comment->pinned_comment_status) {
+                                $pin_status = "hide";
+                                $unpin_status = "";
+                            } else {
+                                $pin_status = "";
+                                $unpin_status = "hide";
+                            }
+                            ?>
+
+                            <?php if ($comment->is_note) { ?>
+                                <li role="presentation"><a href="javascript:;" title="<?php echo app_lang('insert_into_editor') ?>" class="insert-into-editor-button dropdown-item"><span data-feather="clipboard" class="icon-16"></span> <?php echo app_lang('insert_into_editor'); ?></a></li>
+                            <?php } else { ?>
+                                <li role="presentation"><?php echo js_anchor("<i data-feather='map-pin' class='icon-16'></i> " . app_lang('pin_comment'), array("id" => "pin-comment-button-$comment->id", "class" => "dropdown-item pin-comment-button $pin_status", 'title' => app_lang('pin_comment'), "data-action-url" => get_uri("tickets/pin_comment/" . $comment->id), "data-pin-comment-id" => $comment->id)); ?> </li>
+                                <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/pin_comment/" . $comment->id . "/" . $comment->ticket_id), "<i data-feather='map-pin' class='icon-16'></i> " . app_lang('unpin_comment'), array("id" => "unpin-comment-button-$comment->id", "class" => "dropdown-item unpin-comment-button $unpin_status", 'title' => app_lang('unpin_comment'), "data-pin-comment-id" => $comment->id, "data-fade-out-on-success" => "#pinned-comment-$comment->id")); ?> </li>
+                            <?php } ?>
+
+                            <li role="presentation"><?php echo ajax_anchor(get_uri("tickets/delete_comment/$comment->id"), "<i data-feather='x' class='icon-16'></i> " . app_lang('delete'), array("class" => "dropdown-item", "title" => app_lang('delete'), "data-fade-out-on-success" => "#ticket-comment-$comment->id")); ?> </li>
                         </ul>
                     </span>
                 <?php } ?>
@@ -45,22 +66,30 @@
                     <div class="block text-off"><?php echo $comment->creator_email; ?></div>
                 <?php } ?>
             </div>
-            <p><?php echo $comment->description ? nl2br(link_it(process_images_from_content($comment->description))) : ""; ?></p>
+
+            <?php if ($comment->is_note) {
+                echo "<textarea id='ticket-comment-description' class='hide'>" . $comment->description . "</textarea>";
+            } ?>
+
+            <p><?php echo $comment->description ? custom_nl2br(link_it(process_images_from_content($comment->description))) : ""; ?></p>
             <div class="comment-image-box clearfix">
 
                 <?php
-                $files = unserialize($comment->files);
-                $total_files = count($files);
-                echo view("includes/timeline_preview", array("files" => $files));
+                if ($comment->files) {
+                    $files = unserialize($comment->files);
+                    $total_files = count($files);
+                    echo view("includes/timeline_preview", array("files" => $files));
 
-                if ($total_files) {
-                    $download_caption = app_lang('download');
-                    if ($total_files > 1) {
-                        $download_caption = sprintf(app_lang('download_files'), $total_files);
+                    if ($total_files) {
+                        $download_caption = app_lang('download');
+                        if ($total_files > 1) {
+                            $download_caption = sprintf(app_lang('download_files'), $total_files);
+                        }
+                        echo "<i data-feather='paperclip' class='icon-16'></i>";
+                        echo anchor(get_uri("tickets/download_comment_files/" . $comment->id), $download_caption, array("class" => "float-end", "title" => $download_caption));
                     }
-                    echo "<i data-feather='paperclip' class='icon-16'></i>";
-                    echo anchor(get_uri("tickets/download_comment_files/" . $comment->id), $download_caption, array("class" => "float-end", "title" => $download_caption));
                 }
+
                 ?>
             </div>
         </div>

@@ -17,43 +17,49 @@ class Pay_invoice extends App_Controller {
             app_redirect("forbidden");
         }
 
-        if ($verification_code) {
-            $options = array("code" => $verification_code, "type" => "invoice_payment");
-            $verification_info = $this->Verification_model->get_details($options)->getRow();
+        if (!$verification_code) {
+            show_404();
+        }
 
-            if ($verification_info && $verification_info->id) {
-                $invoice_data = unserialize($verification_info->params);
+        // verification code should be 10 characters
+        if (strlen($verification_code) !== 10) {
+            show_404();
+        }
 
-                $invoice_id = get_array_value($invoice_data, "invoice_id");
-                $client_id = get_array_value($invoice_data, "client_id");
-                $contact_id = get_array_value($invoice_data, "contact_id");
+        $options = array("code" => $verification_code, "type" => "invoice_payment");
+        $verification_info = $this->Verification_model->get_details($options)->getRow();
+        if (!($verification_info && $verification_info->id)) {
+            show_404();
+        }
 
-                $this->_log("invoice_id:$invoice_id, client_id:$client_id, contact_id:$contact_id");
+        $invoice_data = unserialize($verification_info->params);
 
-                if ($invoice_id && is_numeric($invoice_id) && $client_id && is_numeric($client_id) && $contact_id && is_numeric($contact_id)) {
-                    $view_data = get_invoice_making_data($invoice_id);
-                    $view_data['payment_methods'] = $this->Payment_methods_model->get_available_online_payment_methods();
+        $invoice_id = get_array_value($invoice_data, "invoice_id");
+        $client_id = get_array_value($invoice_data, "client_id");
+        $contact_id = get_array_value($invoice_data, "contact_id");
 
-                    //check access of this invoice
-                    $this->_check_access_of_invoice($view_data);
+        $this->_log("invoice_id:$invoice_id, client_id:$client_id, contact_id:$contact_id");
 
-                    $view_data['invoice_preview'] = prepare_invoice_pdf($view_data, "html");
+        if ($invoice_id && is_numeric($invoice_id) && $client_id && is_numeric($client_id) && $contact_id && is_numeric($contact_id)) {
+            $view_data = get_invoice_making_data($invoice_id);
+            $view_data['payment_methods'] = $this->Payment_methods_model->get_available_online_payment_methods();
 
-                    $view_data['invoice_id'] = $invoice_id;
+            //check access of this invoice
+            $this->_check_access_of_invoice($view_data);
 
-                    $paytm = new Paytm();
-                    $view_data['paytm_url'] = $paytm->get_paytm_url();
+            $view_data['invoice_preview'] = prepare_invoice_pdf($view_data, "html");
 
-                    $view_data['contact_id'] = $contact_id;
-                    $view_data['verification_code'] = clean_data($verification_code);
+            $view_data['invoice_id'] = $invoice_id;
 
-                    return $this->template->view("invoices/public_invoice_preview", $view_data);
-                } else {
-                    show_404();
-                }
-            } else {
-                show_404();
-            }
+            $paytm = new Paytm();
+            $view_data['paytm_url'] = $paytm->get_paytm_url();
+
+            $view_data['contact_id'] = $contact_id;
+            $view_data['verification_code'] = clean_data($verification_code);
+
+            return $this->template->view("invoices/public_invoice_preview", $view_data);
+        } else {
+            show_404();
         }
     }
 
@@ -83,14 +89,14 @@ class Pay_invoice extends App_Controller {
             echo json_encode(array("success" => false, "message" => $ex->getMessage()));
         }
     }
-    
+
     function get_paypal_checkout_url() {
         if (!get_setting("client_can_pay_invoice_without_login")) {
             app_redirect("forbidden");
         }
-        
+
         $paypal = new Paypal();
-        
+
         try {
             $checkout_url = $paypal->get_paypal_checkout_url($this->request->getPost("input_data"));
             if ($checkout_url) {
@@ -119,7 +125,6 @@ class Pay_invoice extends App_Controller {
             echo json_encode(array("success" => false, "message" => app_lang("paytm_checksum_hash_error_message")));
         }
     }
-
 }
 
 /* End of file Pay_invoice.php */

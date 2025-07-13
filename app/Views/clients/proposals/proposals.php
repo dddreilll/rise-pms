@@ -1,4 +1,4 @@
-<div class="card rounded-bottom">
+<div class="card rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('proposals'); ?></h4>
         <div class="title-button-group">
@@ -23,10 +23,10 @@
             order: [[0, "desc"]],
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
-                {title: "<?php echo app_lang("proposal") ?>", "class": "w15p"},
+                {title: "<?php echo app_lang("proposal") ?>", "class": "w15p all"},
                 {visible: false, searchable: false},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("proposal_date") ?>", "iDataSort": 2, "class": "w15p"},
+                {title: "<?php echo app_lang("proposal_date") ?>", "iDataSort": 2, "class": "w15p all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("valid_until") ?>", "iDataSort": 4, "class": "w15p"},
                 {title: "<?php echo app_lang("last_email_seen") ?>", "class": "w15p text-center"},

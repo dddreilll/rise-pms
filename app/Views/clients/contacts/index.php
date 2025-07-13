@@ -1,8 +1,8 @@
 <?php if (!$view_type == "list_view") { ?>
-    <div class="card rounded-bottom">
+    <div class="card rounded-top-0 full-width-button">
         <div class="tab-title clearfix">
             <h4><?php echo app_lang('contacts'); ?></h4>
-            <div class="title-button-group">
+            <div class="title-button-group clients-view-button">
                 <?php
                 if ($can_edit_clients) {
                     echo modal_anchor(get_uri("clients/invitation_modal"), "<i data-feather='mail' class='icon-16'></i> " . app_lang('send_invitation'), array("class" => "btn btn-default", "title" => app_lang('send_invitation'), "data-post-client_id" => $client_id));
@@ -19,7 +19,7 @@
         </div>
     </div>
 <?php } else { ?>
-    <div class="card">
+    <div class="card rounded-top-0 border-top-0">
         <div class="table-responsive">
             <table id="contact-table" class="display" width="100%">            
             </table>
@@ -59,8 +59,8 @@
             filterDropdown: [{name: "quick_filter", class: "w200", options: quick_filters_dropdown}, <?php echo $custom_field_filters; ?>],
             order: [[1, "asc"]],
             columns: [
-                {title: '', "class": "w50 text-center"},
-                {title: "<?php echo app_lang("name") ?>", "class": "w150", order_by: "first_name"},
+                {title: '', "class": "w50 text-center all"},
+                {title: "<?php echo app_lang("name") ?>", "class": "w150 all", order_by: "first_name"},
                 {visible: showCompanyName, title: "<?php echo app_lang("client_name") ?>", "class": "w150", order_by: "company_name"},
                 {title: "<?php echo app_lang("job_title") ?>", "class": "w15p", order_by: "job_title"},
                 {title: "<?php echo app_lang("email") ?>", "class": "w20p", order_by: "email"},

@@ -9,7 +9,7 @@
                     <div class="preview box-content pr15" style="width:100px;">
                         <img data-dz-thumbnail class="upload-thumbnail-sm" />
                         <div class="progress upload-progress-sm active mt5" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated progress-bar-success" style="width:0%;" data-dz-uploadprogress></div>
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" style="width:0%;" data-dz-uploadprogress></div>
                         </div>
                     </div>
                     <div class="box-content">
@@ -156,7 +156,7 @@ if (!isset($validation_url)) {
             },
             success: function (file) {
                 setTimeout(function () {
-                    $(file.previewElement).find(".progress-bar-striped").removeClass("progress-bar-striped progress-bar-animated");
+                    $(file.previewElement).find(".progress-bar-striped").addClass("progress-bar-success").removeClass("progress-bar-striped progress-bar-animated bg-warning");
                 }, 1000);
             }
         });

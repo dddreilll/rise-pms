@@ -17,17 +17,21 @@
             order: [[0, "asc"]],
             columns: [
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("ticket_id") ?>', "class": "w10p"},
-                {title: '<?php echo app_lang("title") ?>'},
-                {title: '<?php echo app_lang("client") ?>', "class": "w15p"},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("ticket_type") ?>', "class": "w10p"},
-                {title: '<?php echo app_lang("assigned_to") ?>', "class": "w10p"},
+                {title: "<?php echo app_lang("ticket_id") ?>", "class": "w10p"},
+                {title: "<?php echo app_lang("title") ?>", "class": "all"},
+                {title: "<?php echo app_lang("client") ?>", "class": "w15p"},
                 {visible: false, searchable: false},
-                {title: '<?php echo app_lang("last_activity") ?>', "iDataSort": 7, "class": "w10p"},
-                {title: '<?php echo app_lang("status") ?>', "class": "w5p"}
+                {title: "<?php echo app_lang("ticket_type") ?>", "class": "w10p"},
+                {visible: false, searchable: false},
+                {title: "<?php echo app_lang("assigned_to") ?>", "class": "w10p"},
+                {visible: false, searchable: false},
+                {title: "<?php echo app_lang("last_activity") ?>", "iDataSort": 7, "class": "w10p"},
+                {title: "<?php echo app_lang("status") ?>", "class": "w5p"}
 <?php echo $custom_field_headers; ?>,
-                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center dropdown-option w50"}
+                <?php if ($login_user->user_type === "staff") { ?>
+                {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center w80"}
+                <?php } ?>
             ],
             printColumns: combineCustomFieldsColumns([1, 2, 3, 5, 6, 8, 9], '<?php echo $custom_field_headers; ?>'),
             xlsColumns: combineCustomFieldsColumns([1, 2, 3, 5, 6, 8, 9], '<?php echo $custom_field_headers; ?>')

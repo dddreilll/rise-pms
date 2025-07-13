@@ -1,7 +1,7 @@
 <?php
 $textarea_style = "";
-if ($custom_class == "h370") {
-    $textarea_style = "height:326px";
+if ($custom_class == "h377") {
+    $textarea_style = "height:330px";
 }
 ?>
 

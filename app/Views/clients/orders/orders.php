@@ -1,4 +1,4 @@
-<div class="card rounded-bottom">
+<div class="card rounded-top-0">
     <div class="tab-title clearfix">
         <h4><?php echo app_lang('orders'); ?></h4>
     </div>
@@ -15,9 +15,9 @@
             filterDropdown: [<?php echo $custom_field_filters; ?>],
             columns: [
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("order") ?>", "class": "w10p", "iDataSort": 0},
+                {title: "<?php echo app_lang("order") ?>", "class": "w10p all", "iDataSort": 0},
                 {visible: false, searchable: false},
-                {title: "<?php echo app_lang("invoices") ?>", "class": "w20p"},
+                {title: "<?php echo app_lang("invoices") ?>", "class": "w20p all"},
                 {visible: false, searchable: false},
                 {title: "<?php echo app_lang("order_date") ?>", "iDataSort": 4, "class": "w15p"},
                 {title: "<?php echo app_lang("amount") ?>", "class": "text-right w15p"},

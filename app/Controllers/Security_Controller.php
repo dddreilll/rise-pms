@@ -160,7 +160,7 @@ class Security_Controller extends App_Controller {
 
     //allowed team members and clint himself can access  
     protected function access_only_allowed_members_or_contact_personally($user_id) {
-        if (!($this->access_type === "all" || $this->access_type === "own" || $this->access_type === "read_only" || $user_id === $this->login_user->id)) {
+        if (!($this->access_type === "all" || $this->access_type === "own" || $this->access_type === "read_only" || $this->access_type === "specific" || $user_id === $this->login_user->id)) {
             app_redirect("forbidden");
         }
     }
@@ -243,7 +243,7 @@ class Security_Controller extends App_Controller {
     }
 
     //get currencies dropdown
-    protected function _get_currencies_dropdown($support_empty_value = true) {
+    protected function _get_currencies_dropdown($support_empty_value = true, $selected_currency = "") {
         $used_currencies = $this->Invoices_model->get_used_currencies_of_client()->getResult();
         $default_currency = get_setting("default_currency");
 
@@ -254,9 +254,19 @@ class Security_Controller extends App_Controller {
 
         $currencies_dropdown[] = array("id" => $default_currency, "text" => $default_currency); // add default currency
 
+        //if there is any specific currency selected, select only the currency.
+        $selected_status = false;
         if ($used_currencies) {
             foreach ($used_currencies as $currency) {
-                $currencies_dropdown[] = array("id" => $currency->currency, "text" => $currency->currency);
+                if (isset($selected_currency) && $selected_currency) {
+                    if ($currency->currency == $selected_currency) {
+                        $selected_status = true;
+                    } else {
+                        $selected_status = false;
+                    }
+                }
+
+                $currencies_dropdown[] = array("id" => $currency->currency, "text" => $currency->currency, "isSelected" => $selected_status);
             }
         }
         return json_encode($currencies_dropdown);
@@ -899,7 +909,7 @@ class Security_Controller extends App_Controller {
     protected function _make_order_item_row($data) {
         $item = "<div class='item-row strong mb5' data-id='$data->id'><div class='float-start move-icon'><i data-feather='menu' class='icon-16'></i></div> $data->title</div>";
         if ($data->description) {
-            $item .= "<div class='ml30'>" . nl2br($data->description) . "</div>";
+            $item .= "<div class='ml30'>" . custom_nl2br($data->description) . "</div>";
         }
         $type = $data->unit_type ? $data->unit_type : "";
         return array(
@@ -909,7 +919,7 @@ class Security_Controller extends App_Controller {
             to_currency($data->rate),
             to_currency($data->total),
             modal_anchor(get_uri("store/item_modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang('edit_item'), "data-post-id" => $data->id, "data-post-order_id" => $data->order_id))
-            . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("store/delete_item"), "data-action" => "delete"))
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array('title' => app_lang('delete'), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("store/delete_item"), "data-action" => "delete"))
         );
     }
 
@@ -1022,8 +1032,8 @@ class Security_Controller extends App_Controller {
         $permissions = $this->login_user->permissions;
         if ($is_task) {
             if (get_setting("client_can_view_tasks") && ($this->login_user->is_admin ||
-                    ($this->login_user->user_type == "staff" && get_array_value($permissions, "client") && get_array_value($permissions, "show_assigned_tasks_only") !== "1")
-                    )) {
+                ($this->login_user->user_type == "staff" && get_array_value($permissions, "client") && get_array_value($permissions, "show_assigned_tasks_only") !== "1")
+            )) {
                 return true;
             }
         } else {
@@ -1094,11 +1104,31 @@ class Security_Controller extends App_Controller {
     public function can_client_access($menu_item, $check_module = true) {
 
         if ($this->login_user->user_type === "staff" && ($this->login_user->is_admin || get_array_value($this->login_user->permissions, "can_manage_all_kinds_of_settings"))) {
-            $this->login_user->client_permissions = "all"; 
+            $this->login_user->client_permissions = "all";
             //set this permission only for admin and setting admin to manage the client settings (ex. left menu)
         }
-        
+
         return can_client_access($this->login_user->client_permissions, $menu_item, $check_module);
+    }
+
+    protected function check_contract_pdf_access_for_clients($user_type = "") {
+        if (get_setting("disable_contract_pdf_for_clients")) {
+            if (!$user_type || $user_type == "client") {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function check_proposal_pdf_access_for_clients($user_type = "") {
+        if (get_setting("disable_proposal_pdf_for_clients")) {
+            if (!$user_type || $user_type == "client") {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }

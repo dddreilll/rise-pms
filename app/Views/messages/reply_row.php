@@ -23,7 +23,7 @@
                         </strong>
                         <span class="text-off float-end"><?php echo format_to_relative_time($reply_info->created_at); ?></span>
                     </div>
-                    <p><?php echo nl2br(link_it(process_images_from_content($reply_info->message))); ?></p>
+                    <p><?php echo custom_nl2br(link_it(process_images_from_content($reply_info->message))); ?></p>
 
                     <div class="comment-image-box clearfix">
                         <?php

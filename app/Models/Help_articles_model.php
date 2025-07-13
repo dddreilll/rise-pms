@@ -56,6 +56,7 @@ class Help_articles_model extends Crud_model {
 
     function get_articles_of_a_category($category_id, $order="") {
         $help_articles_table = $this->db->prefixTable('help_articles');
+        $category_id = $this->_get_clean_value($category_id);
 
         $order_by = "ASC";
         if($order == "Z-A"){
@@ -72,6 +73,7 @@ class Help_articles_model extends Crud_model {
     }
 
     function increas_page_view($id) {
+        $id = $this->_get_clean_value($id);
         $help_articles_table = $this->db->prefixTable('help_articles');
 
         $sql = "UPDATE $help_articles_table
@@ -85,15 +87,21 @@ class Help_articles_model extends Crud_model {
         $help_articles_table = $this->db->prefixTable('help_articles');
         $help_categories_table = $this->db->prefixTable('help_categories');
 
+        $type = $this->_get_clean_value($type);
+
+        $where = "";
+
+        $search = $this->_get_clean_value($search);
         if ($search) {
             $search = $this->db->escapeLikeString($search);
+            $where = " AND $help_articles_table.title LIKE '%$search%' ESCAPE '!' ";
         }
 
         $sql = "SELECT $help_articles_table.id, $help_articles_table.title
         FROM $help_articles_table
         LEFT JOIN $help_categories_table ON $help_categories_table.id=$help_articles_table.category_id   
         WHERE $help_articles_table.deleted=0 AND $help_articles_table.status='active' AND $help_categories_table.deleted=0 AND $help_categories_table.status='active' AND $help_categories_table.type='$type'
-            AND $help_articles_table.title LIKE '%$search%' ESCAPE '!'
+        $where
         ORDER BY $help_articles_table.title ASC
         LIMIT 0, 10";
 

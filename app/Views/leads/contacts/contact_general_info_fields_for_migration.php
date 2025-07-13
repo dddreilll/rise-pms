@@ -120,16 +120,16 @@
                 "name" => "gender-$model_info->id",
                 "class" => "form-check-input",
                 "data-msg-required" => app_lang("field_required"),
-                    ), "male", ($model_info->gender == "female") ? false : true);
+            ), "male", ($model_info->gender == "female") ? false : true);
             ?>
-            <label for="gender_male-<?php echo $model_info->id; ?>" class="mr15"><?php echo app_lang('male'); ?></label> 
-                <?php
+            <label for="gender_male-<?php echo $model_info->id; ?>" class="mr15"><?php echo app_lang('male'); ?></label>
+            <?php
             echo form_radio(array(
                 "id" => "gender_female-$model_info->id",
                 "name" => "gender-$model_info->id",
                 "class" => "form-check-input",
                 "data-msg-required" => app_lang("field_required"),
-                    ), "female", ($model_info->gender == "female") ? true : false);
+            ), "female", ($model_info->gender == "female") ? true : false);
             ?>
             <label for="gender_female-<?php echo $model_info->id; ?>" class="mr15"><?php echo app_lang('female'); ?></label>
             <?php
@@ -138,7 +138,7 @@
                 "name" => "gender-$model_info->id",
                 "class" => "form-check-input",
                 "data-msg-required" => app_lang("field_required"),
-                    ), "other", ($model_info->gender == "other") ? true : false);
+            ), "other", ($model_info->gender == "other") ? true : false);
             ?>
             <label for="gender_other-<?php echo $model_info->id; ?>" class=""><?php echo app_lang('other'); ?></label>
         </div>
@@ -146,7 +146,7 @@
 </div>
 
 <div class="custom-fields-on-migration" data-user-id="<?php echo $model_info->id; ?>">
-    <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => $label_column, "field_column" => $field_column)); ?> 
+    <?php echo view("custom_fields/form/prepare_context_fields", array("custom_fields" => $custom_fields, "label_column" => $label_column, "field_column" => $field_column)); ?>
 </div>
 
 <?php
@@ -154,7 +154,7 @@
 //also check the client login setting
 
 if (!get_setting("disable_client_login")) {
-    ?>
+?>
     <div class="form-group">
         <div class="row">
             <label for="login_password-<?php echo $model_info->id; ?>" class="col-md-3"><?php echo app_lang('password'); ?></label>
@@ -166,11 +166,7 @@ if (!get_setting("disable_client_login")) {
                         "name" => "login_password-$model_info->id",
                         "class" => "form-control",
                         "placeholder" => app_lang('password'),
-                        "style" => "z-index:auto;",
-                        "data-rule-required" => true,
-                        "data-msg-required" => app_lang("field_required"),
-                        "data-rule-minlength" => 6,
-                        "data-msg-minlength" => app_lang("enter_minimum_6_characters")
+                        "style" => "z-index:auto;"
                     ));
                     ?>
                     <label for="password-<?php echo $model_info->id; ?>" class="input-group-text mb0 clickable" id="generate_password-<?php echo $model_info->id; ?>"><span data-feather="key" class="icon-16"></span> <?php echo app_lang('generate'); ?></label>
@@ -183,11 +179,11 @@ if (!get_setting("disable_client_login")) {
     </div>
 <?php } ?>
 <?php if ($login_user->is_admin) { ?>
-    <div class="form-group">
+    <div class="form-group is_primary_contact_<?php echo $model_info->id; ?>">
         <div class="row">
             <input type="hidden" class="is_primary_contact_value" name="is_primary_contact_value-<?php echo $model_info->id; ?>" value="<?php echo $model_info->is_primary_contact; ?>" />
 
-            <label for="is_primary_contact-<?php echo $model_info->id; ?>"  class="<?php echo $label_column; ?>"><?php echo app_lang('primary_contact'); ?></label>
+            <label for="is_primary_contact-<?php echo $model_info->id; ?>" class="<?php echo $label_column; ?>"><?php echo app_lang('primary_contact'); ?></label>
 
             <div class="<?php echo $field_column; ?>">
                 <?php
@@ -197,14 +193,18 @@ if (!get_setting("disable_client_login")) {
                     $disable = "disabled='disabled'";
                 }
                 echo form_checkbox("is_primary_contact-$model_info->id", "1", $model_info->is_primary_contact, "id='is_primary_contact-$model_info->id' $disable class='is_primary_contact_lead form-check-input'");
-                ?> 
+                ?>
             </div>
         </div>
+    </div>
+
+    <div class="contact-permission-fields permission-fields-<?php echo $model_info->id; ?>">
+        <?php echo view("clients/contacts/contact_permission_fields", array("lead_contact_id" => $model_info->id)); ?>
     </div>
 <?php } ?>
 
 <?php if (!get_setting("disable_client_login")) { ?>
-    <div class="form-group ">
+    <div class="form-group email-login-details-<?php echo $model_info->id; ?> hide">
         <div class="row">
             <label class="<?php echo $label_column; ?>" for="email_login_details-<?php echo $model_info->id; ?>"><?php echo app_lang('email_login_details'); ?></label>
             <div class="<?php echo $field_column; ?>">
@@ -217,13 +217,13 @@ if (!get_setting("disable_client_login")) {
 <?php echo view("leads/custom_field_migration", array("custom_fields" => $custom_fields, "label_column" => $label_column, "field_column" => $field_column, "to_custom_field_type" => "client_contacts", "model_info" => $model_info)); ?>
 
 <script type="text/javascript">
-    $(document).ready(function () {
-        $("#generate_password-<?php echo $model_info->id; ?>").click(function () {
+    $(document).ready(function() {
+        $("#generate_password-<?php echo $model_info->id; ?>").click(function() {
             $("#login_password-<?php echo $model_info->id; ?>").val(getRndomString(8));
         });
-        $("#show_hide_password-<?php echo $model_info->id; ?>").click(function () {
+        $("#show_hide_password-<?php echo $model_info->id; ?>").click(function() {
             var $target = $("#login_password-<?php echo $model_info->id; ?>"),
-                    type = $target.attr("type");
+                type = $target.attr("type");
             if (type === "password") {
                 $(this).attr("title", "<?php echo app_lang("hide_text"); ?>");
                 $(this).html("<span data-feather='eye-off' class='icon-16'></span>");
@@ -236,5 +236,35 @@ if (!get_setting("disable_client_login")) {
                 $target.attr("type", "password");
             }
         });
+
+        $('#login_password-<?php echo $model_info->id; ?>').on('input', function() {
+            var password = $(this).val().trim();
+            if (password.length > 0) {
+                $('.email-login-details-<?php echo $model_info->id; ?>').removeClass('hide');
+            } else {
+                $('.email-login-details-<?php echo $model_info->id; ?>').addClass('hide');
+            }
+        });
+
+        var primaryContactCheckbox = $("#is_primary_contact-<?php echo $model_info->id; ?>");
+        var permissionFields = $(".permission-fields-<?php echo $model_info->id; ?>");
+
+        function togglePermissionFields(triggerChange = false) {
+            if (triggerChange) {
+                $(".contact-permission-fields").removeClass("hide");
+            }
+            if (primaryContactCheckbox.is(":checked")) {
+                permissionFields.addClass("hide");
+            } else {
+                permissionFields.removeClass("hide");
+            }
+        }
+
+        togglePermissionFields();
+
+        primaryContactCheckbox.on("change", function() {
+            togglePermissionFields(true);
+        });
+
     });
-</script>    
+</script>

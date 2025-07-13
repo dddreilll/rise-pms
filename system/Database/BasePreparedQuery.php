@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -29,7 +31,7 @@ abstract class BasePreparedQuery implements PreparedQueryInterface
     /**
      * The prepared statement itself.
      *
-     * @var object|resource|null
+     * @var         object|resource|null
      * @phpstan-var TStatement|null
      */
     protected $statement;
@@ -59,7 +61,7 @@ abstract class BasePreparedQuery implements PreparedQueryInterface
     /**
      * A reference to the db connection to use.
      *
-     * @var BaseConnection
+     * @var         BaseConnection
      * @phpstan-var BaseConnection<TConnection, TResult>
      */
     protected $db;
@@ -110,7 +112,7 @@ abstract class BasePreparedQuery implements PreparedQueryInterface
      * Takes a new set of data and runs it against the currently
      * prepared query. Upon success, will return a Results object.
      *
-     * @return bool|ResultInterface
+     * @return         bool|ResultInterface
      * @phpstan-return bool|ResultInterface<TConnection, TResult>
      *
      * @throws DatabaseException
@@ -175,7 +177,7 @@ abstract class BasePreparedQuery implements PreparedQueryInterface
         // Let others do something with this query
         Events::trigger('DBQuery', $query);
 
-        if ($this->db->isWriteType($query)) {
+        if ($this->db->isWriteType((string) $query)) {
             return true;
         }
 
@@ -256,5 +258,13 @@ abstract class BasePreparedQuery implements PreparedQueryInterface
     public function getErrorMessage(): string
     {
         return $this->errorString;
+    }
+
+    /**
+     * Whether the input contain binary data.
+     */
+    protected function isBinary(string $input): bool
+    {
+        return mb_detect_encoding($input, 'UTF-8', true) === false;
     }
 }

@@ -7,12 +7,14 @@
         <?php echo modal_anchor(get_uri("clients/add_new_contact_modal_form"), "", array()); ?>
     </div>
 
-    <div class="me-auto">
-        <?php
-        echo form_checkbox("email_login_details", "1", true, "id='email_login_details' class='form-check-input'");
-        ?>
-        <label for="email_login_details" class="mb0"><?php echo app_lang('email_login_details'); ?></label>
-    </div>
+    <?php if (!$model_info->id && !get_setting("disable_client_login")) { ?>
+        <div class="me-auto">
+            <?php
+            echo form_checkbox("email_login_details", "1", true, "id='email_login_details' class='form-check-input'");
+            ?>
+            <label for="email_login_details" class="mb0"><?php echo app_lang('email_login_details'); ?></label>
+        </div>
+    <?php } ?>
 
     <button type="button" class="btn btn-default" data-bs-dismiss="modal"><span data-feather="x" class="icon-16"></span> <?php echo app_lang('close'); ?></button>
 

@@ -88,7 +88,7 @@ foreach ($lead_statuses as $lead_status) {
 
     $(document).ready(function () {
         initScrollbar('#leads-overview-widget', {
-            setHeight: 327
+            setHeight: 330
         });
     });
 

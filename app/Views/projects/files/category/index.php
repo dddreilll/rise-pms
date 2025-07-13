@@ -1,8 +1,9 @@
-<div class="table-responsive">
-    <table id="file-category-table" class="display" cellspacing="0" width="100%">         
-    </table>
+<div class="card border-top-0 rounded-top-0">
+    <div class="table-responsive">
+        <table id="file-category-table" class="display" cellspacing="0" width="100%">
+        </table>
+    </div>
 </div>
-
 
 <script type="text/javascript">
     $(document).ready(function () {

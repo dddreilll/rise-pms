@@ -1,14 +1,16 @@
-<div class="card">
+<div>
     <div class="card-header clearfix border-bottom-0">
         <div class="float-start clearfix timesheet-chart-button">
             <span id="monthly-chart-date-range-selector" class="float-start"></span>
             <?php
-            echo form_input(array(
-                "id" => "members-dropdown",
-                "name" => "members-dropdown",
-                "class" => "select2 w200 reload-timesheet-chart ml15",
-                "placeholder" => app_lang('member')
-            ));
+            if (!$user_id) {
+                echo form_input(array(
+                    "id" => "members-dropdown",
+                    "name" => "members-dropdown",
+                    "class" => "select2 w200 reload-timesheet-chart ml15",
+                    "placeholder" => app_lang('member')
+                ));
+            }
             ?>
             <?php
             if (!$project_id) {
@@ -42,7 +44,7 @@
             var user_id = $("#members-dropdown").val() || "0", project_id = $("#projects-dropdown").val() || "0";
 
             $.ajax({
-                url: "<?php echo_uri("projects/timesheet_chart_data/$project_id") ?>",
+                url: "<?php echo_uri("projects/timesheet_chart_data/" . $project_id . "/" . $user_id) ?>",
                 data: {start_date: date.start_date, end_date: date.end_date, user_id: user_id, project_id: project_id},
                 cache: false,
                 type: 'POST',

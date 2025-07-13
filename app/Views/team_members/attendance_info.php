@@ -1,4 +1,4 @@
-<div class="card clearfix rounded-0 <?php
+<div class="card border-top-0 rounded-top-0 clearfix <?php
 if (isset($page_type) && $page_type === "full") {
     echo "m20";
 }
@@ -17,7 +17,7 @@ if (isset($page_type) && $page_type === "full") {
         <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("team_members/attendance_summary/" . $user_id); ?>" data-bs-target="#team_member-attendance-summary"><?php echo app_lang('summary'); ?></a></li>   
 
         <?php if (isset($show_clock_in_out)) { ?>
-            <li><a role="presentation" href="<?php echo_uri("attendance/clock_in_out"); ?>" data-bs-target="#clock-in-out"><?php echo app_lang('clock_in_out'); ?></a></li>
+            <li><a role="presentation" data-bs-toggle="tab" href="<?php echo_uri("attendance/clock_in_out"); ?>" data-bs-target="#clock-in-out"><?php echo app_lang('clock_in_out'); ?></a></li>
         <?php } ?>
 
     </ul>
@@ -28,14 +28,21 @@ if (isset($page_type) && $page_type === "full") {
                 </table>
             </div>
             <script type="text/javascript">
+               
                 loadMembersAttendanceTable = function (selector, type) {
+                    var dynamicDates = getDynamicDates();
                     var rangeDatepicker = [],
                             dateRangeType = "";
 
                     if (type === "custom_range") {
-                        rangeDatepicker = [{startDate: {name: "start_date", value: moment().format("YYYY-MM-DD")}, endDate: {name: "end_date", value: moment().format("YYYY-MM-DD")}}];
+                        rangeDatepicker = [{startDate: {name: "start_date", value: dynamicDates.today}, endDate: {name: "end_date", value: dynamicDates.today}}];
                     } else {
                         dateRangeType = type;
+                    }
+
+                    var responsiveClass = "20p";
+                    if(isMobile()) {
+                        responsiveClass = "";
                     }
 
                     $(selector).appTable({
@@ -47,12 +54,12 @@ if (isset($page_type) && $page_type === "full") {
                         columns: [
                             {targets: [1], visible: false, searchable: false},
                             {visible: false, searchable: false},
-                            {title: "<?php echo app_lang("in_date"); ?>", "class": "w20p", iDataSort: 1},
-                            {title: "<?php echo app_lang("in_time"); ?>", "class": "w20p"},
+                            {title: "<?php echo app_lang("in_date"); ?>", "class": responsiveClass +" all", iDataSort: 1},
+                            {title: "<?php echo app_lang("in_time"); ?>", "class": responsiveClass + " all"},
                             {visible: false, searchable: false},
                             {title: "<?php echo app_lang("out_date"); ?>", "class": "w20p", iDataSort: 1},
                             {title: "<?php echo app_lang("out_time"); ?>", "class": "w20p"},
-                            {title: "<?php echo app_lang("duration"); ?>", "class": "text-right"},
+                            {title: "<?php echo app_lang("duration"); ?>", "class": "text-right all"},
                             {title: '<i data-feather="message-circle" class="icon-16"></i>', "class": "text-center w50"},
                             {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
                         ],
