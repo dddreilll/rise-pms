@@ -2,13 +2,15 @@
 .git
 .gitignore
 
-# Docker
-Dockerfile
+# Docker / deploy helpers (not needed inside the image)
 .dockerignore
+.env.railway.example
+railway.toml
 
 # Documentation
 documentation/
 README.md
+scripts/
 
 # IDE files
 .vscode/

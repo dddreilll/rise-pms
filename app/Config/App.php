@@ -8,11 +8,45 @@ use CodeIgniter\Session\Handlers\FileHandler;
 class App extends BaseConfig {
 
     public function __construct() {
+        $this->apply_env_overrides();
         $this->set_base_url();
         $this->set_supported_languages();
     }
 
+    private function apply_env_overrides() {
+        $encryptionKey = $this->env('ENCRYPTION_KEY');
+        if ($encryptionKey !== '') {
+            $this->encryption_key = $encryptionKey;
+        }
+
+        $forceHttps = strtolower($this->env('FORCE_HTTPS', 'false'));
+        if (in_array($forceHttps, ['1', 'true', 'yes', 'on'], true)) {
+            $this->forceGlobalSecureRequests = true;
+        }
+
+        // CI4 expects [proxyCidrOrIp => headerName]. Use PROXY_IPS=* to trust X-Forwarded-For.
+        $proxyIps = $this->env('PROXY_IPS');
+        if ($proxyIps === '*' || $proxyIps === '0.0.0.0/0') {
+            $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+        }
+    }
+
     private function set_base_url() {
+        $fromEnv = $this->env('APP_BASE_URL');
+        if ($fromEnv === '') {
+            $fromEnv = $this->env('BASE_URL');
+        }
+        if ($fromEnv === '') {
+            $railwayDomain = $this->env('RAILWAY_PUBLIC_DOMAIN');
+            if ($railwayDomain !== '') {
+                $fromEnv = 'https://' . $railwayDomain;
+            }
+        }
+        if ($fromEnv !== '') {
+            $this->baseURL = rtrim($fromEnv, '/') . '/';
+            return;
+        }
+
         if (!$this->baseURL) {
 
             $domain = $_SERVER['HTTP_HOST'] . $_SERVER['SCRIPT_NAME'];
@@ -27,6 +61,15 @@ class App extends BaseConfig {
                 $this->baseURL = 'http://' . $domain;
             }
         }
+    }
+
+    private function env(string $key, string $default = ''): string {
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            $value = $_ENV[$key] ?? $_SERVER[$key] ?? '';
+        }
+
+        return ($value === '' || $value === false) ? $default : (string) $value;
     }
 
     private function set_supported_languages() {
@@ -259,7 +302,7 @@ class App extends BaseConfig {
     public $CSPEnabled = false;
 
     /* User configs */
-    public $encryption_key = "enter_encryption_key";
+    public $encryption_key = "174210cc7815fa3";
     public $csrf_protection = true;
     public $temp_file_path = 'files/temp/';
     public $profile_image_path = 'files/profile_images/';

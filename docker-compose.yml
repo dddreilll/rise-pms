@@ -4,24 +4,23 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: rise-pms-app
+    ports:
+      - '70:80'
+    environment:
+      PORT: '80'
+      CI_ENVIRONMENT: development
+      MYSQLHOST: db
+      MYSQLPORT: '3306'
+      MYSQLUSER: rise_user
+      MYSQLPASSWORD: rise_password
+      MYSQLDATABASE: rise_pms
     volumes:
       - .:/var/www/html
       - ./docker/php.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template
+      - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh
     depends_on:
       - db
-    networks:
-      - rise-network
-
-  nginx:
-    image: nginx:latest
-    container_name: rise-pms-nginx
-    ports:
-      - '8080:80'
-    volumes:
-      - .:/var/www/html
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - app
     networks:
       - rise-network
 
@@ -37,10 +36,19 @@ services:
       MYSQL_ROOT_PASSWORD: root_password
       MYSQL_ROOT_HOST: '%'
     ports:
-      - '3306:3306'
+      - '4406:3306'
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/db/init_user.sql:/docker-entrypoint-initdb.d/init_user.sql
+    networks:
+      - rise-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: rise-pms-mailpit
+    ports:
+      - '2025:1025'
+      - '9025:8025'
     networks:
       - rise-network
 

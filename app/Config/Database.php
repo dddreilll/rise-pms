@@ -32,12 +32,12 @@ class Database extends Config
 	 */
 	public $default = [
 		'DSN'      => '',
-		'hostname' => 'enter_hostname',
-		'username' => 'enter_db_username',
-		'password' => 'enter_db_password',
-		'database' => 'enter_database_name',
+		'hostname' => 'db',
+		'username' => 'rise_user',
+		'password' => 'rise_password',
+		'database' => 'rise_pms',
 		'DBDriver' => 'MySQLi',
-		'DBPrefix' => 'enter_dbprefix',
+		'DBPrefix' => 'rise_',
 		'pConnect' => false,
 		'DBDebug'  => (ENVIRONMENT !== 'production'),
 		'charset'  => 'utf8',
@@ -82,6 +82,18 @@ class Database extends Config
 	{
 		parent::__construct();
 
+		// Prefer Railway / container env vars; fall back to local Docker defaults above.
+		$this->default['hostname'] = $this->env('MYSQLHOST', $this->default['hostname']);
+		$this->default['username'] = $this->env('MYSQLUSER', $this->default['username']);
+		$this->default['password'] = $this->env('MYSQLPASSWORD', $this->default['password']);
+		$this->default['database'] = $this->env('MYSQLDATABASE', $this->default['database']);
+		$this->default['port']     = (int) $this->env('MYSQLPORT', (string) $this->default['port']);
+
+		$dbPrefix = $this->env('DB_PREFIX', '');
+		if ($dbPrefix !== '') {
+			$this->default['DBPrefix'] = $dbPrefix;
+		}
+
 		// Ensure that we always set the database group to 'tests' if
 		// we are currently running an automated test suite, so that
 		// we don't overwrite live data on accident.
@@ -89,6 +101,19 @@ class Database extends Config
 		{
 			$this->defaultGroup = 'tests';
 		}
+	}
+
+	/**
+	 * Read an environment variable from getenv / $_ENV / $_SERVER.
+	 */
+	private function env(string $key, string $default = ''): string
+	{
+		$value = getenv($key);
+		if ($value === false || $value === '') {
+			$value = $_ENV[$key] ?? $_SERVER[$key] ?? '';
+		}
+
+		return ($value === '' || $value === false) ? $default : (string) $value;
 	}
 
 	//--------------------------------------------------------------------
