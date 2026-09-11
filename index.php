@@ -21,8 +21,33 @@ if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
 }
 
 
-//set the variable to 'installed' after installation
-$app_state = "installed";
+// Default to the web installer (Hostinger / fresh shared hosting).
+// The installer rewrites this to "installed" after a successful run.
+$app_state = 'pre_installation';
+
+$riseEnv = static function (string $key): string {
+    $value = getenv($key);
+    if ($value === false || $value === '') {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? '';
+    }
+
+    return ($value === '' || $value === false) ? '' : (string) $value;
+};
+
+// Docker Compose / Railway: DB is configured via environment — skip the installer.
+$appInstalled = strtolower($riseEnv('APP_INSTALLED'));
+if ($riseEnv('MYSQLHOST') !== '' || in_array($appInstalled, ['1', 'true', 'yes', 'on'], true)) {
+    $app_state = 'installed';
+}
+
+// Shared hosting after manual install: Database.php no longer has installer placeholders.
+$dbConfigPath = __DIR__ . '/app/Config/Database.php';
+if (is_file($dbConfigPath)) {
+    $dbConfigContents = file_get_contents($dbConfigPath);
+    if ($dbConfigContents !== false && strpos($dbConfigContents, 'enter_hostname') === false) {
+        $app_state = 'installed';
+    }
+}
 
 // we don't want to access the main project before installation. redirect to installation page
 if ($app_state === 'pre_installation') {

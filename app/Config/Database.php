@@ -32,12 +32,14 @@ class Database extends Config
 	 */
 	public $default = [
 		'DSN'      => '',
-		'hostname' => 'db',
-		'username' => 'rise_user',
-		'password' => 'rise_password',
-		'database' => 'rise_pms',
+		// Placeholders for the web installer (Hostinger / shared hosting).
+		// Docker Compose and Railway override these via MYSQL* environment variables.
+		'hostname' => 'enter_hostname',
+		'username' => 'enter_db_username',
+		'password' => 'enter_db_password',
+		'database' => 'enter_database_name',
 		'DBDriver' => 'MySQLi',
-		'DBPrefix' => 'rise_',
+		'DBPrefix' => 'enter_dbprefix',
 		'pConnect' => false,
 		'DBDebug'  => (ENVIRONMENT !== 'production'),
 		'charset'  => 'utf8',
@@ -82,7 +84,8 @@ class Database extends Config
 	{
 		parent::__construct();
 
-		// Prefer Railway / container env vars; fall back to local Docker defaults above.
+		// Prefer env vars (Docker Compose / Railway); otherwise keep installer placeholders
+		// until the web installer writes real Hostinger credentials into this file.
 		$this->default['hostname'] = $this->env('MYSQLHOST', $this->default['hostname']);
 		$this->default['username'] = $this->env('MYSQLUSER', $this->default['username']);
 		$this->default['password'] = $this->env('MYSQLPASSWORD', $this->default['password']);
