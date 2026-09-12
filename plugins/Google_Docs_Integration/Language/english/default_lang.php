@@ -12,3 +12,5 @@ $lang["google_docs_create_failed"] = "Failed to create Google Doc. Please check 
 $lang["google_docs_manage_permission"] = "Can manage Google Docs";
 $lang["client_can_access_google_docs"] = "Client can access Google Docs";
 $lang["google_docs_help_message"] = "Enable Google Docs API and Google Drive API in Google Cloud Console, then authorize the connection.";
+
+return $lang;
