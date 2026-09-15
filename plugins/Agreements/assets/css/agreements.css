@@ -1,0 +1,73 @@
+.agreement-details-view .agreement-title-section h1 {
+    font-size: 1.35rem;
+}
+
+.agreement-preview-container,
+.agreements-content-preview {
+    background: #fff;
+    min-height: 320px;
+}
+
+.agreements-pdf-stage {
+    position: relative;
+    display: inline-block;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    max-width: 100%;
+    overflow: auto;
+}
+
+.agreements-pdf-stage canvas {
+    display: block;
+}
+
+#fields-layer,
+#sign-fields-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.agreements-field-box {
+    position: absolute;
+    border: 2px dashed #0d6efd;
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+    font-size: 11px;
+    padding: 2px 4px;
+    cursor: move;
+    pointer-events: auto;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.agreements-field-box.active {
+    border-color: #198754;
+    background: rgba(25, 135, 84, 0.15);
+}
+
+.agreements-content-preview {
+    background: #fff;
+}
+
+.agreements-sign-page {
+    background: #eef2f7;
+}
+
+.agreements-field-palette .btn-block {
+    display: block;
+    width: 100%;
+}
+
+.hide {
+    display: none !important;
+}
+
+.signature-pad-field,
+#main-signature-pad {
+    background: #fff;
+    touch-action: none;
+}

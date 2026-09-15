@@ -9,6 +9,9 @@ services:
     environment:
       PORT: '80'
       CI_ENVIRONMENT: development
+      APP_BASE_URL: http://localhost:70/
+      APP_INSTALLED: 'true'
+      DB_PREFIX: rise_
       MYSQLHOST: db
       MYSQLPORT: '3306'
       MYSQLUSER: rise_user

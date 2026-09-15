@@ -1,0 +1,7 @@
+# Runtime uploads / generated signing artifacts — keep directory stubs only
+final/*
+!final/index.html
+pdfs/*
+!pdfs/index.html
+signatures/*
+!signatures/index.html
