@@ -1,0 +1,59 @@
+---
+description: RISE CRM plugin scaffold, lifecycle hooks, structure, and best practices
+globs: plugins/**/*
+alwaysApply: false
+---
+
+# RISE Plugin Development
+
+Docs: https://risedocs.fairsketch.com/doc/category/5  
+In-repo templates: `plugins/Remember_Me`, `plugins/Google_Docs_Integration`
+
+## Scaffold
+
+- Unique folder under `plugins/`; root `index.php` only contains metadata + bootstrap
+- Guard: `defined('PLUGINPATH') or exit('No direct script access allowed');`
+- Metadata block: Plugin Name, URL, Description, Version, Requires at least, Author, Author URL
+- Add `index.html` (403 Forbidden stub) in every subfolder to block directory listing
+
+## Lifecycle (in `index.php`)
+
+Register: `register_installation_hook`, `register_uninstallation_hook`, `register_activation_hook`, `register_deactivation_hook`, `register_update_hook` — first arg is the plugin folder name.
+
+Install SQL:
+
+```php
+$db = db_connect('default');
+$db_prefix = get_db_prefix();
+$db->query("SET sql_mode = ''");
+// CREATE TABLE IF NOT EXISTS `{$db_prefix}plugin_table` ...
+```
+
+- Prefix all plugin tables; do **not** store plugin settings in the core `settings` table — use a dedicated table (reading core settings is fine)
+- On uninstall, drop plugin tables; clear any legacy settings keys if previously written
+
+## Structure
+
+- **Routes:** `Config/Routes.php` with `['namespace' => 'Plugin_Name\Controllers']`
+- **Controllers:** `namespace Plugin_Name\Controllers`; extend `Security_Controller` (or `App_Controller` if public)
+- **Models:** extend `Crud_model`; instantiate as `new \Plugin_Name\Models\...`
+- **Libraries / Helpers / Views / Language** under the plugin folder
+- **Views:** `template->rander()` (full layout), `template->view()` (partial + `$login_user`), or `view()`
+- **Assets:** `base_url(PLUGIN_URL_PATH . "Plugin_Name/assets/...")` — load only where needed
+- **Helpers:** `helper("plugin_helper")` or `require_once(PLUGINPATH . "Plugin_Name/Helpers/...")`
+- **ThirdParty:** `require_once(PLUGINPATH . "Plugin_Name/ThirdParty/.../autoload.php")`
+- **Files:** use `PLUGIN_URL_PATH . "Plugin_Name/files/..."` following core file-management flow
+
+## Hooks
+
+- Actions: `app_hooks()->add_action('hook_name', function () { ... });`
+- Filters: `app_hooks()->add_filter('hook_name', function ($first) { ... return $first; });` — **always return** the first parameter
+- Common in this repo: `app_filter_staff_left_menu`, `app_filter_client_left_menu`, `app_filter_integration_settings_tab`, `app_filter_app_csrf_exclude_uris`, `app_hook_signin_extension`, `app_hook_after_signin`, `app_hook_before_app_access`, `app_hook_before_signout`
+- Full list: https://risedocs.fairsketch.com/doc/view/52-available-hooks-for-plugins
+
+## Best practices
+
+- Prefix functions, classes, DB tables, and language keys with the plugin name
+- Do not load CSS/JS globally — only on pages that need them
+- Own settings table; avoid writing plugin config into core `settings`
+- Language: `Language/english/default_lang.php` + `custom_lang.php`; keys via `app_lang("plugin_key")`
