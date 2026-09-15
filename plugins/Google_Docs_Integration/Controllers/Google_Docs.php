@@ -69,7 +69,7 @@ class Google_Docs extends Security_Controller {
         $this->_can_access();
         $view_data["can_manage"] = $this->_can_manage();
         $view_data["project_id"] = 0;
-        return $this->template->rander("Google_Docs_Integration\Views\google_docs\index", $view_data);
+        return $this->template->rander('Google_Docs_Integration\Views\google_docs\index', $view_data);
     }
 
     function project_docs($project_id = 0) {
@@ -77,7 +77,7 @@ class Google_Docs extends Security_Controller {
         validate_numeric_value($project_id);
         $view_data["can_manage"] = $this->_can_manage();
         $view_data["project_id"] = $project_id;
-        return $this->template->view("Google_Docs_Integration\Views\google_docs\project_docs", $view_data);
+        return $this->template->view('Google_Docs_Integration\Views\google_docs\project_docs', $view_data);
     }
 
     function modal_form() {
@@ -109,7 +109,7 @@ class Google_Docs extends Security_Controller {
         $view_data["members_and_teams_dropdown_source_url"] = get_uri("google_docs/get_members_and_teams_dropdown");
         $view_data["get_sharing_options_view"] = view("includes/sharing_options", $view_data);
 
-        return $this->template->view("Google_Docs_Integration\Views\google_docs\modal_form", $view_data);
+        return $this->template->view('Google_Docs_Integration\Views\google_docs\modal_form', $view_data);
     }
 
     function get_members_and_teams_dropdown() {
@@ -236,7 +236,7 @@ class Google_Docs extends Security_Controller {
 
         $view_data["doc_info"] = $doc_info;
         $view_data["embed_url"] = google_docs_embed_url($doc_info->google_file_id);
-        return $this->template->rander("Google_Docs_Integration\Views\google_docs\view", $view_data);
+        return $this->template->rander('Google_Docs_Integration\Views\google_docs\view', $view_data);
     }
 
     private function _row_data($id) {

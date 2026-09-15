@@ -111,7 +111,7 @@ app_hooks()->add_action('app_hook_role_permissions_extension', function () {
         $permissions = is_array($permissions) ? $permissions : array();
         $google_docs = get_array_value($permissions, "google_docs");
     }
-    echo view("Google_Docs_Integration\Views\settings\role_permission", array("google_docs" => $google_docs));
+    echo view('Google_Docs_Integration\Views\settings\role_permission', array("google_docs" => $google_docs));
 });
 
 app_hooks()->add_filter('app_filter_role_permissions_save_data', function ($permissions) {
@@ -121,7 +121,7 @@ app_hooks()->add_filter('app_filter_role_permissions_save_data', function ($perm
 });
 
 app_hooks()->add_action('app_hook_client_permissions_extension', function () {
-    echo view("Google_Docs_Integration\Views\settings\client_permission");
+    echo view('Google_Docs_Integration\Views\settings\client_permission');
 });
 
 app_hooks()->add_action('app_hook_client_permissions_save_data', function () {

@@ -12,7 +12,7 @@ class Google_Docs_Integration_Settings extends Security_Controller {
     }
 
     function index() {
-        return $this->template->view("Google_Docs_Integration\Views\settings\google_docs");
+        return $this->template->view('Google_Docs_Integration\Views\settings\google_docs');
     }
 
     function save() {
