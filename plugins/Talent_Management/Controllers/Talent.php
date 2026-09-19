@@ -213,7 +213,10 @@ class Talent extends Security_Controller {
 
     //saves only the given columns of one talent record and answers the tab's ajax form
     private function _save_tab_data($talent_id, $data) {
-        if ($this->Talent_model->ci_save(clean_data($data), $talent_id)) {
+        //ci_save() takes its data by reference, so it needs a variable
+        $data = clean_data($data);
+
+        if ($this->Talent_model->ci_save($data, $talent_id)) {
             echo json_encode(array("success" => true, "message" => app_lang("record_updated")));
         } else {
             echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
@@ -341,7 +344,8 @@ class Talent extends Security_Controller {
 
             delete_app_files(get_setting("profile_image_path"), array(@unserialize($talent_info->profile_image)));
 
-            $this->Talent_model->ci_save(array("profile_image" => $profile_image), $talent_id);
+            $image_data = array("profile_image" => $profile_image);
+            $this->Talent_model->ci_save($image_data, $talent_id);
             echo json_encode(array("success" => true, "message" => app_lang("profile_image_changed")));
             return;
         }
@@ -362,7 +366,8 @@ class Talent extends Security_Controller {
                     delete_app_files(get_setting("profile_image_path"), array(@unserialize($talent_info->profile_image)));
                 }
 
-                $this->Talent_model->ci_save(array("profile_image" => $profile_image), $talent_id);
+                $image_data = array("profile_image" => $profile_image);
+                $this->Talent_model->ci_save($image_data, $talent_id);
                 echo json_encode(array("success" => true, "message" => app_lang("profile_image_changed"), "reload_page" => true));
             }
         }
