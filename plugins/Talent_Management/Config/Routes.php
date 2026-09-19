@@ -1,0 +1,50 @@
+<?php
+
+namespace Config;
+
+$routes = Services::routes();
+
+$namespace = 'Talent_Management\Controllers';
+
+//talent CRUD + list pages
+$routes->get('talent', 'Talent::index', ['namespace' => $namespace]);
+$routes->get('talent/index', 'Talent::index', ['namespace' => $namespace]);
+$routes->get('talent/view/(:num)', 'Talent::view/$1', ['namespace' => $namespace]);
+$routes->get('talent/view/(:num)/(:any)', 'Talent::view/$1/$2', ['namespace' => $namespace]);
+$routes->get('talent/general_info/(:num)', 'Talent::general_info/$1', ['namespace' => $namespace]);
+$routes->get('talent/contact_info/(:num)', 'Talent::contact_info/$1', ['namespace' => $namespace]);
+$routes->get('talent/social_links/(:num)', 'Talent::social_links/$1', ['namespace' => $namespace]);
+$routes->get('talent/preferences/(:num)', 'Talent::preferences/$1', ['namespace' => $namespace]);
+$routes->get('talent/additional_info/(:num)', 'Talent::additional_info/$1', ['namespace' => $namespace]);
+$routes->post('talent/save_contact_info/(:num)', 'Talent::save_contact_info/$1', ['namespace' => $namespace]);
+$routes->post('talent/save_preferences/(:num)', 'Talent::save_preferences/$1', ['namespace' => $namespace]);
+$routes->post('talent/save_additional_info/(:num)', 'Talent::save_additional_info/$1', ['namespace' => $namespace]);
+$routes->get('talent/projects_info/(:num)', 'Talent::projects_info/$1', ['namespace' => $namespace]);
+$routes->post('talent/save_general_info/(:num)', 'Talent::save_general_info/$1', ['namespace' => $namespace]);
+$routes->post('talent/save_social_links/(:num)', 'Talent::save_social_links/$1', ['namespace' => $namespace]);
+$routes->get('talent/custom_fields', 'Talent::custom_fields', ['namespace' => $namespace]);
+$routes->post('talent/list_data', 'Talent::list_data', ['namespace' => $namespace]);
+$routes->post('talent/modal_form', 'Talent::modal_form', ['namespace' => $namespace]);
+$routes->post('talent/save', 'Talent::save', ['namespace' => $namespace]);
+$routes->post('talent/delete', 'Talent::delete', ['namespace' => $namespace]);
+$routes->post('talent/save_profile_image/(:num)', 'Talent::save_profile_image/$1', ['namespace' => $namespace]);
+
+//pipeline stage settings (one shared list of stages for all projects)
+$routes->get('talent_status', 'Talent_status::index', ['namespace' => $namespace]);
+$routes->post('talent_status/list_data', 'Talent_status::list_data', ['namespace' => $namespace]);
+$routes->post('talent_status/modal_form', 'Talent_status::modal_form', ['namespace' => $namespace]);
+$routes->post('talent_status/save', 'Talent_status::save', ['namespace' => $namespace]);
+$routes->post('talent_status/delete', 'Talent_status::delete', ['namespace' => $namespace]);
+$routes->post('talent_status/update_field_sort_values', 'Talent_status::update_field_sort_values', ['namespace' => $namespace]);
+
+//project <-> talent linkage (list view)
+$routes->get('talent_projects/project_tab/(:num)', 'Talent_projects::project_tab/$1', ['namespace' => $namespace]);
+$routes->post('talent_projects/list_data/(:num)', 'Talent_projects::list_data/$1', ['namespace' => $namespace]);
+$routes->post('talent_projects/modal_assign_form/(:num)', 'Talent_projects::modal_assign_form/$1', ['namespace' => $namespace]);
+$routes->post('talent_projects/assign', 'Talent_projects::assign', ['namespace' => $namespace]);
+$routes->post('talent_projects/unassign', 'Talent_projects::unassign', ['namespace' => $namespace]);
+$routes->post('talent_projects/list_for_talent/(:num)', 'Talent_projects::list_for_talent/$1', ['namespace' => $namespace]);
+
+//per-project kanban (status now lives on the casting link)
+$routes->post('talent_projects/kanban_data/(:num)', 'Talent_projects::kanban_data/$1', ['namespace' => $namespace]);
+$routes->post('talent_projects/save_sort_and_status', 'Talent_projects::save_sort_and_status', ['namespace' => $namespace]);
