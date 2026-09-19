@@ -1,1 +1,219 @@
 /*Write your custom css in this file.*/
+
+/*
+ * Black & white theme.
+ *
+ * Overrides the accent color of the selected theme preset (assets/css/color/*.css) with black, so it
+ * looks the same whatever "Default theme color" an install has. Only neutral chrome is changed:
+ * the sidebar (white, black active item), banners, buttons, links, tabs and selection highlights.
+ * Semantic colors (success/danger alerts, status badges, pipeline stage colors) are intentionally
+ * left alone.
+ * This file loads last, so plain selectors of equal specificity win over the preset.
+ */
+
+/*
+ * Sidebar: white, matching RISE's own default look. The values are written out (not just removed)
+ * because dark theme presets set a dark sidebar with light text and would otherwise win.
+ */
+.sidebar-scroll,
+.sidebar-brand {
+  background: #fff;
+}
+
+.sidebar-brand {
+  border-bottom-color: rgba(0, 0, 0, 0.0588) !important;
+}
+
+@media (min-width: 991px) {
+  .sidebar {
+    background: #fff;
+  }
+}
+
+.sidebar-menu li a,
+.sidebar-menu li ul li a {
+  color: #7b8190;
+}
+
+.sidebar-menu li a:active,
+.sidebar-menu li a:hover,
+.sidebar-menu li a:focus {
+  color: #383c40 !important;
+  background-color: #f9f9f9;
+}
+
+.sidebar-menu li ul li a:hover {
+  color: #383c40;
+  background-color: #f9f9f9;
+}
+
+.sidebar-toggled .sidebar-menu li:hover {
+  background-color: #fff;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.sidebar-scroll::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 500px) {
+  .sidebar.sidebar-off {
+    background-color: #fff;
+  }
+
+  .sidebar .sidebar-scroll {
+    border-top-color: #f1f1f5 !important;
+  }
+
+  .sidebar #personal-language-icon,
+  .sidebar .sidebar-toggle-btn {
+    color: #7b8190 !important;
+  }
+}
+
+#timeline .post-content .post-date span {
+  background: #000;
+}
+
+/* Banners that use the primary color, e.g. the team member and talent profile headers */
+.bg-primary {
+  background-color: #000 !important;
+}
+
+/* Active sidebar item: black with white text (the theme accent is a solid blue by default) */
+.sidebar-menu li.active > a {
+  color: #fff !important;
+  background-color: #000;
+}
+
+/* Other places the theme accent shows up */
+.awesomplete ul li[aria-selected=true],
+.selection-handler-dropdown-btn.active,
+.sub-task-filter-active,
+.chat-me .chat-msg,
+.bg-dark-success,
+#pwa-install-message-iphone {
+  background-color: #000 !important;
+}
+
+.tox .tox-collection--list .tox-collection__item--active {
+  background-color: #000 !important;
+}
+
+.text-primary,
+.circle-done,
+.message-row.unread span,
+.unread-comments-of-tasks i {
+  color: #000 !important;
+}
+
+.notepad-title,
+.comment-highlight {
+  border-color: #000 !important;
+}
+
+.unread {
+  border-left-color: #000;
+}
+
+/* Loading spinners */
+.circle-loader {
+  border-top-color: #000;
+}
+
+.app-loader .loading,
+.table-loader .loading {
+  border-color: #000;
+  border-top-color: #fff;
+}
+
+.inline-loader {
+  border-color: #000 !important;
+  border-top-color: #fff !important;
+}
+
+.spinning-btn.spinning:before {
+  border-right-color: #000;
+}
+
+/* Tabs */
+.nav-tabs li a:hover,
+.nav-tabs li a:focus,
+.nav-tabs li a:active,
+.nav-tabs li .active,
+.nav-tabs li.active {
+  color: #000 !important;
+}
+
+.nav-tabs li:not(.title-tab) a::after {
+  background-color: #000;
+}
+
+/* Buttons and links */
+.btn-primary {
+  background-color: #000;
+  border-color: #000;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+  background-color: #262626 !important;
+  border-color: #262626 !important;
+  color: #fff;
+}
+
+a {
+  color: #000;
+}
+
+a:hover,
+a:focus,
+a:active {
+  color: #4d4d4d;
+}
+
+/* Selection and active states */
+.list-group-item.active,
+.list-group-item.active:focus,
+.list-group-item.active:hover {
+  background: #000;
+  border-color: #000;
+}
+
+.dataTable:not(.js-selection-mode) tbody tr.active td,
+.dataTable:not(.js-selection-mode) tbody tr.active:hover td {
+  background: #000 !important;
+}
+
+td.dropdown-option button:hover {
+  background: #000;
+  border-color: #000;
+}
+
+.select2-results .select2-highlighted {
+  background-color: #000;
+}
+
+.datepicker table tr td.active.active,
+.datepicker table tr td.active.active:hover,
+.datepicker table tr td span.active.active,
+.datepicker table tr td span.active:hover.active,
+.datepicker table tr td span.active.disabled.active,
+.datepicker table tr td span.active.disabled:hover.active,
+.datepicker table tr td span.active.active:hover {
+  background: #000;
+  border-color: #000;
+}
+
+.atwho-view .cur,
+.note-hint-group .active,
+.note-hint-item:hover {
+  background-color: #000 !important;
+}
+
+.form-check-input:checked {
+  background-color: #000 !important;
+  border-color: #000 !important;
+}
