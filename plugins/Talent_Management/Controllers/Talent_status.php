@@ -16,6 +16,8 @@ class Talent_status extends Security_Controller {
         if (!talent_can_access_staff()) {
             app_redirect("forbidden");
         }
+
+        talent_ensure_schema_once();
     }
 
     function index() {
@@ -60,19 +62,46 @@ class Talent_status extends Security_Controller {
 
     function update_field_sort_values() {
         $sort_values = $this->request->getPost("sort_values");
-        if ($sort_values) {
-            $sort_array = explode(",", $sort_values);
+        if (!$sort_values) {
+            echo json_encode(array("success" => true));
+            return;
+        }
 
-            foreach ($sort_array as $value) {
-                $sort_item = explode("-", $value);
+        $new_sorts = array();
+        foreach (explode(",", $sort_values) as $value) {
+            $sort_item = explode("-", $value);
 
-                $id = get_array_value($sort_item, 0);
-                $sort = get_array_value($sort_item, 1);
+            $id = get_array_value($sort_item, 0);
+            $sort = get_array_value($sort_item, 1);
 
-                $data = array("sort" => $sort);
-                $this->Talent_status_model->ci_save($data, $id);
+            if (is_numeric($id) && is_numeric($sort)) {
+                $new_sorts[(int) $id] = (int) $sort;
             }
         }
+
+        //the contract signing stage has to stay ahead of the confirmed stage; the posted order wins, the saved order fills any gap
+        $system_stage_ids = $this->Talent_status_model->get_system_stage_ids();
+        $signing_id = get_array_value($system_stage_ids, "contract_signing");
+        $confirmed_id = get_array_value($system_stage_ids, "confirmed");
+        if ($signing_id && $confirmed_id) {
+            $saved_sorts = array();
+            foreach ($this->Talent_status_model->get_details()->getResult() as $status) {
+                $saved_sorts[(int) $status->id] = (int) $status->sort;
+            }
+            $sorts = $new_sorts + $saved_sorts;
+
+            if ($sorts[(int) $signing_id] >= $sorts[(int) $confirmed_id]) {
+                echo json_encode(array("success" => false, "message" => app_lang("talent_system_status_order_invalid")));
+                return;
+            }
+        }
+
+        foreach ($new_sorts as $id => $sort) {
+            $data = array("sort" => $sort);
+            $this->Talent_status_model->ci_save($data, $id);
+        }
+
+        echo json_encode(array("success" => true));
     }
 
     function delete() {
@@ -81,6 +110,12 @@ class Talent_status extends Security_Controller {
         ));
 
         $id = $this->request->getPost("id");
+
+        //the contract workflow depends on these stages: they can be renamed and recolored, never removed
+        if ($this->Talent_status_model->get_one($id)->system_key) {
+            echo json_encode(array("success" => false, "message" => app_lang("talent_system_status_cannot_be_deleted")));
+            return;
+        }
 
         if ($this->request->getPost("undo")) {
             if ($this->Talent_status_model->delete($id, true)) {
@@ -115,15 +150,19 @@ class Talent_status extends Security_Controller {
         $edit = modal_anchor(get_uri("talent_status/modal_form"), "<i data-feather='edit' class='icon-16'></i>", array("class" => "edit", "title" => app_lang("edit_talent_status"), "data-post-id" => $data->id));
 
         $delete_attributes = array("title" => app_lang("delete_talent_status"), "class" => "delete", "data-id" => $data->id, "data-action-url" => get_uri("talent_status/delete"), "data-action" => "delete-confirmation");
-        if ($data->total_talent) {
+        if ($data->system_key) {
+            $delete_attributes = array("title" => app_lang("talent_system_status_locked"), "class" => "delete not-clickable text-off");
+        } else if ($data->total_talent) {
             $delete_attributes = array("title" => app_lang("there_has_talent_with_this_status"), "class" => "delete not-clickable text-off");
         }
 
         $delete = js_anchor("<i data-feather='x' class='icon-16'></i>", $delete_attributes);
 
+        $lock = $data->system_key ? "<i data-feather='lock' class='icon-14 text-off ml10' title='" . app_lang("talent_system_status_locked") . "'></i>" : "";
+
         return array(
             $data->sort,
-            "<div class='pt10 pb10 field-row' data-id='$data->id'><div class='float-start move-icon'><i data-feather='menu' class='icon-16'></i></div> <span style='background-color:" . $data->color . "' class='color-tag float-start'></span>" . $data->title . "</div>",
+            "<div class='pt10 pb10 field-row' data-id='$data->id'><div class='float-start move-icon'><i data-feather='menu' class='icon-16'></i></div> <span style='background-color:" . $data->color . "' class='color-tag float-start'></span>" . $data->title . $lock . "</div>",
             $edit . $delete
         );
     }

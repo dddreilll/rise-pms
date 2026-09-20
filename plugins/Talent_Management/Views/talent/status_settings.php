@@ -53,9 +53,16 @@
                         $.ajax({
                             url: '<?php echo_uri("talent_status/update_field_sort_values") ?>',
                             type: "POST",
+                            dataType: "json",
                             data: {sort_values: data},
-                            success: function () {
+                            success: function (result) {
                                 appLoader.hide();
+
+                                //a refused order (e.g. Confirmed dragged above Contract Signing) snaps back to the saved one
+                                if (result && result.success === false) {
+                                    appAlert.error(result.message);
+                                    $("#talent-status-table").appTable({reload: true});
+                                }
                             }
                         });
                     }

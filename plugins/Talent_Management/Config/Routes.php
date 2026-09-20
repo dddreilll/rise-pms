@@ -37,6 +37,15 @@ $routes->post('talent_status/save', 'Talent_status::save', ['namespace' => $name
 $routes->post('talent_status/delete', 'Talent_status::delete', ['namespace' => $namespace]);
 $routes->post('talent_status/update_field_sort_values', 'Talent_status::update_field_sort_values', ['namespace' => $namespace]);
 
+//contract templates (admin only: the wording is legally sensitive)
+$routes->get('talent_contract_templates', 'Talent_contract_templates::index', ['namespace' => $namespace]);
+$routes->post('talent_contract_templates/list_data', 'Talent_contract_templates::list_data', ['namespace' => $namespace]);
+$routes->post('talent_contract_templates/modal_form', 'Talent_contract_templates::modal_form', ['namespace' => $namespace]);
+$routes->post('talent_contract_templates/save', 'Talent_contract_templates::save', ['namespace' => $namespace]);
+$routes->get('talent_contract_templates/form/(:num)', 'Talent_contract_templates::form/$1', ['namespace' => $namespace]);
+$routes->post('talent_contract_templates/save_content', 'Talent_contract_templates::save_content', ['namespace' => $namespace]);
+$routes->post('talent_contract_templates/delete', 'Talent_contract_templates::delete', ['namespace' => $namespace]);
+
 //project <-> talent linkage (list view)
 $routes->get('talent_projects/project_tab/(:num)', 'Talent_projects::project_tab/$1', ['namespace' => $namespace]);
 $routes->post('talent_projects/list_data/(:num)', 'Talent_projects::list_data/$1', ['namespace' => $namespace]);

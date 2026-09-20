@@ -45,16 +45,33 @@ class Talent_status_model extends Crud_model {
         }
     }
 
+    //where a new casting link starts. System stages are skipped: assign() writes the status directly, so landing on
+    //Confirmed (say after a reorder) would hand out a confirmed slot that never went through the contract gate.
     function get_first_status() {
         $talent_status_table = $this->db->prefixTable("talent_status");
 
         $sql = "SELECT $talent_status_table.id AS first_talent_status
         FROM $talent_status_table
-        WHERE $talent_status_table.deleted=0
+        WHERE $talent_status_table.deleted=0 AND ($talent_status_table.system_key IS NULL OR $talent_status_table.system_key='')
         ORDER BY $talent_status_table.sort ASC
         LIMIT 1";
 
         $row = $this->db->query($sql)->getRow();
         return $row ? $row->first_talent_status : 0;
+    }
+
+    //the stages the contract workflow depends on: array(system_key => status id)
+    function get_system_stage_ids() {
+        $talent_status_table = $this->db->prefixTable("talent_status");
+
+        $sql = "SELECT $talent_status_table.id, $talent_status_table.system_key
+        FROM $talent_status_table
+        WHERE $talent_status_table.deleted=0 AND $talent_status_table.system_key IS NOT NULL AND $talent_status_table.system_key!=''";
+
+        $ids = array();
+        foreach ($this->db->query($sql)->getResult() as $row) {
+            $ids[$row->system_key] = $row->id;
+        }
+        return $ids;
     }
 }

@@ -6,7 +6,7 @@ defined('PLUGINPATH') or exit('No direct script access allowed');
 Plugin Name: Talent Management
 Plugin URL: https://github.com/local/rise-pms
 Description: Manage a roster of on-camera talent (actors, extras, hosts, subject-matter experts) with a per-project status pipeline and casting links.
-Version: 1.1.0
+Version: 1.2.0
 Requires at least: 2.8
 Author: Rise PMS
 Author URL: https://github.com/local/rise-pms
@@ -15,6 +15,11 @@ Author URL: https://github.com/local/rise-pms
 $talent_general_helper = PLUGINPATH . "Talent_Management/Helpers/talent_general_helper.php";
 if (file_exists($talent_general_helper)) {
     require_once($talent_general_helper);
+}
+
+$talent_schema_helper = PLUGINPATH . "Talent_Management/Helpers/talent_schema_helper.php";
+if (file_exists($talent_schema_helper)) {
+    require_once($talent_schema_helper);
 }
 
 register_installation_hook("Talent_Management", function ($item_purchase_code) {
@@ -66,19 +71,35 @@ register_installation_hook("Talent_Management", function ($item_purchase_code) {
         KEY `talent_status_id` (`talent_status_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;");
 
+    //contract-signing schema: system_key on the stages + the templates/contracts/audit tables
+    talent_ensure_schema_structure($db, $db_prefix);
+
     //seed a default pipeline so the kanban board isn't empty on first use
     $existing = $db->query("SELECT COUNT(id) AS total FROM `" . $db_prefix . "talent_status`")->getRow();
     if (!$existing || !$existing->total) {
-        $default_statuses = array(
-            array("title" => "Prospective", "color" => "#7c8798", "sort" => 0),
-            array("title" => "Contacted", "color" => "#3f51b5", "sort" => 1),
-            array("title" => "Booked", "color" => "#2e7d32", "sort" => 2),
-            array("title" => "Wrapped", "color" => "#8d6e63", "sort" => 3),
-        );
-        foreach ($default_statuses as $status) {
+        foreach (talent_default_pipeline() as $sort => $status) {
+            $status["sort"] = $sort;
             $db->table($db_prefix . "talent_status")->insert($status);
         }
     }
+
+    //nothing to do on a fresh pipeline; repairs stages left behind by an earlier install
+    talent_ensure_system_stages($db, $db_prefix);
+});
+
+//RISE runs this when an admin clicks "Updates" on the plugin and shows the output in a modal. It brings an existing install
+//(1.1.0 and older) up to the current schema; every step is idempotent, so clicking twice is harmless.
+register_update_hook("Talent_Management", function () {
+    $view_data = array("changes" => array(), "error" => "");
+
+    try {
+        $view_data["changes"] = talent_ensure_schema();
+    } catch (\Throwable $ex) {
+        log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+        $view_data["error"] = $ex->getMessage();
+    }
+
+    echo view('Talent_Management\Views\settings\update_modal', $view_data);
 });
 
 register_uninstallation_hook("Talent_Management", function () {
@@ -89,6 +110,10 @@ register_uninstallation_hook("Talent_Management", function () {
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_projects`");
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent`");
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_status`");
+    $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_contract_templates`");
+
+    //talent_contracts and talent_contract_events are kept on purpose: they hold the signed legal record (frozen contract text,
+    //signer, timestamps, IP) and shouldn't disappear because a plugin was removed. Drop them by hand if that's really wanted.
 
     //custom field data lives in core tables (related_to='talent') - clean it up so uninstall leaves no orphaned rows
     $db->query("DELETE FROM `" . $db_prefix . "custom_field_values` WHERE related_to_type='talent'");

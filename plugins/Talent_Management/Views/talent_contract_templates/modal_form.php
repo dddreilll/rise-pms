@@ -1,4 +1,4 @@
-<?php echo form_open(get_uri("talent_status/save"), array("id" => "talent-status-form", "class" => "general-form", "role" => "form")); ?>
+<?php echo form_open(get_uri("talent_contract_templates/save"), array("id" => "talent-contract-template-title-form", "class" => "general-form", "role" => "form")); ?>
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <input type="hidden" name="id" value="<?php echo $model_info->id; ?>" />
@@ -19,12 +19,6 @@
                         "data-msg-required" => app_lang("field_required"),
                     ));
                     ?>
-                    <div class="mt15">
-                        <?php echo view("includes/color_plate"); ?>
-                    </div>
-                    <?php if ($model_info->system_key) { ?>
-                        <div class="mt15 text-off"><i data-feather="lock" class="icon-14"></i> <?php echo app_lang("talent_system_status_locked"); ?></div>
-                    <?php } ?>
                 </div>
             </div>
         </div>
@@ -39,9 +33,9 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        $("#talent-status-form").appForm({
+        $("#talent-contract-template-title-form").appForm({
             onSuccess: function (result) {
-                $("#talent-status-table").appTable({newData: result.data, dataId: result.id});
+                $("#talent-contract-template-table").appTable({newData: result.data, dataId: result.id});
             }
         });
 

@@ -24,6 +24,9 @@ class Talent_projects extends Security_Controller {
         if (!talent_can_access_staff()) {
             app_redirect("forbidden");
         }
+
+        //assign() starts casting links on the first non-system stage, which reads talent_status.system_key
+        talent_ensure_schema_once();
     }
 
     //rendered inside the core Project detail view via app_filter_team_members_project_details_tab
