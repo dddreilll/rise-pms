@@ -86,3 +86,89 @@ if (!function_exists('talent_contract_default_template')) {
             . "</tr></tbody></table>";
     }
 }
+
+//how long an emailed signing link stays valid
+if (!function_exists('talent_contract_expiry_days')) {
+
+    function talent_contract_expiry_days() {
+        return 14;
+    }
+}
+
+//the number people quote when they talk about a contract, e.g. TC-00042
+if (!function_exists('talent_contract_label')) {
+
+    function talent_contract_label($contract_id) {
+        return "TC-" . str_pad((int) $contract_id, 5, "0", STR_PAD_LEFT);
+    }
+}
+
+//a contract still marked "sent" whose link has lapsed is expired, whether or not anything has updated the row yet
+if (!function_exists('talent_contract_effective_status')) {
+
+    function talent_contract_effective_status($status, $token_expires_at = "") {
+        if ($status === "sent" && $token_expires_at && strtotime($token_expires_at . " UTC") < time()) {
+            return "expired";
+        }
+        return (string) $status;
+    }
+}
+
+//badge for the newest contract of a casting link; empty when nothing has been sent yet
+if (!function_exists('talent_contract_status_html')) {
+
+    function talent_contract_status_html($contract_status, $token_expires_at = "") {
+        if (!$contract_status) {
+            return "";
+        }
+
+        $status = talent_contract_effective_status($contract_status, $token_expires_at);
+        $colors = array("sent" => "#ef6c00", "signed" => "#2e7d32", "declined" => "#c62828", "expired" => "#7c8798", "voided" => "#7c8798");
+        $color = isset($colors[$status]) ? $colors[$status] : "#7c8798";
+
+        return "<span class='badge' style='background-color: $color'>" . app_lang("talent_contract_status_" . $status) . "</span>";
+    }
+}
+
+//the "Send contract" button, offered while nothing is out for signature and nothing is signed
+if (!function_exists('talent_contract_send_action_html')) {
+
+    function talent_contract_send_action_html($talent_project_id, $contract_status = "", $token_expires_at = "") {
+        $status = talent_contract_effective_status($contract_status, $token_expires_at);
+        if ($status === "sent" || $status === "signed") {
+            return "";
+        }
+
+        $label = $status ? app_lang("talent_contract_send_again") : app_lang("talent_contract_send");
+        return modal_anchor(get_uri("talent_contracts/send_modal_form"), "<i data-feather='send' class='icon-14'></i> " . $label, array("class" => "btn btn-default btn-sm", "title" => app_lang("talent_contract_send"), "data-post-talent_project_id" => $talent_project_id));
+    }
+}
+
+//badge + button for one row of the project's talent list or one kanban card
+if (!function_exists('talent_contract_cell_html')) {
+
+    function talent_contract_cell_html($row) {
+        $badge = talent_contract_status_html($row->contract_status, $row->contract_expires_at);
+        $action = talent_contract_send_action_html($row->talent_project_id, $row->contract_status, $row->contract_expires_at);
+        return trim($badge . " " . $action);
+    }
+}
+
+//the mail that carries the signing link; also what gets seeded as the editable "Contract request" email template
+if (!function_exists('talent_contract_default_email')) {
+
+    function talent_contract_default_email() {
+        return array(
+            "subject" => "Please review and sign your agreement for {PROJECT_TITLE}",
+            "message" => "<div style=\"background-color: #eeeeef; padding: 50px 0;\"><div style=\"max-width:640px; margin:0 auto;\">"
+            . "<div style=\"color: #fff; text-align: center; background-color:#33333e; padding: 30px; border-top-left-radius: 3px; border-top-right-radius: 3px; margin: 0;\"><h1>Your agreement is ready</h1></div>"
+            . "<div style=\"padding: 20px; background-color: rgb(255, 255, 255); color: #555; font-size: 14px;\">"
+            . "<p>Hello {TALENT_NAME},</p>"
+            . "<p>{COMPANY_NAME} has prepared an agreement for you for <strong>{PROJECT_TITLE}</strong>. Please review and sign it online:</p>"
+            . "<p><a href=\"{CONTRACT_URL}\" target=\"_blank\">Review and sign</a></p>"
+            . "<p>This link is personal to you, so please don't forward it. It expires on {EXPIRY_DATE}.</p>"
+            . "<p>{SIGNATURE}</p>"
+            . "</div></div></div>",
+        );
+    }
+}

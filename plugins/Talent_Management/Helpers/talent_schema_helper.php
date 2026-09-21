@@ -226,6 +226,36 @@ if (!function_exists('talent_ensure_system_stages')) {
     }
 }
 
+//the mail that carries a signing link. A row in core's email_templates is what makes it editable under Settings > Email templates
+//(the plugin registers its variables with app_filter_email_templates); the sender falls back to the built-in text if it's missing.
+if (!function_exists('talent_email_template_exists')) {
+
+    function talent_email_template_exists($db, $db_prefix) {
+        return $db->query("SELECT id FROM `" . $db_prefix . "email_templates` WHERE template_name='talent_contract_request' LIMIT 1")->getRow() ? true : false;
+    }
+}
+
+if (!function_exists('talent_ensure_email_template')) {
+
+    function talent_ensure_email_template($db, $db_prefix) {
+        if (talent_email_template_exists($db, $db_prefix)) {
+            return array();
+        }
+
+        $default = talent_contract_default_email();
+        $db->table($db_prefix . "email_templates")->insert(array(
+            "template_name" => "talent_contract_request",
+            "email_subject" => $default["subject"],
+            "default_message" => $default["message"],
+            "custom_message" => "",
+            "template_type" => "default",
+            "language" => "",
+        ));
+
+        return array("Created email template talent_contract_request");
+    }
+}
+
 //full upkeep pass. The named lock stops two requests that land right after a deploy from creating the stages twice.
 if (!function_exists('talent_ensure_schema')) {
 
@@ -242,6 +272,7 @@ if (!function_exists('talent_ensure_schema')) {
         try {
             $changes = talent_ensure_schema_structure($db, $db_prefix);
             $changes = array_merge($changes, talent_ensure_system_stages($db, $db_prefix));
+            $changes = array_merge($changes, talent_ensure_email_template($db, $db_prefix));
         } finally {
             $db->query("SELECT RELEASE_LOCK('talent_management_schema')");
         }
@@ -264,8 +295,8 @@ if (!function_exists('talent_ensure_schema_once')) {
             $db = db_connect('default');
             $db_prefix = get_db_prefix();
 
-            //talent_contract_events is the last thing the update creates, so seeing it means the update finished
-            if (!talent_column_exists($db, $db_prefix . "talent_status", "system_key") || !talent_table_exists($db, $db_prefix . "talent_contract_events")) {
+            //the email template is the last thing the update adds, so finding it means the update finished
+            if (!talent_column_exists($db, $db_prefix . "talent_status", "system_key") || !talent_table_exists($db, $db_prefix . "talent_contract_events") || !talent_email_template_exists($db, $db_prefix)) {
                 talent_ensure_schema();
             }
         } catch (\Throwable $ex) {

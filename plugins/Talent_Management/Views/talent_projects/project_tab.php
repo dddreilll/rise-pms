@@ -33,6 +33,23 @@
 </div>
 
 <script type="text/javascript">
+    var projectTalentKanbanLoaded = false;
+
+    //the Send contract modal calls this, so the badge and the card's new stage show up without a page reload
+    window.reloadProjectTalent = function () {
+        $("#project-talent-table").appTable({reload: true});
+
+        if (projectTalentKanbanLoaded) {
+            $.ajax({
+                url: '<?php echo_uri("talent_projects/kanban_data/" . $project_id) ?>',
+                type: "POST",
+                success: function (result) {
+                    $("#project-talent-load-kanban").html(result);
+                }
+            });
+        }
+    };
+
     $(document).ready(function () {
         $("#project-talent-table").appTable({
             source: '<?php echo_uri("talent_projects/list_data/" . $project_id); ?>',
@@ -40,11 +57,11 @@
                 {title: '<?php echo app_lang("name"); ?>', "class": "all"},
                 {title: '<?php echo app_lang("on_screen_title"); ?>'},
                 {title: '<?php echo app_lang("status"); ?>'},
+                {title: '<?php echo app_lang("talent_contract"); ?>'},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]
         });
 
-        var projectTalentKanbanLoaded = false;
         $("#project-talent-kanban-tab-link").on("shown.bs.tab", function () {
             if (projectTalentKanbanLoaded) {
                 return;

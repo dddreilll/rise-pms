@@ -60,6 +60,7 @@ class Talent_projects extends Security_Controller {
             anchor(get_uri("talent/view/" . $data->id), $name),
             $data->on_screen_title ?: "-",
             js_anchor($data->talent_status_title, array("style" => "background-color: $data->talent_status_color", "class" => "badge")),
+            talent_contract_cell_html($data),
             js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
         );
     }

@@ -85,6 +85,9 @@ register_installation_hook("Talent_Management", function ($item_purchase_code) {
 
     //nothing to do on a fresh pipeline; repairs stages left behind by an earlier install
     talent_ensure_system_stages($db, $db_prefix);
+
+    //the "Contract request" mail, editable under Settings > Email templates
+    talent_ensure_email_template($db, $db_prefix);
 });
 
 //RISE runs this when an admin clicks "Updates" on the plugin and shows the output in a modal. It brings an existing install
@@ -114,6 +117,9 @@ register_uninstallation_hook("Talent_Management", function () {
 
     //talent_contracts and talent_contract_events are kept on purpose: they hold the signed legal record (frozen contract text,
     //signer, timestamps, IP) and shouldn't disappear because a plugin was removed. Drop them by hand if that's really wanted.
+
+    //the email template row lives in a core table, so it goes with the plugin
+    $db->query("DELETE FROM `" . $db_prefix . "email_templates` WHERE template_name='talent_contract_request'");
 
     //custom field data lives in core tables (related_to='talent') - clean it up so uninstall leaves no orphaned rows
     $db->query("DELETE FROM `" . $db_prefix . "custom_field_values` WHERE related_to_type='talent'");
@@ -156,6 +162,14 @@ app_hooks()->add_filter('app_filter_role_permissions_save_data', function ($perm
     $request = \Config\Services::request();
     $permissions["talent_management"] = $request->getPost("talent_management");
     return $permissions;
+});
+
+//lists the "Contract request" mail (and the variables it can use) under Settings > Email templates, in a Talent group
+app_hooks()->add_filter('app_filter_email_templates', function ($templates_array) {
+    $templates_array["talent"] = array(
+        "talent_contract_request" => array("TALENT_NAME", "PROJECT_TITLE", "CONTRACT_TITLE", "CONTRACT_URL", "EXPIRY_DATE", "COMPANY_NAME", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
+    );
+    return $templates_array;
 });
 
 app_hooks()->add_filter('app_filter_team_members_project_details_tab', function ($project_tabs, $project_id = 0) {

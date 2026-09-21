@@ -46,6 +46,11 @@ $routes->get('talent_contract_templates/form/(:num)', 'Talent_contract_templates
 $routes->post('talent_contract_templates/save_content', 'Talent_contract_templates::save_content', ['namespace' => $namespace]);
 $routes->post('talent_contract_templates/delete', 'Talent_contract_templates::delete', ['namespace' => $namespace]);
 
+//sending a contract (staff side; the recipient's signing page comes with the public signing routes)
+$routes->post('talent_contracts/send_modal_form', 'Talent_contracts::send_modal_form', ['namespace' => $namespace]);
+$routes->post('talent_contracts/preview', 'Talent_contracts::preview', ['namespace' => $namespace]);
+$routes->post('talent_contracts/send', 'Talent_contracts::send', ['namespace' => $namespace]);
+
 //project <-> talent linkage (list view)
 $routes->get('talent_projects/project_tab/(:num)', 'Talent_projects::project_tab/$1', ['namespace' => $namespace]);
 $routes->post('talent_projects/list_data/(:num)', 'Talent_projects::list_data/$1', ['namespace' => $namespace]);

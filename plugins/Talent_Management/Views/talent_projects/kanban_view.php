@@ -16,7 +16,8 @@
 
         $card = $existing_items . "<span class='lead-kanban-item kanban-item' data-id='$item->talent_project_id' data-sort='$item->new_sort' data-post-id='$item->talent_project_id'>
                     <div class='selection-pe-none'><span class='avatar'><img src='" . get_avatar($item->profile_image) . "'></span>" . anchor(get_uri("talent/view/" . $item->id), $name) . $open_in_new_tab . "</div><div class='clearfix'></div>" .
-            "<div class='mt15'>" . $profession . "</div>" . "<div class='clearfix'></div></span>";
+            "<div class='mt15'>" . $profession . "</div>" . "<div class='clearfix'></div>" .
+            "<div class='mt10'>" . talent_contract_cell_html($item) . "</div></span>";
 
         $columns_data[$item->talent_status_id] = $card;
     }
