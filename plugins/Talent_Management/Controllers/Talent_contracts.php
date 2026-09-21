@@ -110,6 +110,7 @@ class Talent_contracts extends Security_Controller {
         $view_data["states"] = $this->Talent_contract_service->get_agreement_states($talent_project_id);
         $view_data["requirement"] = $this->Talent_contract_service->get_requirement_status($talent_project_id);
         $view_data["sendable_count"] = count($this->Talent_contract_service->get_sendable_templates($talent_project_id));
+        $view_data["can_remove"] = $this->login_user->is_admin ? true : false;
 
         return $this->template->view('Talent_Management\Views\talent_contracts\agreements_modal', $view_data);
     }
@@ -148,6 +149,48 @@ class Talent_contracts extends Security_Controller {
 
         $result = $this->Talent_contract_service->void(
                 $this->request->getPost("contract_id"), (string) $this->request->getPost("reason"), $this->_actor(), $this->login_user->is_admin ? true : false
+        );
+
+        echo json_encode($result);
+    }
+
+    //the confirmation for taking a withdrawn agreement off a casting link; a decision for admins, since it can take a signed record out of sight
+    function remove_modal_form() {
+        if (!$this->login_user->is_admin) {
+            app_redirect("forbidden");
+        }
+
+        $this->validate_submitted_data(array(
+            "talent_project_id" => "required|numeric",
+            "template_id" => "required|numeric"
+        ));
+
+        $talent_project_id = $this->request->getPost("talent_project_id");
+        $template_id = $this->request->getPost("template_id");
+
+        $context = $this->Talent_project_model->get_context($talent_project_id);
+        if (!$context) {
+            show_404();
+        }
+
+        $view_data["talent_project_id"] = $talent_project_id;
+        $view_data["template_id"] = $template_id;
+        $view_data["context"] = $context;
+        //null when it can no longer be removed (sent again, or already removed by someone else): the form then says so
+        $view_data["preview"] = $this->Talent_contract_service->get_removal_preview($talent_project_id, $template_id);
+
+        return $this->template->view('Talent_Management\Views\talent_contracts\remove_modal_form', $view_data);
+    }
+
+    //takes a withdrawn agreement off a casting link; the service checks again that it is withdrawn and that the person is an admin
+    function remove() {
+        $this->validate_submitted_data(array(
+            "talent_project_id" => "required|numeric",
+            "template_id" => "required|numeric"
+        ));
+
+        $result = $this->Talent_contract_service->remove_voided(
+                $this->request->getPost("talent_project_id"), $this->request->getPost("template_id"), (string) $this->request->getPost("reason"), $this->_actor(), $this->login_user->is_admin ? true : false
         );
 
         echo json_encode($result);

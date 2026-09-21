@@ -55,6 +55,8 @@ $routes->post('talent_contracts/view_modal_form', 'Talent_contracts::view_modal_
 $routes->get('talent_contracts/download/(:num)', 'Talent_contracts::download/$1', ['namespace' => $namespace]);
 $routes->post('talent_contracts/resend', 'Talent_contracts::resend', ['namespace' => $namespace]);
 $routes->post('talent_contracts/void', 'Talent_contracts::void', ['namespace' => $namespace]);
+$routes->post('talent_contracts/remove_modal_form', 'Talent_contracts::remove_modal_form', ['namespace' => $namespace]);
+$routes->post('talent_contracts/remove', 'Talent_contracts::remove', ['namespace' => $namespace]);
 $routes->post('talent_contracts/paper_modal_form', 'Talent_contracts::paper_modal_form', ['namespace' => $namespace]);
 $routes->post('talent_contracts/save_paper', 'Talent_contracts::save_paper', ['namespace' => $namespace]);
 

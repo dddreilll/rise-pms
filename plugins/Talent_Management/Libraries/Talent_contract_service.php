@@ -500,6 +500,103 @@ class Talent_contract_service {
         return array("success" => true, "message" => app_lang("talent_contract_voided_message"));
     }
 
+    //An agreement can be removed from a casting link once it has been withdrawn: its newest record is voided and none of its records is
+    //waiting or signed.
+    private function _can_remove($records) {
+        if (!$records) {
+            return false;
+        }
+
+        foreach ($records as $record) {
+            if ($record->status === "sent" || $record->status === "signed") {
+                return false;
+            }
+        }
+
+        return end($records)->status === "voided";
+    }
+
+    //did anyone ever sign any of these records (a signature that was later withdrawn still leaves its date)
+    private function _ever_signed($records) {
+        foreach ($records as $record) {
+            if ($record->signed_at) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    //What removing a withdrawn agreement from a casting link takes away, for the confirmation: its title, how many records go with it and
+    //whether any of them was ever signed (then a reason is required). Null when it can't be removed.
+    function get_removal_preview($talent_project_id, $template_id) {
+        if (!is_numeric($talent_project_id) || !is_numeric($template_id)) {
+            return null;
+        }
+
+        $records = $this->Talent_contract_model->get_records_for_agreement($talent_project_id, $template_id);
+        if (!$this->_can_remove($records)) {
+            return null;
+        }
+
+        return array("title" => end($records)->title, "records" => count($records), "was_signed" => $this->_ever_signed($records));
+    }
+
+    //Staff take a withdrawn agreement off a casting link. Every record of that agreement on the casting link goes out of sight, so the
+    //agreement reads "not sent" again; nothing is erased (the rows, their audit trails and any signed PDF stay in the database) and each
+    //record gets a "removed" event. Admins only, and a reason is required when any of the records was ever signed.
+    function remove_voided($talent_project_id, $template_id, $reason, $actor, $may_remove = false) {
+        if (!$may_remove) {
+            return $this->_fail("talent_contract_error_remove_admin");
+        }
+        if (!is_numeric($talent_project_id) || !is_numeric($template_id)) {
+            return $this->_fail("talent_contract_error_cannot_remove");
+        }
+
+        $talent_project_id = (int) $talent_project_id;
+        $template_id = (int) $template_id;
+        $reason = $this->_clean_text($reason, 1000);
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            //the card first, then the agreement's contracts by id: the same order everything else takes its locks in
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . $talent_project_id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE talent_project_id=" . $talent_project_id . " AND template_id=" . $template_id . " ORDER BY id FOR UPDATE");
+
+            //looked at again under the lock: it may have been sent again, or removed by someone else, since the button was shown
+            $records = $this->Talent_contract_model->get_records_for_agreement($talent_project_id, $template_id);
+            if (!$this->_can_remove($records)) {
+                $db->transRollback();
+                return $this->_fail("talent_contract_error_cannot_remove");
+            }
+            if ($this->_ever_signed($records) && $reason === "") {
+                $db->transRollback();
+                return $this->_fail("talent_contract_error_remove_reason");
+            }
+
+            foreach ($records as $record) {
+                $hidden = array("deleted" => 1);
+                $this->_must($this->Talent_contract_model->ci_save($hidden, $record->id), "remove the contract");
+
+                $event_meta = array("was_signed" => $record->signed_at ? true : false, "records" => count($records));
+                if ($reason !== "") {
+                    $event_meta["reason"] = $reason;
+                }
+                $this->_must($this->Talent_contract_event_model->log($record->id, "removed", $actor, $event_meta), "log the removal");
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        return array("success" => true, "message" => app_lang("talent_contract_removed_message"));
+    }
+
     //a removed casting link or talent must not leave a live signing link behind; signed contracts are records and stay
     function void_pending_for_assignment($talent_project_id, $actor) {
         $this->_void_pending($this->Talent_contract_model->get_pending_ids(array("talent_project_id" => $talent_project_id)), $actor, "assignment_removed");

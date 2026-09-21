@@ -61,8 +61,10 @@ class Talent_projects extends Security_Controller {
             anchor(get_uri("talent/view/" . $data->id), $name),
             $data->on_screen_title ?: "-",
             js_anchor($data->talent_status_title, array("style" => "background-color: $data->talent_status_color", "class" => "badge")),
-            talent_contract_cell_html($data),
-            js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
+            talent_agreements_badge_html($data) ?: "-",
+            //the Agreements icon and the remove X side by side, as RISE puts an edit and a delete icon
+            talent_contract_agreements_action_html($data->talent_project_id)
+            . js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
         );
     }
 
@@ -202,8 +204,9 @@ class Talent_projects extends Security_Controller {
             $result_data[] = array(
                 anchor(get_uri("projects/view/" . $data->project_id), $data->project_title),
                 js_anchor($data->talent_status_title, array("style" => "background-color: $data->talent_status_color", "class" => "badge")),
-                talent_contract_cell_html($data),
-                js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
+                talent_agreements_badge_html($data) ?: "-",
+                talent_contract_agreements_action_html($data->talent_project_id)
+                . js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
             );
         }
 

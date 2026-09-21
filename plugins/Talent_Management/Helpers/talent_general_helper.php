@@ -224,30 +224,77 @@ if (!function_exists('talent_contract_status_html')) {
     }
 }
 
-//the "Send" button of one agreement: template_id preselects it in the form; without one the form offers everything that can go out
+//An icon-only action in RISE's standard table look: an <a> in a td.option is round and grey, green on hover, and class "delete" makes it a
+//red X. $tooltip is the hover text, $modal_title what the modal it opens is called, $post the values sent to it.
+if (!function_exists('talent_contract_icon_action_html')) {
+
+    function talent_contract_icon_action_html($url, $icon, $tooltip, $post = array(), $modal_title = "", $large = false, $class = "edit") {
+        $attributes = array("class" => $class, "title" => esc($tooltip));
+        if ($modal_title !== "") {
+            $attributes["data-modal-title"] = esc($modal_title);
+        }
+        foreach ($post as $key => $value) {
+            $attributes["data-post-" . $key] = $value;
+        }
+        if ($large) {
+            $attributes["data-modal-lg"] = "1";
+        }
+
+        return modal_anchor($url, "<i data-feather='" . $icon . "' class='icon-16'></i>", $attributes);
+    }
+}
+
+//the "Send" button of one agreement: template_id preselects it in the form; without one the form offers everything that can go out.
+//$icon gives the icon-only version for a table row
 if (!function_exists('talent_contract_send_action_html')) {
 
-    function talent_contract_send_action_html($talent_project_id, $template_id = 0, $again = false, $small = true) {
+    function talent_contract_send_action_html($talent_project_id, $template_id = 0, $again = false, $small = true, $icon = false) {
         $label = $again ? app_lang("talent_contract_send_again") : app_lang("talent_contract_send");
-        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_send"), "data-post-talent_project_id" => $talent_project_id);
+        $post = array("talent_project_id" => $talent_project_id);
         if ($template_id) {
-            $attributes["data-post-template_id"] = $template_id;
+            $post["template_id"] = $template_id;
+        }
+
+        if ($icon) {
+            return talent_contract_icon_action_html(get_uri("talent_contracts/send_modal_form"), "send", $label, $post, app_lang("talent_contract_send"));
+        }
+
+        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_send"));
+        foreach ($post as $key => $value) {
+            $attributes["data-post-" . $key] = $value;
         }
 
         return modal_anchor(get_uri("talent_contracts/send_modal_form"), "<i data-feather='send' class='icon-16'></i> " . $label, $attributes);
     }
 }
 
-//the "signed on paper" link of one agreement
+//the "signed on paper" link of one agreement ($icon: the icon-only version for a table row)
 if (!function_exists('talent_contract_paper_action_html')) {
 
-    function talent_contract_paper_action_html($talent_project_id, $template_id = 0, $small = true) {
-        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_paper_title"), "data-post-talent_project_id" => $talent_project_id);
+    function talent_contract_paper_action_html($talent_project_id, $template_id = 0, $small = true, $icon = false) {
+        $post = array("talent_project_id" => $talent_project_id);
         if ($template_id) {
-            $attributes["data-post-template_id"] = $template_id;
+            $post["template_id"] = $template_id;
+        }
+
+        if ($icon) {
+            return talent_contract_icon_action_html(get_uri("talent_contracts/paper_modal_form"), "upload", app_lang("talent_contract_paper_short"), $post, app_lang("talent_contract_paper_title"));
+        }
+
+        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_paper_title"));
+        foreach ($post as $key => $value) {
+            $attributes["data-post-" . $key] = $value;
         }
 
         return modal_anchor(get_uri("talent_contracts/paper_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang("talent_contract_paper_short"), $attributes);
+    }
+}
+
+//takes a withdrawn agreement off a casting link: RISE's red X (admins only; it opens a confirmation, and asks for a reason when the agreement was signed)
+if (!function_exists('talent_contract_remove_action_html')) {
+
+    function talent_contract_remove_action_html($talent_project_id, $template_id) {
+        return talent_contract_icon_action_html(get_uri("talent_contracts/remove_modal_form"), "x", app_lang("talent_contract_remove"), array("talent_project_id" => $talent_project_id, "template_id" => $template_id), app_lang("talent_contract_remove_title"), false, "delete");
     }
 }
 
@@ -259,7 +306,15 @@ if (!function_exists('talent_contract_view_action_html')) {
             return "";
         }
 
-        return modal_anchor(get_uri("talent_contracts/view_modal_form"), "<i data-feather='eye' class='icon-16'></i>", array("class" => "btn btn-default btn-sm", "title" => app_lang("talent_contract_view"), "data-post-contract_id" => $contract_id, "data-modal-lg" => "1"));
+        return talent_contract_icon_action_html(get_uri("talent_contracts/view_modal_form"), "eye", app_lang("talent_contract_view"), array("contract_id" => $contract_id), "", true);
+    }
+}
+
+//the Agreements icon of a Reactor's row in a table, beside the remove-from-project X
+if (!function_exists('talent_contract_agreements_action_html')) {
+
+    function talent_contract_agreements_action_html($talent_project_id) {
+        return talent_contract_icon_action_html(get_uri("talent_contracts/agreements_modal"), "file-text", app_lang("talent_contract_agreements"), array("talent_project_id" => $talent_project_id), "", true);
     }
 }
 

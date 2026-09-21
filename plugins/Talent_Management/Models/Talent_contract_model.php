@@ -36,6 +36,21 @@ class Talent_contract_model extends Crud_model {
         return $this->db->query($sql)->getRow();
     }
 
+    //every contract of one agreement on a casting link that is still in sight, oldest first (the newest is the last one)
+    function get_records_for_agreement($talent_project_id, $template_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $talent_project_id = $this->_get_clean_value($talent_project_id);
+        $template_id = $this->_get_clean_value($template_id);
+
+        $sql = "SELECT " . $this->_state_columns() . "
+                FROM $talent_contracts_table
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.talent_project_id=$talent_project_id AND $talent_contracts_table.template_id=$template_id
+                ORDER BY $talent_contracts_table.id ASC";
+
+        return $this->db->query($sql)->getResult();
+    }
+
     //the newest contract of every agreement that has one on this casting link, oldest agreement first
     function get_latest_per_agreement($talent_project_id) {
         $talent_contracts_table = $this->db->prefixTable("talent_contracts");
