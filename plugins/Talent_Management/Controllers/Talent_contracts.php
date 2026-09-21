@@ -46,10 +46,16 @@ class Talent_contracts extends Security_Controller {
 
         //the agreements that can go out now: everything that isn't already waiting or signed for this casting link, required ones first
         $sendable = $this->Talent_contract_service->get_sendable_templates($talent_project_id);
-        $templates_dropdown = array("" => "- " . app_lang("talent_contract_select_template") . " -");
+        $options = array();
+        $sendable_ids = array();
+        $required_ids = array();
         $moves_back_ids = array();
         foreach ($sendable as $template) {
-            $templates_dropdown[$template["id"]] = $template["title"] . ($template["required"] ? " (" . app_lang("talent_contract_required") . ")" : "");
+            $options[] = array("id" => $template["id"], "text" => $template["title"] . ($template["required"] ? " (" . app_lang("talent_contract_required") . ")" : ""));
+            $sendable_ids[] = $template["id"];
+            if ($template["required"]) {
+                $required_ids[] = $template["id"];
+            }
 
             //sending a listed agreement to someone who is confirmed takes them back to Contract Signing: the form says so beforehand
             if ($context->talent_status_key === "confirmed" && $this->Talent_contract_service->get_stage_for_send($talent_project_id, $template["id"])) {
@@ -58,24 +64,26 @@ class Talent_contracts extends Security_Controller {
         }
 
         //say why nothing can be sent instead of showing a form that will only fail
+        $has_any_templates = count($this->Talent_contract_template_model->get_details()->getResult()) > 0;
         $blocked_message = "";
         if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
             $blocked_message = app_lang("talent_contract_error_no_email");
         } else if (trim((string) $context->legal_name) === "") {
             $blocked_message = app_lang("talent_contract_error_no_legal_name");
         } else if (!$sendable) {
-            $blocked_message = count($this->Talent_contract_template_model->get_details()->getResult()) ? app_lang("talent_contract_error_all_sent") : app_lang("talent_contract_error_no_templates");
+            $blocked_message = $has_any_templates ? app_lang("talent_contract_error_all_sent") : app_lang("talent_contract_error_no_templates");
         }
 
-        $selected_template = $this->request->getPost("template_id");
-        if (!$selected_template || !isset($templates_dropdown[$selected_template])) {
-            $selected_template = count($sendable) === 1 ? $sendable[0]["id"] : "";
-        }
+        //the agreement asked for (from a row's Send button) is chosen already; so is the only one there is
+        $selected = $this->request->getPost("template_id");
+        $selected_ids = in_array((int) $selected, $sendable_ids, true) ? (string) (int) $selected : (count($sendable_ids) === 1 ? (string) $sendable_ids[0] : "");
 
         $view_data["talent_project_id"] = $talent_project_id;
         $view_data["context"] = $context;
-        $view_data["templates_dropdown"] = $templates_dropdown;
-        $view_data["selected_template"] = $selected_template;
+        $view_data["templates_json"] = json_encode($options, JSON_HEX_TAG | JSON_HEX_AMP);
+        $view_data["selected_ids"] = $selected_ids;
+        $view_data["required_ids"] = $required_ids;
+        $view_data["has_any_templates"] = $has_any_templates;
         $view_data["blocked_message"] = $blocked_message;
         $view_data["moves_back_ids"] = $moves_back_ids;
         $view_data["can_manage_templates"] = talent_can_manage_contract_templates();
@@ -260,31 +268,58 @@ class Talent_contracts extends Security_Controller {
         return $this->response;
     }
 
-    //the merged contract text, so nothing goes out unread
+    //the agreements chosen in the send form, as ids: posted as "3,7,9" (a lone template_id from an older form still works)
+    private function _posted_template_ids() {
+        $raw = (string) $this->request->getPost("template_ids");
+        if ($raw === "") {
+            $raw = (string) $this->request->getPost("template_id");
+        }
+
+        $ids = array();
+        foreach (explode(",", $raw) as $value) {
+            $value = trim($value);
+            if ($value !== "" && ctype_digit($value) && (int) $value > 0 && !in_array((int) $value, $ids, true)) {
+                $ids[] = (int) $value;
+            }
+        }
+        return array_slice($ids, 0, 20);
+    }
+
+    //the merged text of every chosen agreement, one under the other, so nothing goes out unread
     function preview() {
         $this->validate_submitted_data(array(
-            "talent_project_id" => "required|numeric",
-            "template_id" => "required|numeric"
+            "talent_project_id" => "required|numeric"
         ));
 
-        $html = $this->Talent_contract_service->preview($this->request->getPost("template_id"), $this->request->getPost("talent_project_id"), $this->request->getPost("notes"));
+        $ids = $this->_posted_template_ids();
+        $sections = array();
+        foreach ($ids as $id) {
+            $html = $this->Talent_contract_service->preview($id, $this->request->getPost("talent_project_id"), $this->request->getPost("notes"));
+            if ($html === null) {
+                $sections = array();
+                break;
+            }
 
-        if ($html === null) {
+            $template = $this->Talent_contract_template_model->get_one($id);
+            $sections[] = count($ids) > 1 ? "<h5 class='mt0 pb5 b-b'>" . esc($template->title) . "</h5>" . $html : $html;
+        }
+
+        if (!$sections) {
             echo json_encode(array("success" => false, "message" => app_lang("talent_contract_error_template")));
         } else {
-            echo json_encode(array("success" => true, "html" => $html));
+            echo json_encode(array("success" => true, "html" => implode("<div class='mt20'></div>", $sections)));
         }
     }
 
+    //sends the chosen agreements: several go in one link and one email unless "send each as its own email" was ticked
     function send() {
         $this->validate_submitted_data(array(
-            "talent_project_id" => "required|numeric",
-            "template_id" => "required|numeric"
+            "talent_project_id" => "required|numeric"
         ));
 
         //the notes are plain text and are escaped where they're merged, so they aren't run through clean_data (that would double-encode)
-        $result = $this->Talent_contract_service->issue(
-                $this->request->getPost("talent_project_id"), $this->request->getPost("template_id"), (string) $this->request->getPost("notes"), $this->_actor()
+        $result = $this->Talent_contract_service->issue_bundle(
+                $this->request->getPost("talent_project_id"), $this->_posted_template_ids(), (string) $this->request->getPost("notes"), $this->_actor(), $this->request->getPost("separate") ? true : false
         );
 
         echo json_encode($result);

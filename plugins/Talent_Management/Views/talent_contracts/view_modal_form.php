@@ -5,6 +5,15 @@ $known_events = array("sent", "email_sent", "email_failed", "viewed", "signed", 
 //what staff can do with it: a link that is out (or has lapsed) can be sent again, a waiting or signed contract can be withdrawn
 $can_resend = $is_latest && ($status === "sent" || $status === "expired");
 $can_void = $status === "sent" || ($status === "signed" && $can_void_signed);
+
+//a link renewed from here also renews the other agreements of its bundle that are still waiting or have lapsed
+$resend_covers_others = false;
+foreach ($bundle_mates as $mate) {
+    $resend_covers_others = $resend_covers_others || $mate->status === "sent" || $mate->status === "expired";
+}
+$mate_titles = array_map(function ($mate) {
+    return esc($mate->title);
+}, $bundle_mates);
 ?>
 <?php //general-form is what gives RISE's fields (the reason box, the link box) their soft grey look outside a <form> ?>
 <div class="modal-body clearfix general-form">
@@ -17,6 +26,9 @@ $can_void = $status === "sent" || ($status === "signed" && $can_void_signed);
 
             <?php if ($contract->sent_at) { ?>
                 <div class="text-off mt5"><?php echo sprintf(app_lang("talent_contract_sent_line"), esc($contract->sent_to_email), esc(format_to_datetime($contract->sent_at, true))); ?></div>
+            <?php } ?>
+            <?php if ($mate_titles) { ?>
+                <div class="text-off"><?php echo sprintf(app_lang("talent_contract_sent_together_with"), implode(", ", $mate_titles)); ?></div>
             <?php } ?>
             <?php if ($was_signed && $is_paper) { ?>
                 <div class="text-success mt5">
@@ -118,7 +130,7 @@ $can_void = $status === "sent" || ($status === "signed" && $can_void_signed);
             };
 
             $("#talent-contract-resend-button").on("click", function () {
-                if (!window.confirm("<?php echo esc(app_lang("talent_contract_resend_confirm"), "js"); ?>")) {
+                if (!window.confirm("<?php echo esc(app_lang($resend_covers_others ? "talent_contract_resend_confirm_bundle" : "talent_contract_resend_confirm"), "js"); ?>")) {
                     return;
                 }
 
