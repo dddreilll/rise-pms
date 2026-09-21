@@ -85,8 +85,7 @@ class Talent_project_agreements extends Security_Controller {
         }
 
         if ($this->Talent_project_agreement_model->replace_for_project($project_id, $template_ids, $this->login_user->id)) {
-            $summary = talent_project_agreements_summary($this->Talent_project_agreement_model->get_templates_for_project($project_id));
-            echo json_encode(array("success" => true, "message" => app_lang("record_saved"), "summary" => $summary));
+            echo json_encode(array("success" => true, "message" => app_lang("record_saved")));
         } else {
             echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
         }

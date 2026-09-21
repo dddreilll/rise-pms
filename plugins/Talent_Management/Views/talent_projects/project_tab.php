@@ -20,8 +20,6 @@
     </ul>
 
     <div class="tab-content">
-        <div class="text-off pl15 pr15 pt10" id="project-talent-agreements-summary"><?php echo esc($agreements_summary); ?></div>
-
         <div role="tabpanel" class="tab-pane fade show active" id="project-talent-list-panel">
             <div class="table-responsive">
                 <table id="project-talent-table" class="display" cellspacing="0" width="100%"></table>

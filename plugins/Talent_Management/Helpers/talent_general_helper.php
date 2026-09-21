@@ -149,22 +149,6 @@ if (!function_exists('talent_starter_templates')) {
     }
 }
 
-//one line saying what a project requires of its talent (plain text: callers escape it, or set it with .text())
-if (!function_exists('talent_project_agreements_summary')) {
-
-    function talent_project_agreements_summary($templates) {
-        if (!$templates) {
-            return app_lang("talent_project_agreements_none");
-        }
-
-        $titles = array_map(function ($template) {
-            return $template->title;
-        }, $templates);
-
-        return sprintf(app_lang("talent_project_agreements_summary"), implode(", ", $titles));
-    }
-}
-
 //how long an emailed signing link stays valid
 if (!function_exists('talent_contract_expiry_days')) {
 

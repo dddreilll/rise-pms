@@ -47,9 +47,8 @@
         $("#template_ids").select2({multiple: true, data: <?php echo $templates_dropdown; ?>});
 
         $("#talent-project-agreements-form").appForm({
-            onSuccess: function (result) {
-                //the line under the tab title, and the rows' "x of y signed" counts
-                $("#project-talent-agreements-summary").text(result.summary);
+            onSuccess: function () {
+                //the rows' "x of y signed" counts
                 if (window.reloadProjectTalent) {
                     window.reloadProjectTalent();
                 }

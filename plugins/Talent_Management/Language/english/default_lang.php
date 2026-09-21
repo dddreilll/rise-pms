@@ -138,7 +138,6 @@ $lang["talent_project_agreements_label"] = "Agreements";
 $lang["talent_project_agreements_placeholder"] = "Choose agreements";
 $lang["talent_project_agreements_help"] = "Leave it empty for no requirement: Reactors can then be moved to any stage, and staff move them by hand.";
 $lang["talent_project_agreements_error_template"] = "One of the chosen agreements doesn't exist any more. Please reload and choose again.";
-$lang["talent_project_agreements_summary"] = "Required: %s";
 $lang["talent_project_agreements_none"] = "No required agreements: Reactors are moved between stages by hand.";
 $lang["talent_sign_invalid_title"] = "This link isn't valid";
 $lang["talent_sign_invalid_message"] = "It may have been mistyped or replaced by a newer one. Please ask the sender for a new link.";
