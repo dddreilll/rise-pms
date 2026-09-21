@@ -6,7 +6,8 @@ $known_events = array("sent", "email_sent", "email_failed", "viewed", "signed", 
 $can_resend = $is_latest && ($status === "sent" || $status === "expired");
 $can_void = $status === "sent" || ($status === "signed" && $can_void_signed);
 ?>
-<div class="modal-body clearfix">
+<?php //general-form is what gives RISE's fields (the reason box, the link box) their soft grey look outside a <form> ?>
+<div class="modal-body clearfix general-form">
     <div class="container-fluid">
         <div id="talent-contract-detail">
         <div class="mb15">
