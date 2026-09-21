@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contracts` (
   `signer_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `signer_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `signed_at` datetime DEFAULT NULL,
+  `signed_via` varchar(10) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'online',
   `signature_data` mediumtext COLLATE utf8_unicode_ci,
   `signed_pdf_data` mediumtext COLLATE utf8_unicode_ci,
   `pdf_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',

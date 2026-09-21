@@ -85,6 +85,7 @@ if (!function_exists('talent_contract_table_definitions')) {
                 `signer_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signer_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signed_at` datetime DEFAULT NULL,
+                `signed_via` varchar(10) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'online',
                 `signature_data` mediumtext COLLATE utf8_unicode_ci,
                 `signed_pdf_data` mediumtext COLLATE utf8_unicode_ci,
                 `pdf_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
@@ -140,6 +141,12 @@ if (!function_exists('talent_ensure_schema_structure')) {
         if (talent_column_exists($db, $contracts_table, "signature_file")) {
             $db->query("ALTER TABLE `$contracts_table` CHANGE `signature_file` `signature_data` mediumtext COLLATE utf8_unicode_ci, CHANGE `signed_pdf_file` `signed_pdf_data` mediumtext COLLATE utf8_unicode_ci");
             $changes[] = "Changed talent_contracts to keep the signature and signed PDF in the row";
+        }
+
+        //how a contract was signed: 'online' through the emailed link, 'paper' when staff recorded a signed scan (every earlier row is online)
+        if (!talent_column_exists($db, $contracts_table, "signed_via")) {
+            $db->query("ALTER TABLE `$contracts_table` ADD `signed_via` varchar(10) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'online' AFTER `signed_at`");
+            $changes[] = "Added signed_via to talent_contracts";
         }
 
         //core's notifications table takes plugin data in columns named plugin_*; this one says which contract a notification is about
@@ -369,6 +376,7 @@ if (!function_exists('talent_ensure_schema_once')) {
             if (!talent_column_exists($db, $db_prefix . "talent_status", "system_key")
                     || !talent_table_exists($db, $db_prefix . "talent_contract_events")
                     || !talent_column_exists($db, $db_prefix . "talent_contracts", "signature_data")
+                    || !talent_column_exists($db, $db_prefix . "talent_contracts", "signed_via")
                     || !talent_column_exists($db, $db_prefix . "notifications", "plugin_talent_contract_id")
                     || !talent_email_template_exists($db, $db_prefix)
                     || !talent_notification_settings_exist($db, $db_prefix)) {

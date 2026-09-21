@@ -40,6 +40,19 @@ if (!function_exists('talent_can_manage_contract_templates')) {
     }
 }
 
+//who a staff request comes from, as the contract audit trail records it
+if (!function_exists('talent_staff_actor')) {
+
+    function talent_staff_actor($login_user, $request) {
+        return array(
+            "type" => "staff",
+            "id" => $login_user->id,
+            "ip" => $request->getIPAddress(),
+            "user_agent" => $request->getUserAgent()->getAgentString(),
+        );
+    }
+}
+
 //merge fields a contract template can use; the template editor lists them and the contract renderer fills them
 if (!function_exists('talent_contract_available_variables')) {
 
@@ -92,6 +105,38 @@ if (!function_exists('talent_contract_expiry_days')) {
 
     function talent_contract_expiry_days() {
         return 14;
+    }
+}
+
+//the largest scan that can be attached to a contract signed on paper, in bytes. It is stored in the database as base64 text (a third
+//bigger) in a single statement, so the limit follows the server's max_allowed_packet (4 MB on a stock MySQL 5.7) up to 5 MB.
+if (!function_exists('talent_contract_paper_max_bytes')) {
+
+    function talent_contract_paper_max_bytes() {
+        static $max = null;
+
+        if ($max === null) {
+            $max = 5 * 1024 * 1024;
+
+            try {
+                $row = db_connect('default')->query("SELECT @@max_allowed_packet AS packet_size")->getRow();
+                if ($row && (int) $row->packet_size > 0) {
+                    $max = max(0, min($max, (int) floor(((int) $row->packet_size - 262144) * 3 / 4)));
+                }
+            } catch (\Throwable $ex) {
+                //keep the default; the insert itself still fails cleanly if the server turns out to be smaller
+            }
+        }
+
+        return $max;
+    }
+}
+
+//the same limit as the number shown to people, in MB with one decimal, rounded down so nothing under it is refused
+if (!function_exists('talent_contract_paper_max_mb')) {
+
+    function talent_contract_paper_max_mb() {
+        return floor(talent_contract_paper_max_bytes() / 104857.6) / 10;
     }
 }
 

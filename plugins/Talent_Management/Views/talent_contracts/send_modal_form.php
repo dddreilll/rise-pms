@@ -64,6 +64,12 @@
                     <div id="talent-contract-preview" class="mt10 p15 b-a bg-white hide" style="max-height: 320px; overflow: auto;"></div>
                 </div>
             <?php } ?>
+
+            <?php if ($show_paper_link) { ?>
+                <div class="mt15">
+                    <?php echo modal_anchor(get_uri("talent_contracts/paper_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang("talent_contract_paper_link"), array("title" => app_lang("talent_contract_paper_title"), "data-post-talent_project_id" => $talent_project_id)); ?>
+                </div>
+            <?php } ?>
         </div>
 
         <div id="talent-contract-send-result" class="hide">

@@ -167,7 +167,7 @@ class Talent_contract_service {
 
         //after the commit on purpose: a slow mail server must not hold the lock, and a failed mail must not undo the contract
         $link = get_uri("talent_sign/" . $contract_id . "/" . $token);
-        $emailed = $this->_send_email($context, $title, $link, $expires_at);
+        $emailed = $this->_send_email($context, $context->email, $title, $link, $expires_at);
         $this->Talent_contract_event_model->log($contract_id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $context->email));
 
         return array(
@@ -180,7 +180,273 @@ class Talent_contract_service {
         );
     }
 
-    //the contract behind a signing link, or null when the id or token doesn't match. Every kind of mismatch looks the same on purpose.
+    //Staff withdraw a contract. A waiting one (whether or not its link has lapsed) can be voided by any staff member with access; a signed
+    //one is a legal record, so that needs $may_void_signed (the controller passes admin) and a reason. Voiding a signed contract also
+    //takes its card back out of Confirmed, since Confirmed means "has a valid signature". $meta is added to the audit event.
+    function void($contract_id, $reason, $actor, $may_void_signed = false, $meta = array()) {
+        if (!is_numeric($contract_id)) {
+            return $this->_fail("talent_contract_error_cannot_void");
+        }
+
+        $contract = $this->Talent_contract_model->get_public($contract_id);
+        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "signed")) {
+            return $this->_fail("talent_contract_error_cannot_void");
+        }
+
+        $reason = $this->_clean_text($reason, 1000);
+        if ($contract->status === "signed") {
+            if (!$may_void_signed) {
+                return $this->_fail("talent_contract_error_void_signed_admin");
+            }
+            if ($reason === "") {
+                return $this->_fail("talent_contract_error_void_reason");
+            }
+        }
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            //the card first, then the contract: the same order issue() takes its locks in
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $contract->talent_project_id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
+
+            $latest = $this->Talent_contract_model->get_public($contract->id);
+            if (!($latest->status === "sent" || $latest->status === "signed")) {
+                $db->transRollback();
+                return $this->_fail("talent_contract_error_cannot_void");
+            }
+            $was_signed = $latest->status === "signed";
+
+            $voided = array("status" => "voided");
+            $this->_must($this->Talent_contract_model->ci_save($voided, $contract->id), "void the contract");
+
+            $event_meta = $meta + array("was_signed" => $was_signed);
+            if ($reason !== "") {
+                $event_meta["reason"] = $reason;
+            }
+            $this->_must($this->Talent_contract_event_model->log($contract->id, "voided", $actor, $event_meta), "log the void");
+
+            if ($was_signed) {
+                $stages = $this->Talent_status_model->get_system_stage_ids();
+                $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
+                $signing_stage_id = get_array_value($stages, "contract_signing");
+                if ($assignment->id && !$assignment->deleted && $signing_stage_id && (int) $assignment->talent_status_id === (int) get_array_value($stages, "confirmed")) {
+                    $card = array("talent_status_id" => $signing_stage_id);
+                    $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card back");
+                    $this->_must($this->Talent_contract_event_model->log($contract->id, "card_reverted", array("type" => "system"), array("stage_id" => (int) $signing_stage_id)), "log the card move");
+                }
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        return array("success" => true, "message" => app_lang("talent_contract_voided_message"));
+    }
+
+    //a removed casting link or talent must not leave a live signing link behind; signed contracts are records and stay
+    function void_pending_for_assignment($talent_project_id, $actor) {
+        $this->_void_pending($this->Talent_contract_model->get_pending_ids(array("talent_project_id" => $talent_project_id)), $actor, "assignment_removed");
+    }
+
+    function void_pending_for_talent($talent_id, $actor) {
+        $this->_void_pending($this->Talent_contract_model->get_pending_ids(array("talent_id" => $talent_id)), $actor, "talent_removed");
+    }
+
+    private function _void_pending($contract_ids, $actor, $cause) {
+        foreach ($contract_ids as $contract_id) {
+            $this->void($contract_id, "", $actor, false, array("cause" => $cause));
+        }
+    }
+
+    //Sends the link again, for someone who lost the email or never got it. The token is only stored as a hash, so this makes a new one:
+    //the earlier link stops working. The mail goes to the talent's address on file now when it is valid (that is how a typo gets fixed),
+    //and the address the signer has to confirm follows it. A lapsed contract comes back to life with a fresh expiry.
+    function resend($contract_id, $actor) {
+        if (!is_numeric($contract_id)) {
+            return $this->_fail("talent_contract_error_cannot_resend");
+        }
+
+        $contract = $this->Talent_contract_model->get_public($contract_id);
+        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "expired")) {
+            return $this->_fail("talent_contract_error_cannot_resend");
+        }
+
+        $context = $this->Talent_project_model->get_context($contract->talent_project_id);
+        if (!$context) {
+            return $this->_fail("talent_contract_error_assignment_missing");
+        }
+
+        $to = filter_var($context->email, FILTER_VALIDATE_EMAIL) ? trim($context->email) : (string) $contract->sent_to_email;
+        if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+            return $this->_fail("talent_contract_error_no_email");
+        }
+
+        $token = bin2hex(random_bytes(20));
+        $now = get_current_utc_time();
+        $expires_at = gmdate("Y-m-d H:i:s", strtotime($now . " UTC") + talent_contract_expiry_days() * 86400);
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            //the card first, then the contract, as in issue() and void()
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $contract->talent_project_id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
+
+            //signed, declined or voided in the meantime: nothing to send any more. And only the newest contract of a casting link can come
+            //back to life; an older lapsed one would otherwise sit next to the newer contract as a second live link.
+            $latest = $this->Talent_contract_model->get_public($contract->id);
+            $newest = $this->Talent_contract_model->get_latest_for_talent_project($contract->talent_project_id);
+            if (!($latest->status === "sent" || $latest->status === "expired") || !$newest || (int) $newest->id !== (int) $contract->id) {
+                $db->transRollback();
+                return $this->_fail("talent_contract_error_cannot_resend");
+            }
+
+            $renewed = array("status" => "sent", "token_hash" => hash("sha256", $token), "token_expires_at" => $expires_at, "sent_to_email" => $to);
+            $this->_must($this->Talent_contract_model->ci_save($renewed, $contract->id), "renew the link");
+
+            $event_meta = array("to" => $to, "expires_at" => $expires_at);
+            if ($to !== (string) $contract->sent_to_email) {
+                $event_meta["previous_to"] = (string) $contract->sent_to_email;
+            }
+            $this->_must($this->Talent_contract_event_model->log($contract->id, "resent", $actor, $event_meta), "log the resend");
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        $link = get_uri("talent_sign/" . $contract->id . "/" . $token);
+        $emailed = $this->_send_email($context, $to, $contract->title, $link, $expires_at);
+        $this->Talent_contract_event_model->log($contract->id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $to));
+
+        return array(
+            "success" => true,
+            "message" => $emailed ? sprintf(app_lang("talent_contract_resent_message"), $to) : app_lang("talent_contract_resend_email_failed_message"),
+            "contract_id" => (int) $contract->id,
+            "emailed" => $emailed,
+            "email" => $to,
+            "link" => $link,
+        );
+    }
+
+    //Records a contract that was signed on paper. The scan (a PDF, or a photo that is turned into one) is kept as the signed copy, and
+    //this is the only way a card reaches Confirmed without the talent signing online, so it is audited like everything else. A contract
+    //still waiting for the talent is withdrawn in the same step. $file is array(path, name); $signed_on is the date on the paper (Y-m-d).
+    function record_paper_copy($talent_project_id, $title, $signed_on, $note, $file, $actor) {
+        if (!is_numeric($talent_project_id)) {
+            return $this->_fail("talent_contract_error_assignment_missing");
+        }
+
+        $context = $this->Talent_project_model->get_context($talent_project_id);
+        if (!$context) {
+            return $this->_fail("talent_contract_error_assignment_missing");
+        }
+
+        $legal_name = trim((string) $context->legal_name);
+        if ($legal_name === "") {
+            return $this->_fail("talent_contract_error_no_legal_name");
+        }
+
+        //the day on the paper, which can be earlier than today but not later
+        $signed_on = trim((string) $signed_on);
+        $date = \DateTime::createFromFormat("!Y-m-d", $signed_on, new \DateTimeZone("UTC"));
+        $date_errors = \DateTime::getLastErrors();
+        if (!$date || ($date_errors && ($date_errors["warning_count"] || $date_errors["error_count"])) || $date->format("Y-m-d") !== $signed_on || $signed_on > get_my_local_time("Y-m-d")) {
+            return $this->_fail("talent_contract_error_paper_date");
+        }
+
+        $title = trim(preg_replace('/\s+/', " ", $this->_clean_text($title, 255)));
+        if ($title === "") {
+            $title = app_lang("talent_contract_paper_default_title");
+        }
+        $note = $this->_clean_text($note, 1000);
+
+        $scan = $this->_prepare_paper_scan($file, $title);
+        if (isset($scan["error"])) {
+            return array("success" => false, "message" => sprintf(app_lang($scan["error"]), talent_contract_paper_max_mb()));
+        }
+
+        $pdf = $scan["pdf"];
+        $pdf_hash = hash("sha256", $pdf);
+        $now = get_current_utc_time();
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $talent_project_id . " FOR UPDATE");
+
+            $current = $this->Talent_contract_model->get_latest_for_talent_project($talent_project_id);
+            if ($current) {
+                if ($current->status === "signed") {
+                    $db->transRollback();
+                    return $this->_fail("talent_contract_error_already_signed");
+                }
+
+                //a link that is still out would let the talent sign a second time, so the paper copy replaces it
+                if ($current->status === "sent") {
+                    $withdrawn = array("status" => "voided");
+                    $this->_must($this->Talent_contract_model->ci_save($withdrawn, $current->id), "withdraw the waiting contract");
+                    $this->_must($this->Talent_contract_event_model->log($current->id, "voided", $actor, array("was_signed" => false, "cause" => "paper_copy")), "log the withdrawal");
+                }
+            }
+
+            $contract = array(
+                "talent_project_id" => $talent_project_id,
+                "title" => $title,
+                "content" => "",
+                "content_hash" => $pdf_hash,
+                "token_hash" => "",
+                "status" => "signed",
+                "signer_name" => $legal_name,
+                "signer_email" => filter_var($context->email, FILTER_VALIDATE_EMAIL) ? trim($context->email) : "",
+                "sent_by" => (int) get_array_value($actor, "id"),
+                //noon UTC keeps the date the same in every timezone; only the day is known
+                "signed_at" => $signed_on . " 12:00:00",
+                "signed_via" => "paper",
+                "signed_pdf_data" => base64_encode($pdf),
+                "pdf_hash" => $pdf_hash,
+                "created_at" => $now,
+            );
+            $contract_id = $this->Talent_contract_model->ci_save($contract);
+            $this->_must($contract_id, "record the paper copy");
+
+            $assignment = $this->Talent_project_model->get_one($talent_project_id);
+            $confirmed_stage_id = get_array_value($this->Talent_status_model->get_system_stage_ids(), "confirmed");
+            $confirmed = false;
+            if ($assignment->id && !$assignment->deleted && $confirmed_stage_id) {
+                $card = array("talent_status_id" => $confirmed_stage_id);
+                $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card");
+                $confirmed = true;
+            }
+
+            $file_name = talent_strip_4byte_chars(preg_replace('/[\x00-\x1F\x7F]/', "", basename(str_replace("\\", "/", (string) get_array_value($file, "name")))));
+            $meta = array("signed_on" => $signed_on, "file_name" => substr($file_name, 0, 120), "pdf_hash" => $pdf_hash, "bytes" => strlen($pdf), "from_image" => $scan["from_image"]);
+            if ($note !== "") {
+                $meta["note"] = $note;
+            }
+            $this->_must($this->Talent_contract_event_model->log($contract_id, "signed_paper", $actor, $meta), "log the paper copy");
+            $this->_must($this->Talent_contract_event_model->log($contract_id, $confirmed ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $confirmed ? array("stage_id" => (int) $confirmed_stage_id) : array("reason" => ($assignment->id && !$assignment->deleted) ? "no_confirmed_stage" : "assignment_removed")), "log the card move");
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        return array("success" => true, "message" => app_lang("talent_contract_paper_saved_message"), "contract_id" => (int) $contract_id, "confirmed" => $confirmed);
+    }
+
+    //The contract behind a signing link, or null when the id or token doesn't match. Every kind of mismatch looks the same on purpose.
     function find_by_token($contract_id, $token) {
         if (!is_numeric($contract_id) || !preg_match('/^[0-9a-f]{40}$/', (string) $token)) {
             return null;
@@ -232,10 +498,17 @@ class Talent_contract_service {
 
         $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
 
+        //only the newest contract of a casting link can be sent again
+        $newest = $this->Talent_contract_model->get_latest_for_talent_project($contract->talent_project_id);
+
         return array(
             "contract" => $contract,
             "status" => $status,
-            "html" => $this->_display_html($contract, $status),
+            "is_latest" => ($newest && (int) $newest->id === (int) $contract->id) ? true : false,
+            "is_paper" => $contract->signed_via === "paper",
+            //a paper contract has no text of its own: the scan is the document
+            "was_signed" => $contract->signed_at ? true : false,
+            "html" => $contract->signed_via === "paper" ? "" : $this->_display_html($contract, $contract->signed_at ? "signed" : $status),
             "label" => talent_contract_label($contract->id),
             "signer_name" => $this->_signer_name($contract),
             "events" => $this->Talent_contract_event_model->get_for_contract($contract->id)->getResult(),
@@ -249,7 +522,7 @@ class Talent_contract_service {
             return null;
         }
 
-        $pdf = $this->_stored_pdf($view["contract"]);
+        $pdf = $this->_stored_pdf($view["contract"], true);
         if ($pdf) {
             $this->Talent_contract_event_model->log($view["contract"]->id, "downloaded", $actor);
         }
@@ -304,6 +577,8 @@ class Talent_contract_service {
         $db->transBegin();
 
         try {
+            //the card first, then the contract, like issue(), void() and resend(): one lock order means they can't deadlock each other
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $contract->talent_project_id . " FOR UPDATE");
             $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
 
             $latest = $this->Talent_contract_model->get_public($contract->id);
@@ -313,11 +588,18 @@ class Talent_contract_service {
                 return $this->_fail_for_state($state);
             }
 
+            //a link that was replaced while this request waited for the lock is a dead link
+            if (!hash_equals((string) $latest->token_hash, hash("sha256", $token))) {
+                $db->transRollback();
+                return $this->_fail("talent_sign_error_invalid");
+            }
+
             $signed = array(
                 "status" => "signed",
                 "signer_name" => $name,
                 "signer_email" => $email,
                 "signed_at" => $now,
+                "signed_via" => "online",
                 "signature_data" => base64_encode($png),
                 "signed_pdf_data" => base64_encode($pdf),
                 "pdf_hash" => $pdf_hash,
@@ -387,6 +669,11 @@ class Talent_contract_service {
                 return $this->_fail_for_state($state);
             }
 
+            if (!hash_equals((string) $latest->token_hash, hash("sha256", $token))) {
+                $db->transRollback();
+                return $this->_fail("talent_sign_error_invalid");
+            }
+
             $declined = array("status" => "declined", "decline_reason" => $reason);
             $this->_must($this->Talent_contract_model->ci_save($declined, $contract->id), "record the decline");
             $this->_must($this->Talent_contract_event_model->log($contract->id, "declined", $actor, $reason === "" ? array() : array("reason" => $reason)), "log the decline");
@@ -418,9 +705,10 @@ class Talent_contract_service {
         return $pdf;
     }
 
-    //the stored signed PDF, only if the contract is signed and the bytes still match the hash recorded at signing
-    private function _stored_pdf($contract) {
-        if ($contract->status !== "signed") {
+    //the stored signed PDF, only if the contract is signed and the bytes still match the hash recorded at signing. Staff may also
+    //fetch the copy of a contract that was signed and withdrawn afterwards; the talent's link never serves it.
+    private function _stored_pdf($contract, $include_withdrawn = false) {
+        if (!($contract->status === "signed" || ($include_withdrawn && $contract->status === "voided" && $contract->signed_at))) {
             return null;
         }
 
@@ -640,6 +928,170 @@ class Talent_contract_service {
         }
     }
 
+    //The scan of a paper contract as PDF bytes: array("pdf" => bytes, "from_image" => bool), or array("error" => language key).
+    //A PDF is taken as it is; a JPG or PNG photo is turned into a one-page PDF.
+    private function _prepare_paper_scan($file, $title) {
+        $path = (string) get_array_value($file, "path");
+        if ($path === "" || !is_file($path) || !is_readable($path)) {
+            return array("error" => "talent_contract_error_paper_missing");
+        }
+
+        $size = filesize($path);
+        if (!$size) {
+            return array("error" => "talent_contract_error_paper_missing");
+        }
+        if ($size > talent_contract_paper_max_bytes()) {
+            return array("error" => "talent_contract_error_paper_too_large");
+        }
+
+        $bytes = file_get_contents($path);
+        if ($bytes === false || $bytes === "") {
+            return array("error" => "talent_contract_error_paper_missing");
+        }
+
+        if (substr($bytes, 0, 5) === "%PDF-") {
+            //an upload that was cut short has no end marker
+            if (strpos(substr($bytes, -2048), "%%EOF") === false) {
+                return array("error" => "talent_contract_error_paper_invalid");
+            }
+            return array("pdf" => $bytes, "from_image" => false);
+        }
+
+        return $this->_image_to_pdf($bytes, $path, $title);
+    }
+
+    //A photo of the signed pages. The picture is re-encoded, which drops everything but the pixels (a phone photo carries its GPS position
+    //in EXIF), turned upright if the phone stored it sideways, flattened on white and capped at 2400 px before it is placed on an A4 page.
+    private function _image_to_pdf($bytes, $path, $title) {
+        $info = function_exists("imagecreatefromstring") ? @getimagesizefromstring($bytes) : false;
+        if (!$info || !in_array($info[2], array(IMAGETYPE_JPEG, IMAGETYPE_PNG), true) || $info[0] < 50 || $info[1] < 50) {
+            return array("error" => "talent_contract_error_paper_type");
+        }
+
+        //the size is read from the header, so a PNG whose header isn't one would report nonsense
+        if ($info[2] === IMAGETYPE_PNG && substr($bytes, 12, 4) !== "IHDR") {
+            return array("error" => "talent_contract_error_paper_invalid");
+        }
+
+        //GD keeps the whole picture in memory at 4 bytes a pixel, and running out of memory can't be caught, so it is checked first
+        if ($info[0] * $info[1] > 60000000 || !$this->_gd_fits_in_memory($info[0], $info[1])) {
+            return array("error" => "talent_contract_error_paper_image_large");
+        }
+
+        $orientation = 1;
+        if ($info[2] === IMAGETYPE_JPEG && function_exists("exif_read_data")) {
+            try {
+                $exif = @exif_read_data($path);
+                if (is_array($exif) && isset($exif["Orientation"])) {
+                    $orientation = (int) $exif["Orientation"];
+                }
+            } catch (\Throwable $ex) {
+                $orientation = 1;
+            }
+        }
+
+        $source = null;
+        $flat = null;
+        try {
+            //a photo that was cut short decodes into a half-grey picture with only a warning, which would be filed as the signed copy
+            $warnings = "";
+            set_error_handler(function ($number, $message) use (&$warnings) {
+                $warnings .= $message . "
+";
+                return true;
+            });
+            try {
+                $source = imagecreatefromstring($bytes);
+            } finally {
+                restore_error_handler();
+            }
+            if (!$source || stripos($warnings, "premature end") !== false) {
+                return array("error" => "talent_contract_error_paper_invalid");
+            }
+            imagepalettetotruecolor($source);
+
+            $width = imagesx($source);
+            $height = imagesy($source);
+            $scale = min(1, 2400 / max($width, $height));
+            $target_width = max(1, (int) round($width * $scale));
+            $target_height = max(1, (int) round($height * $scale));
+
+            $flat = imagecreatetruecolor($target_width, $target_height);
+            imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
+            imagecopyresampled($flat, $source, 0, 0, 0, 0, $target_width, $target_height, $width, $height);
+
+            //the big bitmap is not needed any more; the rotation below works on the reduced one
+            imagedestroy($source);
+            $source = null;
+
+            $angles = array(3 => 180, 6 => -90, 8 => 90);
+            if (isset($angles[$orientation])) {
+                $upright = imagerotate($flat, $angles[$orientation], imagecolorallocate($flat, 255, 255, 255));
+                if ($upright) {
+                    imagedestroy($flat);
+                    $flat = $upright;
+                }
+            }
+
+            $target_width = imagesx($flat);
+            $target_height = imagesy($flat);
+
+            ob_start();
+            imagejpeg($flat, null, 85);
+            $jpeg = ob_get_clean();
+            if (!$jpeg) {
+                return array("error" => "talent_contract_error_paper_type");
+            }
+
+            $pdf = new Talent_pdf();
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+            $pdf->SetMargins(10, 10, 10);
+            $pdf->SetAutoPageBreak(false, 0);
+            $pdf->SetTitle($title);
+            $pdf->AddPage($target_width > $target_height ? "L" : "P", "A4");
+
+            $box_width = $pdf->getPageWidth() - 20;
+            $box_height = $pdf->getPageHeight() - 20;
+            $ratio = min($box_width / $target_width, $box_height / $target_height);
+            $draw_width = $target_width * $ratio;
+            $draw_height = $target_height * $ratio;
+            $pdf->Image("@" . $jpeg, 10 + ($box_width - $draw_width) / 2, 10 + ($box_height - $draw_height) / 2, $draw_width, $draw_height, "JPG");
+
+            return array("pdf" => $pdf->Output("", "S"), "from_image" => true);
+        } catch (\Throwable $ex) {
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return array("error" => "talent_contract_error_paper_type");
+        } finally {
+            if ($source) {
+                imagedestroy($source);
+            }
+            if ($flat) {
+                imagedestroy($flat);
+            }
+        }
+    }
+
+    //will a picture of this size fit in what is left of PHP's memory limit (the decoded bitmap plus room for the reduced copy and the PDF)?
+    private function _gd_fits_in_memory($width, $height) {
+        $limit = trim((string) ini_get("memory_limit"));
+        if ($limit === "" || $limit === "-1") {
+            return true;
+        }
+
+        $bytes = (float) $limit;
+        switch (strtolower(substr($limit, -1))) {
+            case "g":
+                $bytes *= 1024;
+            case "m":
+                $bytes *= 1024;
+            case "k":
+                $bytes *= 1024;
+        }
+
+        return memory_get_usage() + $width * $height * 4.8 + 24 * 1048576 <= $bytes;
+    }
+
     //a blank pad exports a plain white (or fully transparent) image, so a few dozen dark opaque pixels is what separates a signature from nothing
     private function _has_ink($image) {
         $width = imagesx($image);
@@ -725,7 +1177,7 @@ class Talent_contract_service {
 
     //true when the mail server accepted it. In a non-production environment core's mailer throws on failure instead of returning
     //false, so both outcomes are handled; the error text can hold SMTP details, so it goes to the log only.
-    private function _send_email($context, $title, $link, $expires_at) {
+    private function _send_email($context, $to, $title, $link, $expires_at) {
         $Email_templates_model = model("App\Models\Email_templates_model");
         $company = $this->_company();
 
@@ -746,7 +1198,7 @@ class Talent_contract_service {
             "COMPANY_NAME" => $this->_e($company->name),
             "LOGO_URL" => $this->_e(get_logo_url()),
             "SIGNATURE" => (string) get_array_value($template, "signature_default"),
-            "RECIPIENTS_EMAIL_ADDRESS" => $this->_e($context->email),
+            "RECIPIENTS_EMAIL_ADDRESS" => $this->_e($to),
         );
 
         //the subject is plain text: no HTML escaping, but no line breaks either (header injection)
@@ -763,7 +1215,7 @@ class Talent_contract_service {
 
         try {
             //the message is already escaped, so the mailer's own htmlspecialchars_decode is switched off
-            return send_app_mail($context->email, $this->_render($subject, $subject_values), $this->_render($message, $html_values), array(), false) ? true : false;
+            return send_app_mail($to, $this->_render($subject, $subject_values), $this->_render($message, $html_values), array(), false) ? true : false;
         } catch (\Throwable $ex) {
             log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
             return false;

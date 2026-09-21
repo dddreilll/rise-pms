@@ -24,6 +24,7 @@ class Talent_sign extends Security_Controller {
         $this->response->setHeader("Cache-Control", "no-store, max-age=0");
         $this->response->setHeader("Referrer-Policy", "no-referrer");
         $this->response->setHeader("X-Robots-Tag", "noindex, nofollow");
+        $this->response->setHeader("X-Content-Type-Options", "nosniff");
     }
 
     private function _request() {

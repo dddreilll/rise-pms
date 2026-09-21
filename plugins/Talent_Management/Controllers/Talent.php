@@ -3,6 +3,7 @@
 namespace Talent_Management\Controllers;
 
 use App\Controllers\Security_Controller;
+use Talent_Management\Libraries\Talent_contract_service;
 use Talent_Management\Models\Talent_model;
 use Talent_Management\Models\Talent_project_model;
 use Talent_Management\Models\Talent_status_model;
@@ -100,6 +101,11 @@ class Talent extends Security_Controller {
             }
         } else {
             if ($this->Talent_model->delete($id)) {
+                //contracts still waiting for this person's signature are withdrawn with them; signed ones are records and stay
+                talent_ensure_schema_once();
+                $Talent_contract_service = new Talent_contract_service();
+                $Talent_contract_service->void_pending_for_talent($id, talent_staff_actor($this->login_user, $this->request));
+
                 echo json_encode(array("success" => true, "message" => app_lang("record_deleted")));
             } else {
                 echo json_encode(array("success" => false, "message" => app_lang("record_cannot_be_deleted")));

@@ -29,12 +29,7 @@ class Talent_contracts extends Security_Controller {
 
     //who is doing this, for the audit trail
     private function _actor() {
-        return array(
-            "type" => "staff",
-            "id" => $this->login_user->id,
-            "ip" => $this->request->getIPAddress(),
-            "user_agent" => $this->request->getUserAgent()->getAgentString(),
-        );
+        return talent_staff_actor($this->login_user, $this->request);
     }
 
     function send_modal_form() {
@@ -76,6 +71,7 @@ class Talent_contracts extends Security_Controller {
         $view_data["blocked_message"] = $blocked_message;
         $view_data["moves_from_confirmed"] = $context->talent_status_key === "confirmed";
         $view_data["can_manage_templates"] = talent_can_manage_contract_templates();
+        $view_data["show_paper_link"] = $state["status"] !== "signed";
 
         return $this->template->view('Talent_Management\Views\talent_contracts\send_modal_form', $view_data);
     }
@@ -91,7 +87,92 @@ class Talent_contracts extends Security_Controller {
             show_404();
         }
 
+        //withdrawing a signed contract is a legal step, so only an admin gets the button (the service enforces it too)
+        $view_data["can_void_signed"] = $this->login_user->is_admin ? true : false;
+
         return $this->template->view('Talent_Management\Views\talent_contracts\view_modal_form', $view_data);
+    }
+
+    //the emailed link was lost or never arrived: a new one goes out and the old one stops working
+    function resend() {
+        $this->validate_submitted_data(array(
+            "contract_id" => "required|numeric"
+        ));
+
+        echo json_encode($this->Talent_contract_service->resend($this->request->getPost("contract_id"), $this->_actor()));
+    }
+
+    //withdraws a contract; a signed one takes an admin and a reason
+    function void() {
+        $this->validate_submitted_data(array(
+            "contract_id" => "required|numeric"
+        ));
+
+        $result = $this->Talent_contract_service->void(
+                $this->request->getPost("contract_id"), (string) $this->request->getPost("reason"), $this->_actor(), $this->login_user->is_admin ? true : false
+        );
+
+        echo json_encode($result);
+    }
+
+    //for a contract the talent signed on paper: the scan goes in here and counts as the signature
+    function paper_modal_form() {
+        $this->validate_submitted_data(array(
+            "talent_project_id" => "required|numeric"
+        ));
+
+        $talent_project_id = $this->request->getPost("talent_project_id");
+
+        $context = $this->Talent_project_model->get_context($talent_project_id);
+        if (!$context) {
+            show_404();
+        }
+
+        $state = $this->Talent_contract_service->get_state($talent_project_id);
+        $blocked_message = "";
+        if ($state["status"] === "signed") {
+            $blocked_message = app_lang("talent_contract_error_already_signed");
+        } else if (trim((string) $context->legal_name) === "") {
+            $blocked_message = app_lang("talent_contract_error_no_legal_name");
+        }
+
+        $view_data["talent_project_id"] = $talent_project_id;
+        $view_data["context"] = $context;
+        $view_data["blocked_message"] = $blocked_message;
+        $view_data["withdraws_pending"] = $state["status"] === "sent";
+        $view_data["default_title"] = app_lang("talent_contract_paper_default_title");
+        $view_data["today"] = get_my_local_time("Y-m-d");
+        $view_data["max_mb"] = talent_contract_paper_max_mb();
+
+        return $this->template->view('Talent_Management\Views\talent_contracts\paper_modal_form', $view_data);
+    }
+
+    function save_paper() {
+        $this->validate_submitted_data(array(
+            "talent_project_id" => "required|numeric",
+            "signed_on" => "required"
+        ));
+
+        $file = $this->request->getFile("scan");
+        if (!$file || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            echo json_encode(array("success" => false, "message" => app_lang("talent_contract_error_paper_missing")));
+            return;
+        }
+        if ($file->getError() === UPLOAD_ERR_INI_SIZE || $file->getError() === UPLOAD_ERR_FORM_SIZE) {
+            echo json_encode(array("success" => false, "message" => sprintf(app_lang("talent_contract_error_paper_too_large"), talent_contract_paper_max_mb())));
+            return;
+        }
+        if (!$file->isValid()) {
+            echo json_encode(array("success" => false, "message" => app_lang("talent_contract_error_paper_missing")));
+            return;
+        }
+
+        //the title and note are plain text; the service cleans them and everything is escaped where it is shown
+        $result = $this->Talent_contract_service->record_paper_copy(
+                $this->request->getPost("talent_project_id"), (string) $this->request->getPost("title"), (string) $this->request->getPost("signed_on"), (string) $this->request->getPost("note"), array("path" => $file->getTempName(), "name" => $file->getClientName()), $this->_actor()
+        );
+
+        echo json_encode($result);
     }
 
     //the signed PDF, on the staff member's own login
@@ -106,6 +187,7 @@ class Talent_contracts extends Security_Controller {
         $this->response->setHeader("Content-Type", "application/pdf");
         $this->response->setHeader("Content-Disposition", 'attachment; filename="' . $pdf["file_name"] . '"');
         $this->response->setHeader("Cache-Control", "no-store, max-age=0");
+        $this->response->setHeader("X-Content-Type-Options", "nosniff");
         $this->response->setBody($pdf["bytes"]);
         return $this->response;
     }

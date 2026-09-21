@@ -180,6 +180,10 @@ class Talent_projects extends Security_Controller {
         $id = $this->request->getPost("id");
 
         if ($this->Talent_project_model->delete($id)) {
+            //a contract still waiting for a signature must not outlive its assignment; a signed one is a record and stays
+            $Talent_contract_service = new Talent_contract_service();
+            $Talent_contract_service->void_pending_for_assignment($id, talent_staff_actor($this->login_user, $this->request));
+
             echo json_encode(array("success" => true, "message" => app_lang("record_deleted")));
         } else {
             echo json_encode(array("success" => false, "message" => app_lang("record_cannot_be_deleted")));
