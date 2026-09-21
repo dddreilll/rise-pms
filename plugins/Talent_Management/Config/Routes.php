@@ -47,6 +47,7 @@ $routes->post('talent_contract_templates/save_content', 'Talent_contract_templat
 $routes->post('talent_contract_templates/delete', 'Talent_contract_templates::delete', ['namespace' => $namespace]);
 
 //sending a contract (staff side)
+$routes->post('talent_contracts/agreements_modal', 'Talent_contracts::agreements_modal', ['namespace' => $namespace]);
 $routes->post('talent_contracts/send_modal_form', 'Talent_contracts::send_modal_form', ['namespace' => $namespace]);
 $routes->post('talent_contracts/preview', 'Talent_contracts::preview', ['namespace' => $namespace]);
 $routes->post('talent_contracts/send', 'Talent_contracts::send', ['namespace' => $namespace]);

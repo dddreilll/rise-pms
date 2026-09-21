@@ -14,7 +14,7 @@
             columns: [
                 {title: '<?php echo app_lang("project"); ?>', "class": "all"},
                 {title: '<?php echo app_lang("status"); ?>'},
-                {title: '<?php echo app_lang("talent_contract"); ?>'},
+                {title: '<?php echo app_lang("talent_contract_agreements"); ?>'},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]
         });

@@ -84,6 +84,28 @@ class Talent_contracts extends Security_Controller {
         return $this->template->view('Talent_Management\Views\talent_contracts\send_modal_form', $view_data);
     }
 
+    //everything a Reactor's project asks of them: one row per agreement with its state and what can be done next
+    function agreements_modal() {
+        $this->validate_submitted_data(array(
+            "talent_project_id" => "required|numeric"
+        ));
+
+        $talent_project_id = $this->request->getPost("talent_project_id");
+
+        $context = $this->Talent_project_model->get_context($talent_project_id);
+        if (!$context) {
+            show_404();
+        }
+
+        $view_data["talent_project_id"] = $talent_project_id;
+        $view_data["context"] = $context;
+        $view_data["states"] = $this->Talent_contract_service->get_agreement_states($talent_project_id);
+        $view_data["requirement"] = $this->Talent_contract_service->get_requirement_status($talent_project_id);
+        $view_data["sendable_count"] = count($this->Talent_contract_service->get_sendable_templates($talent_project_id));
+
+        return $this->template->view('Talent_Management\Views\talent_contracts\agreements_modal', $view_data);
+    }
+
     //a contract behind a row of the project's talent list: the text as sent, or as signed, with its state and activity
     function view_modal_form() {
         $this->validate_submitted_data(array(

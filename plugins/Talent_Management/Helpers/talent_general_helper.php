@@ -240,17 +240,30 @@ if (!function_exists('talent_contract_status_html')) {
     }
 }
 
-//the "Send contract" button, offered while nothing is out for signature and nothing is signed
+//the "Send" button of one agreement: template_id preselects it in the form; without one the form offers everything that can go out
 if (!function_exists('talent_contract_send_action_html')) {
 
-    function talent_contract_send_action_html($talent_project_id, $contract_status = "", $token_expires_at = "") {
-        $status = talent_contract_effective_status($contract_status, $token_expires_at);
-        if ($status === "sent" || $status === "signed") {
-            return "";
+    function talent_contract_send_action_html($talent_project_id, $template_id = 0, $again = false, $small = true) {
+        $label = $again ? app_lang("talent_contract_send_again") : app_lang("talent_contract_send");
+        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_send"), "data-post-talent_project_id" => $talent_project_id);
+        if ($template_id) {
+            $attributes["data-post-template_id"] = $template_id;
         }
 
-        $label = $status ? app_lang("talent_contract_send_again") : app_lang("talent_contract_send");
-        return modal_anchor(get_uri("talent_contracts/send_modal_form"), "<i data-feather='send' class='icon-14'></i> " . $label, array("class" => "btn btn-default btn-sm", "title" => app_lang("talent_contract_send"), "data-post-talent_project_id" => $talent_project_id));
+        return modal_anchor(get_uri("talent_contracts/send_modal_form"), "<i data-feather='send' class='icon-16'></i> " . $label, $attributes);
+    }
+}
+
+//the "signed on paper" link of one agreement
+if (!function_exists('talent_contract_paper_action_html')) {
+
+    function talent_contract_paper_action_html($talent_project_id, $template_id = 0, $small = true) {
+        $attributes = array("class" => "btn btn-default" . ($small ? " btn-sm" : ""), "title" => app_lang("talent_contract_paper_title"), "data-post-talent_project_id" => $talent_project_id);
+        if ($template_id) {
+            $attributes["data-post-template_id"] = $template_id;
+        }
+
+        return modal_anchor(get_uri("talent_contracts/paper_modal_form"), "<i data-feather='upload' class='icon-16'></i> " . app_lang("talent_contract_paper_short"), $attributes);
     }
 }
 
@@ -266,14 +279,46 @@ if (!function_exists('talent_contract_view_action_html')) {
     }
 }
 
-//badge + view + send buttons for one row of the project's talent list or one kanban card
+//the badge that sums up a casting link's agreements: "2 of 3 signed" when its project requires some (green once all are signed),
+//otherwise what has been sent or signed anyway. Empty when there is nothing to say.
+if (!function_exists('talent_agreements_badge_html')) {
+
+    function talent_agreements_badge_html($row) {
+        $required_total = (int) $row->required_total;
+        $required_signed = (int) $row->required_signed;
+        $waiting = (int) $row->waiting_count;
+        $signed = (int) $row->signed_count;
+
+        $badge = function ($text, $color) {
+            return "<span class='badge' style='background-color: $color'>" . $text . "</span>";
+        };
+
+        if ($required_total > 0) {
+            $color = $required_signed >= $required_total ? "#2e7d32" : (($required_signed > 0 || $waiting > 0) ? "#ef6c00" : "#7c8798");
+            $html = $badge(sprintf(app_lang("talent_contract_progress"), $required_signed, $required_total), $color);
+            if ($waiting > 0) {
+                $html .= " " . $badge(sprintf(app_lang("talent_contract_waiting_count"), $waiting), "#ef6c00");
+            }
+            return $html;
+        }
+
+        $parts = array();
+        if ($signed > 0) {
+            $parts[] = $badge(sprintf(app_lang("talent_contract_signed_count"), $signed), "#2e7d32");
+        }
+        if ($waiting > 0) {
+            $parts[] = $badge(sprintf(app_lang("talent_contract_waiting_count"), $waiting), "#ef6c00");
+        }
+        return implode(" ", $parts);
+    }
+}
+
+//badge + the one Agreements button for a row of the project's talent list, a kanban card or the talent profile's projects
 if (!function_exists('talent_contract_cell_html')) {
 
     function talent_contract_cell_html($row) {
-        $badge = talent_contract_status_html($row->contract_status, $row->contract_expires_at);
-        $view = talent_contract_view_action_html($row->contract_id);
-        $action = talent_contract_send_action_html($row->talent_project_id, $row->contract_status, $row->contract_expires_at);
-        return trim(implode(" ", array_filter(array($badge, $view, $action))));
+        $button = modal_anchor(get_uri("talent_contracts/agreements_modal"), "<i data-feather='file-text' class='icon-16'></i> " . app_lang("talent_contract_agreements"), array("class" => "btn btn-default btn-sm", "title" => app_lang("talent_contract_agreements"), "data-post-talent_project_id" => $row->talent_project_id, "data-modal-lg" => "1"));
+        return trim(implode(" ", array_filter(array(talent_agreements_badge_html($row), $button))));
     }
 }
 

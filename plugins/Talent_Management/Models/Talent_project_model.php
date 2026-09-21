@@ -13,29 +13,50 @@ class Talent_project_model extends Crud_model {
         parent::__construct($this->table);
     }
 
+    //Where a casting link stands on agreements, as columns for a list query:
+    //  required_total   how many agreements the project requires (its list, live templates only)
+    //  required_signed  how many of those this casting link has a signature for
+    //  waiting_count    agreements sent and still waiting for a signature (link not lapsed)
+    //  signed_count     agreements signed, whether they are required or extras
+    //$casting_link_id and $project_id are column expressions of the query this goes into.
+    private function _agreement_counts_sql($casting_link_id, $project_id) {
+        $contracts = $this->db->prefixTable("talent_contracts");
+        $agreements = $this->db->prefixTable("talent_project_agreements");
+        $templates = $this->db->prefixTable("talent_contract_templates");
+
+        return "(SELECT COUNT(*) FROM $agreements AS required
+                    INNER JOIN $templates AS required_template ON required_template.id=required.template_id AND required_template.deleted=0
+                    WHERE required.project_id=$project_id) AS required_total,
+                (SELECT COUNT(*) FROM $agreements AS required
+                    INNER JOIN $templates AS required_template ON required_template.id=required.template_id AND required_template.deleted=0
+                    WHERE required.project_id=$project_id AND EXISTS (
+                        SELECT 1 FROM $contracts AS signed_contract
+                        WHERE signed_contract.talent_project_id=$casting_link_id AND signed_contract.template_id=required.template_id AND signed_contract.status='signed' AND signed_contract.deleted=0
+                    )) AS required_signed,
+                (SELECT COUNT(*) FROM $contracts AS waiting_contract
+                    WHERE waiting_contract.talent_project_id=$casting_link_id AND waiting_contract.status='sent' AND waiting_contract.deleted=0
+                    AND (waiting_contract.token_expires_at IS NULL OR waiting_contract.token_expires_at>UTC_TIMESTAMP())) AS waiting_count,
+                (SELECT COUNT(DISTINCT signed_contract.template_id) FROM $contracts AS signed_contract
+                    WHERE signed_contract.talent_project_id=$casting_link_id AND signed_contract.status='signed' AND signed_contract.deleted=0) AS signed_count";
+    }
+
     //talent assigned to a given project, with each casting link's own status
     function get_details_for_project($project_id) {
         $talent_projects_table = $this->db->prefixTable("talent_projects");
         $talent_table = $this->db->prefixTable("talent");
         $talent_status_table = $this->db->prefixTable("talent_status");
-        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
 
         $project_id = $this->_get_clean_value($project_id);
 
-        //each casting link also carries its newest contract (any state) for the badge and the "Send contract" button
+        //each casting link also carries its agreement counts for the "2 of 3 signed" badge
         $sql = "SELECT $talent_projects_table.id AS talent_project_id,
                 IF($talent_projects_table.sort!=0, $talent_projects_table.sort, $talent_projects_table.id) AS new_sort,
                 $talent_projects_table.talent_status_id, $talent_table.*,
                 $talent_status_table.title AS talent_status_title, $talent_status_table.color AS talent_status_color,
-                $talent_contracts_table.id AS contract_id, $talent_contracts_table.status AS contract_status,
-                $talent_contracts_table.token_expires_at AS contract_expires_at, $talent_contracts_table.sent_at AS contract_sent_at
+                " . $this->_agreement_counts_sql($talent_projects_table . ".id", $talent_projects_table . ".project_id") . "
                 FROM $talent_projects_table
                 LEFT JOIN $talent_table ON $talent_table.id=$talent_projects_table.talent_id
                 LEFT JOIN $talent_status_table ON $talent_status_table.id=$talent_projects_table.talent_status_id
-                LEFT JOIN $talent_contracts_table ON $talent_contracts_table.id=(
-                    SELECT MAX(latest_contract.id) FROM $talent_contracts_table AS latest_contract
-                    WHERE latest_contract.talent_project_id=$talent_projects_table.id AND latest_contract.deleted=0
-                )
                 WHERE $talent_projects_table.deleted=0 AND $talent_table.deleted=0 AND $talent_projects_table.project_id=$project_id
                 ORDER BY $talent_projects_table.id DESC";
 
@@ -69,22 +90,16 @@ class Talent_project_model extends Crud_model {
         $talent_projects_table = $this->db->prefixTable("talent_projects");
         $projects_table = $this->db->prefixTable("projects");
         $talent_status_table = $this->db->prefixTable("talent_status");
-        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
 
         $talent_id = $this->_get_clean_value($talent_id);
 
-        //each project also carries the newest contract of that casting link (any state), like the project's own talent list does
+        //each project also carries its agreement counts, like the project's own talent list does
         $sql = "SELECT $talent_projects_table.id AS talent_project_id, $projects_table.id AS project_id, $projects_table.title AS project_title, $projects_table.status AS project_status,
                 $talent_status_table.title AS talent_status_title, $talent_status_table.color AS talent_status_color,
-                $talent_contracts_table.id AS contract_id, $talent_contracts_table.status AS contract_status,
-                $talent_contracts_table.token_expires_at AS contract_expires_at, $talent_contracts_table.sent_at AS contract_sent_at
+                " . $this->_agreement_counts_sql($talent_projects_table . ".id", $projects_table . ".id") . "
                 FROM $talent_projects_table
                 LEFT JOIN $projects_table ON $projects_table.id=$talent_projects_table.project_id
                 LEFT JOIN $talent_status_table ON $talent_status_table.id=$talent_projects_table.talent_status_id
-                LEFT JOIN $talent_contracts_table ON $talent_contracts_table.id=(
-                    SELECT MAX(latest_contract.id) FROM $talent_contracts_table AS latest_contract
-                    WHERE latest_contract.talent_project_id=$talent_projects_table.id AND latest_contract.deleted=0
-                )
                 WHERE $talent_projects_table.deleted=0 AND $projects_table.deleted=0 AND $talent_projects_table.talent_id=$talent_id
                 ORDER BY $talent_projects_table.id DESC";
 
