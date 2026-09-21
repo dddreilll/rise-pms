@@ -14,8 +14,8 @@ class Talent_contract_bundle_model extends Crud_model {
         parent::__construct($this->table);
     }
 
-    //the bundle, or null when there is none with this id
-    function find($bundle_id) {
+    //the bundle, or null when there is none with this id. (Not called find(): CodeIgniter's Model already has a find() with another signature.)
+    function get_existing($bundle_id) {
         if (!is_numeric($bundle_id) || (int) $bundle_id <= 0) {
             return null;
         }

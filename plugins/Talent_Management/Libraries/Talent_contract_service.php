@@ -525,7 +525,7 @@ class Talent_contract_service {
         }
 
         $contract = $this->Talent_contract_model->get_public($contract_id);
-        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "expired") || !$this->Talent_contract_bundle_model->find($contract->bundle_id)) {
+        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "expired") || !$this->Talent_contract_bundle_model->get_existing($contract->bundle_id)) {
             return $this->_fail("talent_contract_error_cannot_resend");
         }
 
@@ -736,7 +736,7 @@ class Talent_contract_service {
             return null;
         }
 
-        $bundle = $this->Talent_contract_bundle_model->find($bundle_id);
+        $bundle = $this->Talent_contract_bundle_model->get_existing($bundle_id);
         if (!$bundle || !hash_equals((string) $bundle->token_hash, hash("sha256", $token))) {
             return null;
         }
@@ -926,7 +926,7 @@ class Talent_contract_service {
             $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id IN (" . implode(",", $ids) . ") ORDER BY id FOR UPDATE");
 
             //a link that was replaced while this request waited for the lock is a dead link
-            $fresh_bundle = $this->Talent_contract_bundle_model->find($bundle->id);
+            $fresh_bundle = $this->Talent_contract_bundle_model->get_existing($bundle->id);
             if (!$fresh_bundle || !hash_equals((string) $fresh_bundle->token_hash, hash("sha256", $token))) {
                 $db->transRollback();
                 return $this->_fail("talent_sign_error_invalid");
@@ -1027,7 +1027,7 @@ class Talent_contract_service {
                 return $this->_fail_for_state($state);
             }
 
-            $fresh_bundle = $this->Talent_contract_bundle_model->find($bundle->id);
+            $fresh_bundle = $this->Talent_contract_bundle_model->get_existing($bundle->id);
             if (!$fresh_bundle || !hash_equals((string) $fresh_bundle->token_hash, hash("sha256", $token))) {
                 $db->transRollback();
                 return $this->_fail("talent_sign_error_invalid");
