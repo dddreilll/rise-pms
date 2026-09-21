@@ -18,15 +18,26 @@
         <?php } else { ?>
             <div class="text-off mb15"><?php echo app_lang("talent_contract_paper_intro"); ?></div>
 
-            <?php if ($withdraws_pending) { ?>
-                <div class="alert alert-info"><i data-feather="info" class="icon-16"></i> <?php echo app_lang("talent_contract_paper_withdraws"); ?></div>
+            <div class="form-group">
+                <div class="row">
+                    <label for="paper_template_id" class="col-md-3"><?php echo app_lang("talent_contract_paper_agreement"); ?></label>
+                    <div class="col-md-9">
+                        <?php
+                        echo form_dropdown("template_id", $templates_dropdown, $selected_template, "id='paper_template_id' class='form-control select2' data-rule-required='true' data-msg-required='" . app_lang("field_required") . "'");
+                        ?>
+                    </div>
+                </div>
+            </div>
+
+            <?php if ($withdraws_ids) { ?>
+                <div id="talent-contract-paper-withdraws" class="alert alert-info hide"><i data-feather="info" class="icon-16"></i> <?php echo app_lang("talent_contract_paper_withdraws"); ?></div>
             <?php } ?>
 
             <div class="form-group">
                 <div class="row">
                     <label for="paper_title" class="col-md-3"><?php echo app_lang("talent_contract_paper_contract_title"); ?></label>
                     <div class="col-md-9">
-                        <input type="text" id="paper_title" name="title" value="<?php echo esc($default_title); ?>" maxlength="255" class="form-control" data-rule-required="true" data-msg-required="<?php echo app_lang("field_required"); ?>" />
+                        <input type="text" id="paper_title" name="title" value="" maxlength="255" class="form-control" placeholder="<?php echo esc(app_lang("talent_contract_paper_title_help")); ?>" />
                     </div>
                 </div>
             </div>
@@ -81,5 +92,14 @@
         });
 
         setDatePicker("#paper_signed_on");
+
+        //a waiting contract for the chosen agreement is withdrawn by its paper copy
+        $("#paper_template_id").appDropdown();
+        var withdrawsIds = <?php echo json_encode(array_map('strval', $withdraws_ids)); ?>;
+        var showWithdraws = function () {
+            $("#talent-contract-paper-withdraws").toggleClass("hide", withdrawsIds.indexOf(String($("#paper_template_id").val())) === -1);
+        };
+        $("#paper_template_id").on("change", showWithdraws);
+        showWithdraws();
     });
 </script>

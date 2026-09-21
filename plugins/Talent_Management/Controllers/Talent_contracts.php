@@ -44,34 +44,42 @@ class Talent_contracts extends Security_Controller {
             show_404();
         }
 
+        //the agreements that can go out now: everything that isn't already waiting or signed for this casting link, required ones first
+        $sendable = $this->Talent_contract_service->get_sendable_templates($talent_project_id);
         $templates_dropdown = array("" => "- " . app_lang("talent_contract_select_template") . " -");
-        foreach ($this->Talent_contract_template_model->get_details()->getResult() as $template) {
-            $templates_dropdown[$template->id] = $template->title;
+        $moves_back_ids = array();
+        foreach ($sendable as $template) {
+            $templates_dropdown[$template["id"]] = $template["title"] . ($template["required"] ? " (" . app_lang("talent_contract_required") . ")" : "");
+
+            //sending a listed agreement to someone who is confirmed takes them back to Contract Signing: the form says so beforehand
+            if ($context->talent_status_key === "confirmed" && $this->Talent_contract_service->get_stage_for_send($talent_project_id, $template["id"])) {
+                $moves_back_ids[] = $template["id"];
+            }
         }
 
         //say why nothing can be sent instead of showing a form that will only fail
-        $state = $this->Talent_contract_service->get_state($talent_project_id);
         $blocked_message = "";
-        if ($state["status"] === "signed") {
-            $blocked_message = app_lang("talent_contract_error_already_signed");
-        } else if ($state["status"] === "sent") {
-            $blocked_message = app_lang("talent_contract_error_pending");
-        } else if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
             $blocked_message = app_lang("talent_contract_error_no_email");
         } else if (trim((string) $context->legal_name) === "") {
             $blocked_message = app_lang("talent_contract_error_no_legal_name");
-        } else if (count($templates_dropdown) < 2) {
-            $blocked_message = app_lang("talent_contract_error_no_templates");
+        } else if (!$sendable) {
+            $blocked_message = count($this->Talent_contract_template_model->get_details()->getResult()) ? app_lang("talent_contract_error_all_sent") : app_lang("talent_contract_error_no_templates");
+        }
+
+        $selected_template = $this->request->getPost("template_id");
+        if (!$selected_template || !isset($templates_dropdown[$selected_template])) {
+            $selected_template = count($sendable) === 1 ? $sendable[0]["id"] : "";
         }
 
         $view_data["talent_project_id"] = $talent_project_id;
         $view_data["context"] = $context;
         $view_data["templates_dropdown"] = $templates_dropdown;
-        $view_data["selected_template"] = count($templates_dropdown) === 2 ? array_keys($templates_dropdown)[1] : "";
+        $view_data["selected_template"] = $selected_template;
         $view_data["blocked_message"] = $blocked_message;
-        $view_data["moves_from_confirmed"] = $context->talent_status_key === "confirmed";
+        $view_data["moves_back_ids"] = $moves_back_ids;
         $view_data["can_manage_templates"] = talent_can_manage_contract_templates();
-        $view_data["show_paper_link"] = $state["status"] !== "signed";
+        $view_data["show_paper_link"] = true;
 
         return $this->template->view('Talent_Management\Views\talent_contracts\send_modal_form', $view_data);
     }
@@ -115,7 +123,7 @@ class Talent_contracts extends Security_Controller {
         echo json_encode($result);
     }
 
-    //for a contract the talent signed on paper: the scan goes in here and counts as the signature
+    //for a contract the talent signed on paper: the scan goes in here and counts as the signature of the agreement chosen
     function paper_modal_form() {
         $this->validate_submitted_data(array(
             "talent_project_id" => "required|numeric"
@@ -128,19 +136,56 @@ class Talent_contracts extends Security_Controller {
             show_404();
         }
 
-        $state = $this->Talent_contract_service->get_state($talent_project_id);
+        //every agreement that isn't signed yet for this casting link, required ones first; a waiting one is withdrawn by its paper copy
+        $states = array();
+        foreach ($this->Talent_contract_service->get_agreement_states($talent_project_id) as $state) {
+            $states[$state["template_id"]] = $state;
+        }
+
+        $withdraws_ids = array();
+        $required_first = array();
+        $others = array();
+        foreach ($this->Talent_contract_template_model->get_details()->getResult() as $template) {
+            $state = isset($states[(int) $template->id]) ? $states[(int) $template->id] : null;
+            if ($state && $state["status"] === "signed") {
+                continue;
+            }
+            if ($state && $state["status"] === "sent") {
+                $withdraws_ids[] = (int) $template->id;
+            }
+
+            $is_required = $state && $state["required"];
+            $entry = array("id" => (int) $template->id, "title" => $template->title . ($is_required ? " (" . app_lang("talent_contract_required") . ")" : ""));
+            if ($is_required) {
+                $required_first[] = $entry;
+            } else {
+                $others[] = $entry;
+            }
+        }
+
+        $options = array("" => "- " . app_lang("talent_contract_select_template") . " -");
+        foreach (array_merge($required_first, $others) as $entry) {
+            $options[$entry["id"]] = $entry["title"];
+        }
+
         $blocked_message = "";
-        if ($state["status"] === "signed") {
-            $blocked_message = app_lang("talent_contract_error_already_signed");
-        } else if (trim((string) $context->legal_name) === "") {
+        if (trim((string) $context->legal_name) === "") {
             $blocked_message = app_lang("talent_contract_error_no_legal_name");
+        } else if (count($options) < 2) {
+            $blocked_message = app_lang("talent_contract_error_all_signed");
+        }
+
+        $selected_template = $this->request->getPost("template_id");
+        if (!$selected_template || !isset($options[$selected_template])) {
+            $selected_template = count($options) === 2 ? array_keys($options)[1] : "";
         }
 
         $view_data["talent_project_id"] = $talent_project_id;
         $view_data["context"] = $context;
         $view_data["blocked_message"] = $blocked_message;
-        $view_data["withdraws_pending"] = $state["status"] === "sent";
-        $view_data["default_title"] = app_lang("talent_contract_paper_default_title");
+        $view_data["templates_dropdown"] = $options;
+        $view_data["selected_template"] = $selected_template;
+        $view_data["withdraws_ids"] = $withdraws_ids;
         $view_data["today"] = get_my_local_time("Y-m-d");
         $view_data["max_mb"] = talent_contract_paper_max_mb();
 
@@ -150,6 +195,7 @@ class Talent_contracts extends Security_Controller {
     function save_paper() {
         $this->validate_submitted_data(array(
             "talent_project_id" => "required|numeric",
+            "template_id" => "required|numeric",
             "signed_on" => "required"
         ));
 
@@ -169,7 +215,7 @@ class Talent_contracts extends Security_Controller {
 
         //the title and note are plain text; the service cleans them and everything is escaped where it is shown
         $result = $this->Talent_contract_service->record_paper_copy(
-                $this->request->getPost("talent_project_id"), (string) $this->request->getPost("title"), (string) $this->request->getPost("signed_on"), (string) $this->request->getPost("note"), array("path" => $file->getTempName(), "name" => $file->getClientName()), $this->_actor()
+                $this->request->getPost("talent_project_id"), $this->request->getPost("template_id"), (string) $this->request->getPost("title"), (string) $this->request->getPost("signed_on"), (string) $this->request->getPost("note"), array("path" => $file->getTempName(), "name" => $file->getClientName()), $this->_actor()
         );
 
         echo json_encode($result);

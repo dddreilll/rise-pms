@@ -53,8 +53,8 @@
                     </div>
                 </div>
 
-                <?php if ($moves_from_confirmed) { ?>
-                    <div class="alert alert-info">
+                <?php if ($moves_back_ids) { ?>
+                    <div id="talent-contract-moves-back" class="alert alert-info hide">
                         <i data-feather="info" class="icon-16"></i> <?php echo app_lang("talent_contract_moves_from_confirmed"); ?>
                     </div>
                 <?php } ?>
@@ -97,6 +97,14 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $("#template_id").appDropdown();
+
+        //sending a required agreement to someone who is confirmed takes them back to Contract Signing; an extra doesn't
+        var movesBackIds = <?php echo json_encode(array_map('strval', $moves_back_ids)); ?>;
+        var showMovesBack = function () {
+            $("#talent-contract-moves-back").toggleClass("hide", movesBackIds.indexOf(String($("#template_id").val())) === -1);
+        };
+        $("#template_id").on("change", showMovesBack);
+        showMovesBack();
 
         $("#talent-contract-send-form").appForm({
             //the modal stays open so the signing link can be copied

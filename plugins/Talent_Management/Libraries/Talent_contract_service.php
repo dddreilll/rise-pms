@@ -6,6 +6,7 @@ use Talent_Management\Models\Talent_contract_event_model;
 use Talent_Management\Models\Talent_contract_model;
 use Talent_Management\Models\Talent_contract_template_model;
 use Talent_Management\Models\Talent_model;
+use Talent_Management\Models\Talent_project_agreement_model;
 use Talent_Management\Models\Talent_project_model;
 use Talent_Management\Models\Talent_status_model;
 
@@ -17,6 +18,7 @@ class Talent_contract_service {
     private $Talent_contract_event_model;
     private $Talent_contract_template_model;
     private $Talent_model;
+    private $Talent_project_agreement_model;
     private $Talent_project_model;
     private $Talent_status_model;
 
@@ -25,31 +27,178 @@ class Talent_contract_service {
         $this->Talent_contract_event_model = new Talent_contract_event_model();
         $this->Talent_contract_template_model = new Talent_contract_template_model();
         $this->Talent_model = new Talent_model();
+        $this->Talent_project_agreement_model = new Talent_project_agreement_model();
         $this->Talent_project_model = new Talent_project_model();
         $this->Talent_status_model = new Talent_status_model();
     }
 
-    //the newest contract of a casting link and whether another one can be sent right now
-    function get_state($talent_project_id) {
-        $contract = $this->Talent_contract_model->get_latest_for_talent_project($talent_project_id);
-        $status = $contract ? talent_contract_effective_status($contract->status, $contract->token_expires_at) : "";
-
-        return array(
-            "contract" => $contract,
-            "status" => $status,
-            "can_send" => !($status === "sent" || $status === "signed"),
-        );
+    //The agreements a project requires of its talent (its "required list"), or an empty list when it has none.
+    private function _required_templates($project_id) {
+        return $project_id ? $this->Talent_project_agreement_model->get_templates_for_project($project_id) : array();
     }
 
-    //Why a casting link can't enter the Confirmed stage yet, as a language key; null when it can. Confirmed is for people who have signed:
-    //a pending, declined, expired or missing contract all count as "not yet", but the message tells the first apart from the rest.
+    private function _ids_of($templates) {
+        return array_map(function ($template) {
+            return (int) $template->id;
+        }, $templates);
+    }
+
+    //Where a casting link stands against its project's required list: has_list (the project asks for anything at all), the required
+    //templates, the ones still missing a signature, and complete (a list exists and every entry on it is signed).
+    function get_requirement_status($talent_project_id) {
+        $assignment = $this->Talent_project_model->get_one($talent_project_id);
+        $required = $assignment->id ? $this->_required_templates($assignment->project_id) : array();
+        $signed = $required ? $this->Talent_contract_model->get_signed_template_ids($talent_project_id) : array();
+
+        $missing = array_values(array_filter($required, function ($template) use ($signed) {
+            return !in_array((int) $template->id, $signed, true);
+        }));
+
+        return array("has_list" => count($required) > 0, "required" => $required, "missing" => $missing, "complete" => count($required) > 0 && !$missing);
+    }
+
+    //Every agreement of a casting link with where it stands: first the ones its project requires (in the order chosen), then extras that
+    //were sent although they aren't on the list. Each row: template_id, title, required, contract (the newest one or null), status
+    //(its effective state, "" when nothing was sent) and can_send (nothing is waiting or signed).
+    function get_agreement_states($talent_project_id) {
+        $assignment = $this->Talent_project_model->get_one($talent_project_id);
+        $required = $assignment->id ? $this->_required_templates($assignment->project_id) : array();
+
+        $latest = array();
+        foreach ($this->Talent_contract_model->get_latest_per_agreement($talent_project_id) as $contract) {
+            $latest[(int) $contract->template_id] = $contract;
+        }
+
+        $row = function ($template_id, $title, $is_required) use (&$latest) {
+            $contract = isset($latest[$template_id]) ? $latest[$template_id] : null;
+            unset($latest[$template_id]);
+            $status = $contract ? talent_contract_effective_status($contract->status, $contract->token_expires_at) : "";
+
+            return array("template_id" => (int) $template_id, "title" => $title, "required" => $is_required, "contract" => $contract, "status" => $status, "can_send" => !($status === "sent" || $status === "signed"));
+        };
+
+        $rows = array();
+        foreach ($required as $template) {
+            $rows[] = $row((int) $template->id, $template->title, true);
+        }
+        foreach ($latest as $template_id => $contract) {
+            $rows[] = $row((int) $template_id, $contract->title, false);
+        }
+
+        return $rows;
+    }
+
+    //the templates that can be sent to this casting link right now (nothing of that agreement is waiting or signed), required ones first
+    function get_sendable_templates($talent_project_id) {
+        $blocked = array();
+        foreach ($this->get_agreement_states($talent_project_id) as $state) {
+            if (!$state["can_send"]) {
+                $blocked[$state["template_id"]] = true;
+            }
+        }
+
+        $assignment = $this->Talent_project_model->get_one($talent_project_id);
+        $required_ids = $assignment->id ? $this->_ids_of($this->_required_templates($assignment->project_id)) : array();
+
+        $sendable = array();
+        foreach ($this->Talent_contract_template_model->get_details()->getResult() as $template) {
+            if (!isset($blocked[(int) $template->id])) {
+                $sendable[] = array("id" => (int) $template->id, "title" => $template->title, "required" => in_array((int) $template->id, $required_ids, true));
+            }
+        }
+
+        usort($sendable, function ($a, $b) {
+            return $a["required"] === $b["required"] ? 0 : ($a["required"] ? -1 : 1);
+        });
+
+        return $sendable;
+    }
+
+    //Why a casting link can't enter the Confirmed stage yet, as a message naming what is still to sign; null when it can. A project with no
+    //required list has no gate at all (staff move cards themselves). The titles are escaped: the message is shown as HTML.
     function get_confirm_block_reason($talent_project_id) {
-        if ($this->Talent_contract_model->has_signed($talent_project_id)) {
+        $status = $this->get_requirement_status($talent_project_id);
+        if (!$status["has_list"] || $status["complete"]) {
             return null;
         }
 
-        $state = $this->get_state($talent_project_id);
-        return $state["status"] === "sent" ? "talent_contract_gate_pending" : "talent_contract_gate_missing";
+        $titles = array_map(function ($template) {
+            return esc($template->title);
+        }, $status["missing"]);
+
+        return sprintf(app_lang("talent_contract_gate_missing"), implode(", ", $titles));
+    }
+
+    //Where sending this agreement should put the card: the Contract Signing stage id, or null to leave it where it is.
+    //  - an extra (the project has a list and this agreement isn't on it) never moves the card;
+    //  - a card in Confirmed goes back only for a listed agreement (that is a requirement it no longer meets);
+    //  - a card in a stage before Contract Signing moves there; Contract Signing itself and later stages (Wrapped) are left alone.
+    function get_stage_for_send($talent_project_id, $template_id) {
+        $assignment = $this->Talent_project_model->get_one($talent_project_id);
+        if (!$assignment->id || $assignment->deleted) {
+            return null;
+        }
+
+        $stages = $this->Talent_status_model->get_system_stage_ids();
+        $signing_id = (int) get_array_value($stages, "contract_signing");
+        $confirmed_id = (int) get_array_value($stages, "confirmed");
+        if (!$signing_id) {
+            return null;
+        }
+
+        $required_ids = $this->_ids_of($this->_required_templates($assignment->project_id));
+        $has_list = count($required_ids) > 0;
+        $listed = in_array((int) $template_id, $required_ids, true);
+        if ($has_list && !$listed) {
+            return null;
+        }
+
+        $current_id = (int) $assignment->talent_status_id;
+        if ($current_id === $signing_id) {
+            return null;
+        }
+        if ($confirmed_id && $current_id === $confirmed_id) {
+            return ($has_list && $listed) ? $signing_id : null;
+        }
+
+        $current = $this->Talent_status_model->get_one($current_id);
+        $signing = $this->Talent_status_model->get_one($signing_id);
+        return (int) $current->sort < (int) $signing->sort ? $signing_id : null;
+    }
+
+    //After a signature is saved (inside the caller's transaction): with a required list, the signature that completes it moves the card
+    //to Confirmed. No list, an agreement that isn't on the list, or agreements still missing: nothing applies (returns null).
+    //Otherwise array(moved, stage_id, reason). Being in Confirmed already needs no move and no entry.
+    private function _settle_confirmation($talent_project_id, $template_id) {
+        $assignment = $this->Talent_project_model->get_one($talent_project_id);
+        $required_ids = $this->_ids_of($this->_required_templates($assignment->project_id));
+        if (!$required_ids || !in_array((int) $template_id, $required_ids, true)) {
+            return null;
+        }
+
+        $signed = $this->Talent_contract_model->get_signed_template_ids($talent_project_id);
+        foreach ($required_ids as $required_id) {
+            if (!in_array($required_id, $signed, true)) {
+                return null;
+            }
+        }
+
+        //a valid signature stands even if the card was unassigned meanwhile or the pipeline lost its Confirmed stage; the trail says so
+        if (!$assignment->id || $assignment->deleted) {
+            return array("moved" => false, "stage_id" => 0, "reason" => "assignment_removed");
+        }
+
+        $confirmed_id = (int) get_array_value($this->Talent_status_model->get_system_stage_ids(), "confirmed");
+        if (!$confirmed_id) {
+            return array("moved" => false, "stage_id" => 0, "reason" => "no_confirmed_stage");
+        }
+        if ((int) $assignment->talent_status_id === $confirmed_id) {
+            return null;
+        }
+
+        $card = array("talent_status_id" => $confirmed_id);
+        $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card");
+        return array("moved" => true, "stage_id" => $confirmed_id, "reason" => "");
     }
 
     //what the staff member reads before sending; the signature fields show as blanks so the layout is clear. Null if it can't be built.
@@ -106,7 +255,7 @@ class Talent_contract_service {
             //two people (or a double click) sending for the same casting link must not both get through
             $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $talent_project_id . " FOR UPDATE");
 
-            $current = $this->Talent_contract_model->get_latest_for_talent_project($talent_project_id);
+            $current = $this->Talent_contract_model->get_latest_for_agreement($talent_project_id, $template->id);
             if ($current) {
                 $current_status = talent_contract_effective_status($current->status, $current->token_expires_at);
                 if ($current_status === "signed" || $current_status === "sent") {
@@ -147,8 +296,12 @@ class Talent_contract_service {
             $frozen_data = array("content" => $frozen, "content_hash" => $content_hash);
             $this->_must($this->Talent_contract_model->ci_save($frozen_data, $contract_id), "freeze the contract text");
 
-            $card = array("talent_status_id" => $signing_stage_id);
-            $this->_must($this->Talent_project_model->ci_save($card, $talent_project_id), "move the card");
+            //read under the lock, so a card that moved a moment ago is judged where it is now
+            $move_to = $this->get_stage_for_send($talent_project_id, $template->id);
+            if ($move_to) {
+                $card = array("talent_status_id" => $move_to);
+                $this->_must($this->Talent_project_model->ci_save($card, $talent_project_id), "move the card");
+            }
 
             $this->_must($this->Talent_contract_event_model->log($contract_id, "sent", $actor, array(
                         "to" => $context->email,
@@ -231,7 +384,9 @@ class Talent_contract_service {
                 $stages = $this->Talent_status_model->get_system_stage_ids();
                 $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
                 $signing_stage_id = get_array_value($stages, "contract_signing");
-                if ($assignment->id && !$assignment->deleted && $signing_stage_id && (int) $assignment->talent_status_id === (int) get_array_value($stages, "confirmed")) {
+                //Confirmed means "everything the project requires is signed", so only withdrawing a LISTED agreement takes the card back out
+                $listed = $assignment->id && in_array((int) $contract->template_id, $this->_ids_of($this->_required_templates($assignment->project_id)), true);
+                if ($listed && !$assignment->deleted && $signing_stage_id && (int) $assignment->talent_status_id === (int) get_array_value($stages, "confirmed")) {
                     $card = array("talent_status_id" => $signing_stage_id);
                     $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card back");
                     $this->_must($this->Talent_contract_event_model->log($contract->id, "card_reverted", array("type" => "system"), array("stage_id" => (int) $signing_stage_id)), "log the card move");
@@ -301,7 +456,7 @@ class Talent_contract_service {
             //signed, declined or voided in the meantime: nothing to send any more. And only the newest contract of a casting link can come
             //back to life; an older lapsed one would otherwise sit next to the newer contract as a second live link.
             $latest = $this->Talent_contract_model->get_public($contract->id);
-            $newest = $this->Talent_contract_model->get_latest_for_talent_project($contract->talent_project_id);
+            $newest = $this->Talent_contract_model->get_latest_for_agreement($contract->talent_project_id, $contract->template_id);
             if (!($latest->status === "sent" || $latest->status === "expired") || !$newest || (int) $newest->id !== (int) $contract->id) {
                 $db->transRollback();
                 return $this->_fail("talent_contract_error_cannot_resend");
@@ -340,9 +495,15 @@ class Talent_contract_service {
     //Records a contract that was signed on paper. The scan (a PDF, or a photo that is turned into one) is kept as the signed copy, and
     //this is the only way a card reaches Confirmed without the talent signing online, so it is audited like everything else. A contract
     //still waiting for the talent is withdrawn in the same step. $file is array(path, name); $signed_on is the date on the paper (Y-m-d).
-    function record_paper_copy($talent_project_id, $title, $signed_on, $note, $file, $actor) {
+    function record_paper_copy($talent_project_id, $template_id, $title, $signed_on, $note, $file, $actor) {
         if (!is_numeric($talent_project_id)) {
             return $this->_fail("talent_contract_error_assignment_missing");
+        }
+
+        //the scan is for one of the agreements: that is what makes it count toward the project's list
+        $template = is_numeric($template_id) ? $this->Talent_contract_template_model->get_one($template_id) : null;
+        if (!$template || !$template->id || $template->deleted) {
+            return $this->_fail("talent_contract_error_template");
         }
 
         $context = $this->Talent_project_model->get_context($talent_project_id);
@@ -365,7 +526,7 @@ class Talent_contract_service {
 
         $title = trim(preg_replace('/\s+/', " ", $this->_clean_text($title, 255)));
         if ($title === "") {
-            $title = app_lang("talent_contract_paper_default_title");
+            $title = $template->title;
         }
         $note = $this->_clean_text($note, 1000);
 
@@ -384,7 +545,7 @@ class Talent_contract_service {
         try {
             $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $talent_project_id . " FOR UPDATE");
 
-            $current = $this->Talent_contract_model->get_latest_for_talent_project($talent_project_id);
+            $current = $this->Talent_contract_model->get_latest_for_agreement($talent_project_id, $template->id);
             if ($current) {
                 if ($current->status === "signed") {
                     $db->transRollback();
@@ -401,6 +562,7 @@ class Talent_contract_service {
 
             $contract = array(
                 "talent_project_id" => $talent_project_id,
+                "template_id" => $template->id,
                 "title" => $title,
                 "content" => "",
                 "content_hash" => $pdf_hash,
@@ -419,14 +581,8 @@ class Talent_contract_service {
             $contract_id = $this->Talent_contract_model->ci_save($contract);
             $this->_must($contract_id, "record the paper copy");
 
-            $assignment = $this->Talent_project_model->get_one($talent_project_id);
-            $confirmed_stage_id = get_array_value($this->Talent_status_model->get_system_stage_ids(), "confirmed");
-            $confirmed = false;
-            if ($assignment->id && !$assignment->deleted && $confirmed_stage_id) {
-                $card = array("talent_status_id" => $confirmed_stage_id);
-                $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card");
-                $confirmed = true;
-            }
+            $outcome = $this->_settle_confirmation($talent_project_id, $template->id);
+            $confirmed = $outcome && $outcome["moved"];
 
             $file_name = talent_strip_4byte_chars(preg_replace('/[\x00-\x1F\x7F]/', "", basename(str_replace("\\", "/", (string) get_array_value($file, "name")))));
             $meta = array("signed_on" => $signed_on, "file_name" => substr($file_name, 0, 120), "pdf_hash" => $pdf_hash, "bytes" => strlen($pdf), "from_image" => $scan["from_image"]);
@@ -434,7 +590,9 @@ class Talent_contract_service {
                 $meta["note"] = $note;
             }
             $this->_must($this->Talent_contract_event_model->log($contract_id, "signed_paper", $actor, $meta), "log the paper copy");
-            $this->_must($this->Talent_contract_event_model->log($contract_id, $confirmed ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $confirmed ? array("stage_id" => (int) $confirmed_stage_id) : array("reason" => ($assignment->id && !$assignment->deleted) ? "no_confirmed_stage" : "assignment_removed")), "log the card move");
+            if ($outcome) {
+                $this->_must($this->Talent_contract_event_model->log($contract_id, $outcome["moved"] ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $outcome["moved"] ? array("stage_id" => $outcome["stage_id"]) : array("reason" => $outcome["reason"])), "log the card move");
+            }
 
             $db->transCommit();
         } catch (\Throwable $ex) {
@@ -498,8 +656,8 @@ class Talent_contract_service {
 
         $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
 
-        //only the newest contract of a casting link can be sent again
-        $newest = $this->Talent_contract_model->get_latest_for_talent_project($contract->talent_project_id);
+        //only the newest contract of an agreement on a casting link can be sent again
+        $newest = $this->Talent_contract_model->get_latest_for_agreement($contract->talent_project_id, $contract->template_id);
 
         return array(
             "contract" => $contract,
@@ -608,16 +766,10 @@ class Talent_contract_service {
             );
             $this->_must($this->Talent_contract_model->ci_save($signed, $contract->id), "record the signature");
 
-            //the signature is what unlocks Confirmed. A card that was unassigned in the meantime, or a pipeline that lost its
-            //Confirmed stage, doesn't undo a valid signature; it is noted in the audit trail instead.
+            //the signature that completes the project's required list is what confirms the card (see _settle_confirmation)
             $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
-            $confirmed_stage_id = get_array_value($this->Talent_status_model->get_system_stage_ids(), "confirmed");
-            $confirmed = false;
-            if ($assignment->id && !$assignment->deleted && $confirmed_stage_id) {
-                $card = array("talent_status_id" => $confirmed_stage_id);
-                $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card");
-                $confirmed = true;
-            }
+            $outcome = $this->_settle_confirmation($contract->talent_project_id, $contract->template_id);
+            $confirmed = $outcome && $outcome["moved"];
 
             $this->_must($this->Talent_contract_event_model->log($contract->id, "signed", $actor, array(
                         "name" => $name,
@@ -627,7 +779,9 @@ class Talent_contract_service {
                         "pdf_hash" => $pdf_hash,
                     )), "log the signature");
 
-            $this->_must($this->Talent_contract_event_model->log($contract->id, $confirmed ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $confirmed ? array("stage_id" => (int) $confirmed_stage_id) : array("reason" => ($assignment->id && !$assignment->deleted) ? "no_confirmed_stage" : "assignment_removed")), "log the card move");
+            if ($outcome) {
+                $this->_must($this->Talent_contract_event_model->log($contract->id, $outcome["moved"] ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $outcome["moved"] ? array("stage_id" => $outcome["stage_id"]) : array("reason" => $outcome["reason"])), "log the card move");
+            }
 
             $db->transCommit();
         } catch (\Throwable $ex) {

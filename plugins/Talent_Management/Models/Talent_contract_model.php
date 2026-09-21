@@ -13,35 +13,62 @@ class Talent_contract_model extends Crud_model {
         parent::__construct($this->table);
     }
 
-    //newest contract of a casting link, whatever state it is in; it drives the badge and whether "Send contract" is offered.
-    //The frozen text is left out because callers only need the state.
-    function get_latest_for_talent_project($talent_project_id) {
+    //the columns a state check needs; the frozen text and the signature are left out because callers only need the state
+    private function _state_columns() {
+        $t = $this->db->prefixTable("talent_contracts");
+        return "$t.id, $t.talent_project_id, $t.template_id, $t.title, $t.status, $t.token_expires_at, $t.sent_to_email, $t.sent_at, $t.signed_at, $t.signed_via";
+    }
+
+    //Newest contract of one agreement (template) on a casting link, whatever state it is in. Contracts are tracked per casting link AND
+    //agreement, so this is what says whether that agreement can be sent, resent or is signed.
+    function get_latest_for_agreement($talent_project_id, $template_id) {
         $talent_contracts_table = $this->db->prefixTable("talent_contracts");
 
         $talent_project_id = $this->_get_clean_value($talent_project_id);
+        $template_id = $this->_get_clean_value($template_id);
 
-        $sql = "SELECT $talent_contracts_table.id, $talent_contracts_table.talent_project_id, $talent_contracts_table.title, $talent_contracts_table.status,
-                $talent_contracts_table.token_expires_at, $talent_contracts_table.sent_to_email, $talent_contracts_table.sent_at, $talent_contracts_table.signed_at
+        $sql = "SELECT " . $this->_state_columns() . "
                 FROM $talent_contracts_table
-                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.talent_project_id=$talent_project_id
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.talent_project_id=$talent_project_id AND $talent_contracts_table.template_id=$template_id
                 ORDER BY $talent_contracts_table.id DESC
                 LIMIT 1";
 
         return $this->db->query($sql)->getRow();
     }
 
-    //has this casting link got a signature on file? A voided or declined contract doesn't count, only a signed one.
-    function has_signed($talent_project_id) {
+    //the newest contract of every agreement that has one on this casting link, oldest agreement first
+    function get_latest_per_agreement($talent_project_id) {
         $talent_contracts_table = $this->db->prefixTable("talent_contracts");
 
         $talent_project_id = $this->_get_clean_value($talent_project_id);
 
-        $sql = "SELECT $talent_contracts_table.id
+        $sql = "SELECT " . $this->_state_columns() . "
                 FROM $talent_contracts_table
-                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.status='signed' AND $talent_contracts_table.talent_project_id=$talent_project_id
-                LIMIT 1";
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.talent_project_id=$talent_project_id
+                AND $talent_contracts_table.id=(
+                    SELECT MAX(newest.id) FROM $talent_contracts_table AS newest
+                    WHERE newest.deleted=0 AND newest.talent_project_id=$talent_contracts_table.talent_project_id AND newest.template_id=$talent_contracts_table.template_id
+                )
+                ORDER BY $talent_contracts_table.id ASC";
 
-        return $this->db->query($sql)->getRow() ? true : false;
+        return $this->db->query($sql)->getResult();
+    }
+
+    //ids of the agreements this casting link has a signature for. A voided or declined contract doesn't count, only a signed one.
+    function get_signed_template_ids($talent_project_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $talent_project_id = $this->_get_clean_value($talent_project_id);
+
+        $sql = "SELECT DISTINCT $talent_contracts_table.template_id
+                FROM $talent_contracts_table
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.status='signed' AND $talent_contracts_table.talent_project_id=$talent_project_id";
+
+        $ids = array();
+        foreach ($this->db->query($sql)->getResult() as $row) {
+            $ids[] = (int) $row->template_id;
+        }
+        return $ids;
     }
 
     //ids of the contracts still waiting for a signature (link not yet used), for one casting link or for every casting link of a talent

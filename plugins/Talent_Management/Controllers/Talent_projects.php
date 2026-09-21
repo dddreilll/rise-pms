@@ -155,9 +155,10 @@ class Talent_projects extends Security_Controller {
             //Confirmed is only for people who have signed. The gate is on ENTERING the stage: a card already there can still be
             //reordered, and leaving it is free. The signature itself moves the card there without passing through here.
             if ($status->system_key === "confirmed" && (int) $casting_link->talent_status_id !== (int) $status->id) {
+                //a project with a required list needs every agreement on it signed; one without a list has no gate
                 $reason = (new Talent_contract_service())->get_confirm_block_reason($id);
                 if ($reason) {
-                    echo json_encode(array("success" => false, "message" => app_lang($reason)));
+                    echo json_encode(array("success" => false, "message" => $reason));
                     return;
                 }
             }
