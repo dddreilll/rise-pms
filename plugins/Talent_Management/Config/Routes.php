@@ -66,7 +66,7 @@ $routes->post('talent_project_agreements/save', 'Talent_project_agreements::save
 $routes->get('talent_sign/(:num)/(:alphanum)', 'Talent_sign::index/$1/$2', ['namespace' => $namespace]);
 $routes->post('talent_sign/sign', 'Talent_sign::sign', ['namespace' => $namespace]);
 $routes->post('talent_sign/decline', 'Talent_sign::decline', ['namespace' => $namespace]);
-$routes->get('talent_sign/download/(:num)/(:alphanum)', 'Talent_sign::download/$1/$2', ['namespace' => $namespace]);
+$routes->get('talent_sign/download/(:num)/(:alphanum)/(:num)', 'Talent_sign::download/$1/$2/$3', ['namespace' => $namespace]);
 
 //project <-> talent linkage (list view)
 $routes->get('talent_projects/project_tab/(:num)', 'Talent_projects::project_tab/$1', ['namespace' => $namespace]);

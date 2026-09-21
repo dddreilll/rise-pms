@@ -88,6 +88,21 @@ if (!function_exists('talent_contract_table_definitions')) {
                 UNIQUE KEY `project_template` (`project_id`, `template_id`)
             ) $table_options;",
 
+            //One row per email sent: a bundle is the unit that carries the signing link. It holds the token (only its sha256) and the expiry, and the
+            //contracts it delivers point back with bundle_id; a send of one agreement is a bundle of one. Kept together with the contracts on uninstall.
+            "talent_contract_bundles" => "CREATE TABLE IF NOT EXISTS `" . $db_prefix . "talent_contract_bundles` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `talent_project_id` int(11) NOT NULL,
+                `token_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+                `token_expires_at` datetime DEFAULT NULL,
+                `sent_to_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+                `sent_by` int(11) NOT NULL DEFAULT '0',
+                `sent_at` datetime DEFAULT NULL,
+                `created_at` datetime DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `talent_project_id` (`talent_project_id`)
+            ) $table_options;",
+
             //one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token.
             //The drawn signature (PNG) and the signed PDF are kept here as base64 text: nothing depends on where files/ lives or survives
             //a redeploy, there is no public file URL to guess, and text passes the 3-byte utf8 connection where raw binary would not.
@@ -95,6 +110,7 @@ if (!function_exists('talent_contract_table_definitions')) {
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `talent_project_id` int(11) NOT NULL,
                 `template_id` int(11) NOT NULL DEFAULT '0',
+                `bundle_id` int(11) NOT NULL DEFAULT '0',
                 `title` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `content` mediumtext COLLATE utf8_unicode_ci,
                 `content_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
@@ -119,6 +135,7 @@ if (!function_exists('talent_contract_table_definitions')) {
                 PRIMARY KEY (`id`),
                 KEY `talent_project_id` (`talent_project_id`),
                 KEY `talent_project_template` (`talent_project_id`, `template_id`),
+                KEY `bundle_id` (`bundle_id`),
                 KEY `status` (`status`)
             ) $table_options;",
 
@@ -177,6 +194,12 @@ if (!function_exists('talent_ensure_schema_structure')) {
         if (!talent_column_exists($db, $templates_table, "starter_key")) {
             $db->query("ALTER TABLE `$templates_table` ADD `starter_key` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL, ADD KEY `starter_key` (`starter_key`)");
             $changes[] = "Added starter_key to talent_contract_templates";
+        }
+
+        //which bundle (email + signing link) delivered a contract; 0 for contracts that were never sent through one (paper copies, old records)
+        if (!talent_column_exists($db, $contracts_table, "bundle_id")) {
+            $db->query("ALTER TABLE `$contracts_table` ADD `bundle_id` int(11) NOT NULL DEFAULT '0' AFTER `template_id`, ADD KEY `bundle_id` (`bundle_id`)");
+            $changes[] = "Added bundle_id to talent_contracts";
         }
 
         //agreements are tracked per casting link and template, so that pair is looked up a lot
@@ -335,8 +358,29 @@ if (!function_exists('talent_email_template_exists')) {
 
 if (!function_exists('talent_ensure_email_template')) {
 
+    //true when the stored template is still one of the built-in defaults of an earlier version (nobody has changed its subject or default text)
+    function talent_email_template_is_outdated($db, $db_prefix) {
+        $row = $db->query("SELECT email_subject, default_message FROM `" . $db_prefix . "email_templates` WHERE template_name='talent_contract_request' LIMIT 1")->getRow();
+        if (!$row) {
+            return false;
+        }
+
+        foreach (talent_contract_previous_default_emails() as $previous) {
+            if ((string) $row->email_subject === $previous["subject"] && (string) $row->default_message === $previous["message"]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function talent_ensure_email_template($db, $db_prefix) {
         if (talent_email_template_exists($db, $db_prefix)) {
+            //a template that still holds an earlier built-in text is brought up to date; anything an admin edited is left alone
+            if (talent_email_template_is_outdated($db, $db_prefix)) {
+                $default = talent_contract_default_email();
+                $db->query("UPDATE `" . $db_prefix . "email_templates` SET email_subject=" . $db->escape($default["subject"]) . ", default_message=" . $db->escape($default["message"]) . " WHERE template_name='talent_contract_request'");
+                return array("Updated email template talent_contract_request");
+            }
             return array();
         }
 
@@ -351,6 +395,46 @@ if (!function_exists('talent_ensure_email_template')) {
         ));
 
         return array("Created email template talent_contract_request");
+    }
+}
+
+//Contracts that were waiting for a signature before bundles existed each get a bundle of their own (copying the token hash, expiry, address and
+//sender), so they can be resent. Their old emailed link used the contract's id and stops working; resending makes a fresh one.
+if (!function_exists('talent_bundles_pending_migration')) {
+
+    function talent_bundles_pending_migration($db, $db_prefix) {
+        $contracts_table = $db_prefix . "talent_contracts";
+        if (!talent_column_exists($db, $contracts_table, "bundle_id")) {
+            return false;
+        }
+
+        return $db->query("SELECT id FROM `$contracts_table` WHERE bundle_id=0 AND deleted=0 AND status IN ('sent','expired') AND token_hash!='' LIMIT 1")->getRow() ? true : false;
+    }
+}
+
+if (!function_exists('talent_ensure_bundles')) {
+
+    function talent_ensure_bundles($db, $db_prefix) {
+        $contracts_table = $db_prefix . "talent_contracts";
+        $bundles_table = $db_prefix . "talent_contract_bundles";
+        $moved = 0;
+
+        $rows = $db->query("SELECT id, talent_project_id, token_hash, token_expires_at, sent_to_email, sent_by, sent_at FROM `$contracts_table` WHERE bundle_id=0 AND deleted=0 AND status IN ('sent','expired') AND token_hash!='' ORDER BY id ASC")->getResult();
+        foreach ($rows as $row) {
+            $db->table($bundles_table)->insert(array(
+                "talent_project_id" => $row->talent_project_id,
+                "token_hash" => $row->token_hash,
+                "token_expires_at" => $row->token_expires_at,
+                "sent_to_email" => $row->sent_to_email,
+                "sent_by" => $row->sent_by,
+                "sent_at" => $row->sent_at,
+                "created_at" => get_current_utc_time(),
+            ));
+            $db->query("UPDATE `$contracts_table` SET bundle_id=" . (int) $db->insertID() . " WHERE id=" . (int) $row->id);
+            $moved++;
+        }
+
+        return $moved ? array("Moved " . $moved . " waiting contract(s) into bundles (their old emailed links need to be sent again)") : array();
     }
 }
 
@@ -422,6 +506,7 @@ if (!function_exists('talent_ensure_schema')) {
 
         try {
             $changes = talent_ensure_schema_structure($db, $db_prefix);
+            $changes = array_merge($changes, talent_ensure_bundles($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_system_stages($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_starter_templates($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_email_template($db, $db_prefix));
@@ -453,6 +538,10 @@ if (!function_exists('talent_ensure_schema_once')) {
                     || !talent_table_exists($db, $db_prefix . "talent_contract_events")
                     || !talent_column_exists($db, $db_prefix . "talent_contracts", "signature_data")
                     || !talent_column_exists($db, $db_prefix . "talent_contracts", "signed_via")
+                    || !talent_table_exists($db, $db_prefix . "talent_contract_bundles")
+                    || !talent_column_exists($db, $db_prefix . "talent_contracts", "bundle_id")
+                    || talent_bundles_pending_migration($db, $db_prefix)
+                    || talent_email_template_is_outdated($db, $db_prefix)
                     || !talent_table_exists($db, $db_prefix . "talent_project_agreements")
                     || !talent_column_exists($db, $db_prefix . "talent_contract_templates", "starter_key")
                     || !talent_starter_templates_exist($db, $db_prefix)

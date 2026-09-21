@@ -322,10 +322,32 @@ if (!function_exists('talent_contract_cell_html')) {
     }
 }
 
-//the mail that carries the signing link; also what gets seeded as the editable "Contract request" email template
+//the mail that carries the signing link; also what gets seeded as the editable "Contract request" email template.
+//{AGREEMENT_LIST} is the agreements in this link as a list, {CONTRACT_TITLE} is the agreement's title (or "3 agreements" for a bundle)
 if (!function_exists('talent_contract_default_email')) {
 
     function talent_contract_default_email() {
+        return array(
+            "subject" => "Please sign {CONTRACT_TITLE} for {PROJECT_TITLE}",
+            "message" => "<div style=\"background-color: #eeeeef; padding: 50px 0;\"><div style=\"max-width:640px; margin:0 auto;\">"
+            . "<div style=\"color: #fff; text-align: center; background-color:#33333e; padding: 30px; border-top-left-radius: 3px; border-top-right-radius: 3px; margin: 0;\"><h1>Your agreement is ready</h1></div>"
+            . "<div style=\"padding: 20px; background-color: rgb(255, 255, 255); color: #555; font-size: 14px;\">"
+            . "<p>Hello {TALENT_NAME},</p>"
+            . "<p>{COMPANY_NAME} has prepared the following for you for <strong>{PROJECT_TITLE}</strong>:</p>"
+            . "{AGREEMENT_LIST}"
+            . "<p>Please review and sign online:</p>"
+            . "<p><a href=\"{CONTRACT_URL}\" target=\"_blank\">Review and sign</a></p>"
+            . "<p>This link is personal to you, so please don't forward it. It expires on {EXPIRY_DATE}.</p>"
+            . "<p>{SIGNATURE}</p>"
+            . "</div></div></div>",
+        );
+    }
+}
+
+//the built-in texts of earlier versions, so a stored template that was never edited can be recognised and brought up to date
+if (!function_exists('talent_contract_previous_default_emails')) {
+
+    function talent_contract_default_email_v1() {
         return array(
             "subject" => "Please review and sign your agreement for {PROJECT_TITLE}",
             "message" => "<div style=\"background-color: #eeeeef; padding: 50px 0;\"><div style=\"max-width:640px; margin:0 auto;\">"
@@ -338,6 +360,10 @@ if (!function_exists('talent_contract_default_email')) {
             . "<p>{SIGNATURE}</p>"
             . "</div></div></div>",
         );
+    }
+
+    function talent_contract_previous_default_emails() {
+        return array(talent_contract_default_email_v1());
     }
 }
 
@@ -371,7 +397,7 @@ if (!function_exists('talent_contract_notification_description')) {
         $db = db_connect('default');
         $prefix = get_db_prefix();
 
-        $row = $db->query("SELECT c.id, c.title, c.status, c.signer_name, t.legal_name, t.preferred_name
+        $row = $db->query("SELECT c.id, c.title, c.status, c.signer_name, c.bundle_id, c.signed_at, t.legal_name, t.preferred_name
                 FROM `" . $prefix . "talent_contracts` c
                 LEFT JOIN `" . $prefix . "talent_projects` tp ON tp.id=c.talent_project_id
                 LEFT JOIN `" . $prefix . "talent` t ON t.id=tp.talent_id
@@ -382,6 +408,20 @@ if (!function_exists('talent_contract_notification_description')) {
 
         //a signature is under the legal name; otherwise use the name staff know the person by
         $who = ($row->status === "signed" && $row->signer_name) ? $row->signer_name : ($row->preferred_name ? $row->preferred_name : $row->legal_name);
+
+        //one notification is sent per signing, so when several agreements were signed together it lists them all
+        $together = array();
+        if ($row->status === "signed" && (int) $row->bundle_id > 0 && $row->signed_at) {
+            $together = $db->query("SELECT id, title FROM `" . $prefix . "talent_contracts`
+                    WHERE bundle_id=" . (int) $row->bundle_id . " AND status='signed' AND signed_at=" . $db->escape($row->signed_at) . " AND deleted=0 ORDER BY id")->getResult();
+        }
+        if (count($together) > 1) {
+            $titles = array_map(function ($item) {
+                return esc($item->title) . " (" . esc(talent_contract_label($item->id)) . ")";
+            }, $together);
+            return "<div>" . sprintf(app_lang("talent_contract_signed_together"), count($together)) . ": " . implode(", ", $titles) . "</div>"
+                    . "<div>" . app_lang("talent") . ": " . esc($who) . "</div>";
+        }
 
         return "<div>" . esc($row->title) . " (" . esc(talent_contract_label($row->id)) . ")</div>"
                 . "<div>" . app_lang("talent") . ": " . esc($who) . "</div>";

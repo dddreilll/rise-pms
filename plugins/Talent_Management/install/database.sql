@@ -78,6 +78,21 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_project_agreements` (
   UNIQUE KEY `project_template` (`project_id`, `template_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
+-- one row per email sent: a bundle is the unit that carries the signing link (only the sha256 of the token is stored) and the expiry.
+-- The contracts it delivers point back with bundle_id; sending one agreement is a bundle of one. Kept with the contracts on uninstall.
+CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contract_bundles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `talent_project_id` int(11) NOT NULL,
+  `token_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `token_expires_at` datetime DEFAULT NULL,
+  `sent_to_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `sent_by` int(11) NOT NULL DEFAULT '0',
+  `sent_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `talent_project_id` (`talent_project_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
 -- one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token.
 -- The drawn signature (PNG) and the signed PDF are kept here as base64 text: nothing depends on where files/ lives or
 -- survives a redeploy, there is no public file URL to guess, and text passes the 3-byte utf8 connection where raw binary would not.
@@ -85,6 +100,7 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contracts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `talent_project_id` int(11) NOT NULL,
   `template_id` int(11) NOT NULL DEFAULT '0',
+  `bundle_id` int(11) NOT NULL DEFAULT '0',
   `title` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
   `content` mediumtext COLLATE utf8_unicode_ci,
   `content_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
@@ -109,6 +125,7 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contracts` (
   PRIMARY KEY (`id`),
   KEY `talent_project_id` (`talent_project_id`),
   KEY `talent_project_template` (`talent_project_id`, `template_id`),
+  KEY `bundle_id` (`bundle_id`),
   KEY `status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

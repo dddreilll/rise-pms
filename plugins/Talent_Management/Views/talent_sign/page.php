@@ -38,7 +38,7 @@
                             <div class="text-off mb15"><?php echo sprintf(app_lang("talent_sign_expires"), esc(format_to_date($contract->token_expires_at, true))); ?></div>
 
                             <?php echo form_open(get_uri("talent_sign/sign"), array("id" => "talent-sign-form", "class" => "general-form", "role" => "form")); ?>
-                            <input type="hidden" name="id" value="<?php echo (int) $contract->id; ?>" />
+                            <input type="hidden" name="bundle_id" value="<?php echo (int) $contract->bundle_id; ?>" />
                             <input type="hidden" name="token" value="<?php echo esc($token); ?>" />
 
                             <div class="form-group">
@@ -63,7 +63,7 @@
 
                             <div class="form-group">
                                 <label class="d-flex align-items-start">
-                                    <input type="checkbox" name="consent" value="1" class="mt5 mr10"
+                                    <input type="checkbox" name="contract_ids[]" value="<?php echo (int) $contract->id; ?>" class="mt5 mr10"
                                            data-rule-required="true" data-msg-required="<?php echo app_lang("talent_sign_consent_required"); ?>" />
                                     <span><?php echo esc(app_lang("talent_sign_consent")); ?></span>
                                 </label>
@@ -85,7 +85,7 @@
                                 <?php echo sprintf(app_lang("talent_sign_signed_banner"), esc($contract->signer_name), esc(format_to_date($contract->signed_at, true))); ?>
                             </div>
                             <div>
-                                <?php echo anchor(get_uri("talent_sign/download/" . (int) $contract->id . "/" . $token), "<i data-feather='download' class='icon-16'></i> " . app_lang("talent_sign_download"), array("class" => "btn btn-default")); ?>
+                                <?php echo anchor(get_uri("talent_sign/download/" . (int) $contract->bundle_id . "/" . $token . "/" . (int) $contract->id), "<i data-feather='download' class='icon-16'></i> " . app_lang("talent_sign_download"), array("class" => "btn btn-default")); ?>
                             </div>
                         </div>
                     <?php } else { ?>
@@ -158,7 +158,7 @@
                             url: "<?php echo get_uri("talent_sign/decline"); ?>",
                             type: "POST",
                             dataType: "json",
-                            data: {id: "<?php echo (int) $contract->id; ?>", token: "<?php echo esc($token); ?>", reason: $("#talent-decline-reason").val()},
+                            data: {bundle_id: "<?php echo (int) $contract->bundle_id; ?>", contract_id: "<?php echo (int) $contract->id; ?>", token: "<?php echo esc($token); ?>", reason: $("#talent-decline-reason").val()},
                             success: function (result) {
                                 if (result.success) {
                                     appAlert.success(result.message, {duration: 8000});

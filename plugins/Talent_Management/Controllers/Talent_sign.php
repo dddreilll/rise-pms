@@ -40,10 +40,10 @@ class Talent_sign extends Security_Controller {
         return view('Talent_Management\Views\talent_sign\invalid');
     }
 
-    function index($contract_id = 0, $token = "") {
+    function index($bundle_id = 0, $token = "") {
         $this->_private_headers();
 
-        $page = $this->Talent_contract_service->prepare_public_page($contract_id, $token, $this->_request());
+        $page = $this->Talent_contract_service->prepare_public_page($bundle_id, $token, $this->_request());
         if (!$page) {
             return $this->_invalid();
         }
@@ -56,11 +56,12 @@ class Talent_sign extends Security_Controller {
         $this->_private_headers();
 
         $this->validate_submitted_data(array(
-            "id" => "required|numeric"
+            "bundle_id" => "required|numeric"
         ));
 
+        //the agreements the person ticked: each tick is the consent for that agreement and names it
         echo json_encode($this->Talent_contract_service->complete(
-                        $this->request->getPost("id"), (string) $this->request->getPost("token"), $this->request->getPost("email"), $this->request->getPost("consent"), $this->request->getPost("signature"), $this->_request()
+                        $this->request->getPost("bundle_id"), (string) $this->request->getPost("token"), (array) $this->request->getPost("contract_ids"), $this->request->getPost("email"), $this->request->getPost("signature"), $this->_request()
         ));
     }
 
@@ -68,18 +69,19 @@ class Talent_sign extends Security_Controller {
         $this->_private_headers();
 
         $this->validate_submitted_data(array(
-            "id" => "required|numeric"
+            "bundle_id" => "required|numeric",
+            "contract_id" => "required|numeric"
         ));
 
         echo json_encode($this->Talent_contract_service->decline(
-                        $this->request->getPost("id"), (string) $this->request->getPost("token"), $this->request->getPost("reason"), $this->_request()
+                        $this->request->getPost("bundle_id"), (string) $this->request->getPost("token"), $this->request->getPost("contract_id"), $this->request->getPost("reason"), $this->_request()
         ));
     }
 
-    function download($contract_id = 0, $token = "") {
+    function download($bundle_id = 0, $token = "", $contract_id = 0) {
         $this->_private_headers();
 
-        $pdf = $this->Talent_contract_service->get_signed_pdf($contract_id, $token, $this->_request());
+        $pdf = $this->Talent_contract_service->get_signed_pdf($bundle_id, $token, $contract_id, $this->_request());
         if (!$pdf) {
             return $this->_invalid();
         }

@@ -111,7 +111,7 @@ class Talent_contract_model extends Crud_model {
 
         $contract_id = $this->_get_clean_value($contract_id);
 
-        $sql = "SELECT $talent_contracts_table.id, $talent_contracts_table.talent_project_id, $talent_contracts_table.template_id, $talent_contracts_table.title,
+        $sql = "SELECT $talent_contracts_table.id, $talent_contracts_table.talent_project_id, $talent_contracts_table.template_id, $talent_contracts_table.bundle_id, $talent_contracts_table.title,
                 $talent_contracts_table.content, $talent_contracts_table.content_hash, $talent_contracts_table.token_hash, $talent_contracts_table.token_expires_at,
                 $talent_contracts_table.status, $talent_contracts_table.sent_to_email, $talent_contracts_table.sent_at, $talent_contracts_table.signer_name,
                 $talent_contracts_table.signer_email, $talent_contracts_table.signed_at, $talent_contracts_table.signed_via, $talent_contracts_table.signature_data, $talent_contracts_table.pdf_hash,
@@ -120,6 +120,39 @@ class Talent_contract_model extends Crud_model {
                 WHERE $talent_contracts_table.id=$contract_id";
 
         return $this->db->query($sql)->getRow();
+    }
+
+    //the columns of get_public(), for every contract a bundle delivered (oldest first); withdrawn ones are included so the signing page can say so
+    function get_for_bundle($bundle_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $bundle_id = $this->_get_clean_value($bundle_id);
+
+        $sql = "SELECT $talent_contracts_table.id, $talent_contracts_table.talent_project_id, $talent_contracts_table.template_id, $talent_contracts_table.bundle_id, $talent_contracts_table.title,
+                $talent_contracts_table.content, $talent_contracts_table.content_hash, $talent_contracts_table.token_hash, $talent_contracts_table.token_expires_at,
+                $talent_contracts_table.status, $talent_contracts_table.sent_to_email, $talent_contracts_table.sent_at, $talent_contracts_table.signer_name,
+                $talent_contracts_table.signer_email, $talent_contracts_table.signed_at, $talent_contracts_table.signed_via, $talent_contracts_table.signature_data, $talent_contracts_table.pdf_hash,
+                $talent_contracts_table.decline_reason, $talent_contracts_table.deleted
+                FROM $talent_contracts_table
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.bundle_id=$bundle_id
+                ORDER BY $talent_contracts_table.id ASC";
+
+        return $this->db->query($sql)->getResult();
+    }
+
+    //id and title of the other contracts delivered in the same bundle, for the staff view ("sent together with")
+    function get_bundle_mates($contract_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $contract_id = $this->_get_clean_value($contract_id);
+
+        $sql = "SELECT mate.id, mate.title, mate.status, mate.token_expires_at
+                FROM $talent_contracts_table AS mate
+                INNER JOIN $talent_contracts_table AS mine ON mine.bundle_id=mate.bundle_id AND mine.id=$contract_id
+                WHERE mate.deleted=0 AND mine.bundle_id>0 AND mate.id!=mine.id
+                ORDER BY mate.id ASC";
+
+        return $this->db->query($sql)->getResult();
     }
 
     function get_signed_pdf_data($contract_id) {

@@ -2,6 +2,7 @@
 
 namespace Talent_Management\Libraries;
 
+use Talent_Management\Models\Talent_contract_bundle_model;
 use Talent_Management\Models\Talent_contract_event_model;
 use Talent_Management\Models\Talent_contract_model;
 use Talent_Management\Models\Talent_contract_template_model;
@@ -15,6 +16,7 @@ use Talent_Management\Models\Talent_status_model;
 class Talent_contract_service {
 
     private $Talent_contract_model;
+    private $Talent_contract_bundle_model;
     private $Talent_contract_event_model;
     private $Talent_contract_template_model;
     private $Talent_model;
@@ -24,6 +26,7 @@ class Talent_contract_service {
 
     function __construct() {
         $this->Talent_contract_model = new Talent_contract_model();
+        $this->Talent_contract_bundle_model = new Talent_contract_bundle_model();
         $this->Talent_contract_event_model = new Talent_contract_event_model();
         $this->Talent_contract_template_model = new Talent_contract_template_model();
         $this->Talent_model = new Talent_model();
@@ -169,10 +172,13 @@ class Talent_contract_service {
     //After a signature is saved (inside the caller's transaction): with a required list, the signature that completes it moves the card
     //to Confirmed. No list, an agreement that isn't on the list, or agreements still missing: nothing applies (returns null).
     //Otherwise array(moved, stage_id, reason). Being in Confirmed already needs no move and no entry.
-    private function _settle_confirmation($talent_project_id, $template_id) {
+    private function _settle_confirmation($talent_project_id, $template_ids) {
         $assignment = $this->Talent_project_model->get_one($talent_project_id);
         $required_ids = $this->_ids_of($this->_required_templates($assignment->project_id));
-        if (!$required_ids || !in_array((int) $template_id, $required_ids, true)) {
+
+        //a signing can cover several agreements at once; it matters if at least one of them is on the list
+        $template_ids = array_map('intval', (array) $template_ids);
+        if (!$required_ids || !array_intersect($template_ids, $required_ids)) {
             return null;
         }
 
@@ -215,9 +221,29 @@ class Talent_contract_service {
         return $this->_render($template->content, $values + $this->_blank_signature_values());
     }
 
-    //Sends a contract for a casting link: freezes the text, creates the signing link, moves the card to Contract Signing and emails
-    //the talent. Returns array(success, message, ...). $actor is array(type, id, ip, user_agent) for the audit trail.
+    //Sends one agreement for a casting link (a bundle of one). Returns array(success, message, contract_id, emailed, email, link) or
+    //array(success => false, message). $actor is array(type, id, ip, user_agent) for the audit trail.
     function issue($talent_project_id, $template_id, $notes, $actor) {
+        $result = $this->issue_bundle($talent_project_id, array($template_id), $notes, $actor, false);
+        if (!$result["success"]) {
+            return array("success" => false, "message" => $result["message"]);
+        }
+
+        $bundle = $result["bundles"][0];
+        return array(
+            "success" => true,
+            "message" => $bundle["message"],
+            "contract_id" => $bundle["contract_ids"][0],
+            "emailed" => $bundle["emailed"],
+            "email" => $bundle["email"],
+            "link" => $bundle["link"],
+        );
+    }
+
+    //Sends agreements for a casting link. Several go out in ONE link and email unless $separate, which sends each on its own. Freezes each
+    //text, moves the card if the rules say so, and emails the talent. Returns success (something was sent), message, bundles (one entry per
+    //email: bundle_id, contract_ids, titles, emailed, email, link, message) and errors (what could not be sent, in split sends).
+    function issue_bundle($talent_project_id, $template_ids, $notes, $actor, $separate = false) {
         $context = $this->Talent_project_model->get_context($talent_project_id);
         if (!$context) {
             return $this->_fail("talent_contract_error_assignment_missing");
@@ -227,26 +253,65 @@ class Talent_contract_service {
         }
 
         //the talent signs under their legal name; it is fixed here, so the signature record always matches the name printed in the text
-        $legal_name = trim((string) $context->legal_name);
-        if ($legal_name === "") {
+        if (trim((string) $context->legal_name) === "") {
             return $this->_fail("talent_contract_error_no_legal_name");
         }
 
-        $template = $this->Talent_contract_template_model->get_one($template_id);
-        if (!$template->id || $template->deleted || $this->_is_blank($template->content)) {
+        $templates = array();
+        foreach ((array) $template_ids as $template_id) {
+            if (!is_numeric($template_id) || (int) $template_id <= 0 || isset($templates[(int) $template_id])) {
+                continue;
+            }
+
+            $template = $this->Talent_contract_template_model->get_one($template_id);
+            if (!$template->id || $template->deleted || $this->_is_blank($template->content)) {
+                return $this->_fail("talent_contract_error_template");
+            }
+            $templates[(int) $template->id] = $template;
+        }
+        if (!$templates) {
             return $this->_fail("talent_contract_error_template");
         }
 
-        $signing_stage_id = get_array_value($this->Talent_status_model->get_system_stage_ids(), "contract_signing");
-        if (!$signing_stage_id) {
+        if (!get_array_value($this->Talent_status_model->get_system_stage_ids(), "contract_signing")) {
             return $this->_fail("talent_contract_error_stage_missing");
         }
 
+        $groups = ($separate || count($templates) === 1) ? array_map(function ($template) {
+                    return array($template);
+                }, array_values($templates)) : array(array_values($templates));
+
+        $bundles = array();
+        $errors = array();
+        foreach ($groups as $group) {
+            $result = $this->_issue_bundle($context, $talent_project_id, $group, $notes, $actor);
+            if ($result["success"]) {
+                $bundles[] = $result;
+            } else {
+                $errors[] = $result["message"];
+            }
+        }
+
+        if (!$bundles) {
+            return array("success" => false, "message" => implode(" ", $errors));
+        }
+
+        $message = count($bundles) === 1 ? $bundles[0]["message"] : sprintf(app_lang("talent_contract_sent_many_message"), count($bundles), $context->email);
+        if ($errors) {
+            $message .= " " . implode(" ", $errors);
+        }
+
+        return array("success" => true, "message" => $message, "bundles" => $bundles, "errors" => $errors);
+    }
+
+    //One bundle: the link, its contracts and one email, in one transaction (the email goes out after the commit)
+    private function _issue_bundle($context, $talent_project_id, $templates, $notes, $actor) {
         //only a hash of the token is stored, so the link exists only in this response and the email
         $token = bin2hex(random_bytes(20));
         $now = get_current_utc_time();
         $expires_at = gmdate("Y-m-d H:i:s", strtotime($now . " UTC") + talent_contract_expiry_days() * 86400);
-        $title = $template->title;
+        $legal_name = trim((string) $context->legal_name);
+        $many = count($templates) > 1;
 
         $db = db_connect('default');
         $db->transBegin();
@@ -255,12 +320,17 @@ class Talent_contract_service {
             //two people (or a double click) sending for the same casting link must not both get through
             $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $talent_project_id . " FOR UPDATE");
 
-            $current = $this->Talent_contract_model->get_latest_for_agreement($talent_project_id, $template->id);
-            if ($current) {
+            foreach ($templates as $template) {
+                $current = $this->Talent_contract_model->get_latest_for_agreement($talent_project_id, $template->id);
+                if (!$current) {
+                    continue;
+                }
+
                 $current_status = talent_contract_effective_status($current->status, $current->token_expires_at);
                 if ($current_status === "signed" || $current_status === "sent") {
                     $db->transRollback();
-                    return $this->_fail($current_status === "signed" ? "talent_contract_error_already_signed" : "talent_contract_error_pending");
+                    $reason = app_lang($current_status === "signed" ? "talent_contract_error_already_signed" : "talent_contract_error_pending");
+                    return array("success" => false, "message" => $many ? sprintf(app_lang("talent_contract_error_bundle_item"), $template->title, $reason) : $reason);
                 }
 
                 //a lapsed link is marked expired now so the history reads correctly
@@ -271,45 +341,68 @@ class Talent_contract_service {
                 }
             }
 
-            $contract = array(
+            $bundle = array(
                 "talent_project_id" => $talent_project_id,
-                "template_id" => $template->id,
-                "title" => $title,
-                "content" => "",
                 "token_hash" => hash("sha256", $token),
                 "token_expires_at" => $expires_at,
-                "status" => "sent",
-                "signer_name" => $legal_name,
                 "sent_to_email" => $context->email,
                 "sent_by" => (int) get_array_value($actor, "id"),
                 "sent_at" => $now,
                 "created_at" => $now,
             );
-            $contract_id = $this->Talent_contract_model->ci_save($contract);
-            $this->_must($contract_id, "create the contract");
+            $bundle_id = $this->Talent_contract_bundle_model->ci_save($bundle);
+            $this->_must($bundle_id, "create the link");
 
-            //frozen from here on: later template edits never touch a sent contract. The hash covers the exact string stored.
-            $values = $this->_merge_values($context, $title, $notes, $now);
-            $values["CONTRACT_ID"] = esc(talent_contract_label($contract_id));
-            $frozen = talent_encode_4byte_chars($this->_render($template->content, $values));
-            $content_hash = hash("sha256", $frozen);
-            $frozen_data = array("content" => $frozen, "content_hash" => $content_hash);
-            $this->_must($this->Talent_contract_model->ci_save($frozen_data, $contract_id), "freeze the contract text");
-
-            //read under the lock, so a card that moved a moment ago is judged where it is now
-            $move_to = $this->get_stage_for_send($talent_project_id, $template->id);
+            //the card moves once, however many agreements are in the bundle: to Contract Signing if any of them calls for it
+            $move_to = null;
+            foreach ($templates as $template) {
+                $move_to = $move_to ? $move_to : $this->get_stage_for_send($talent_project_id, $template->id);
+            }
             if ($move_to) {
                 $card = array("talent_status_id" => $move_to);
                 $this->_must($this->Talent_project_model->ci_save($card, $talent_project_id), "move the card");
             }
 
-            $this->_must($this->Talent_contract_event_model->log($contract_id, "sent", $actor, array(
-                        "to" => $context->email,
-                        "signer_name" => $legal_name,
-                        "template_id" => (int) $template->id,
-                        "expires_at" => $expires_at,
-                        "content_hash" => $content_hash,
-                    )), "log the contract");
+            $contract_ids = array();
+            $titles = array();
+            foreach ($templates as $template) {
+                $contract = array(
+                    "talent_project_id" => $talent_project_id,
+                    "template_id" => $template->id,
+                    "bundle_id" => $bundle_id,
+                    "title" => $template->title,
+                    "content" => "",
+                    "token_expires_at" => $expires_at,
+                    "status" => "sent",
+                    "signer_name" => $legal_name,
+                    "sent_to_email" => $context->email,
+                    "sent_by" => (int) get_array_value($actor, "id"),
+                    "sent_at" => $now,
+                    "created_at" => $now,
+                );
+                $contract_id = $this->Talent_contract_model->ci_save($contract);
+                $this->_must($contract_id, "create the contract");
+
+                //frozen from here on: later template edits never touch a sent contract. The hash covers the exact string stored.
+                $values = $this->_merge_values($context, $template->title, $notes, $now);
+                $values["CONTRACT_ID"] = esc(talent_contract_label($contract_id));
+                $frozen = talent_encode_4byte_chars($this->_render($template->content, $values));
+                $content_hash = hash("sha256", $frozen);
+                $frozen_data = array("content" => $frozen, "content_hash" => $content_hash);
+                $this->_must($this->Talent_contract_model->ci_save($frozen_data, $contract_id), "freeze the contract text");
+
+                $this->_must($this->Talent_contract_event_model->log($contract_id, "sent", $actor, array(
+                            "to" => $context->email,
+                            "signer_name" => $legal_name,
+                            "template_id" => (int) $template->id,
+                            "bundle_id" => (int) $bundle_id,
+                            "expires_at" => $expires_at,
+                            "content_hash" => $content_hash,
+                        )), "log the contract");
+
+                $contract_ids[] = (int) $contract_id;
+                $titles[] = $template->title;
+            }
 
             $db->transCommit();
         } catch (\Throwable $ex) {
@@ -318,15 +411,19 @@ class Talent_contract_service {
             return $this->_fail("error_occurred");
         }
 
-        //after the commit on purpose: a slow mail server must not hold the lock, and a failed mail must not undo the contract
-        $link = get_uri("talent_sign/" . $contract_id . "/" . $token);
-        $emailed = $this->_send_email($context, $context->email, $title, $link, $expires_at);
-        $this->Talent_contract_event_model->log($contract_id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $context->email));
+        //after the commit on purpose: a slow mail server must not hold the lock, and a failed mail must not undo the contracts
+        $link = get_uri("talent_sign/" . $bundle_id . "/" . $token);
+        $emailed = $this->_send_email($context, $context->email, $titles, $link, $expires_at);
+        foreach ($contract_ids as $contract_id) {
+            $this->Talent_contract_event_model->log($contract_id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $context->email));
+        }
 
         return array(
             "success" => true,
             "message" => $emailed ? sprintf(app_lang("talent_contract_sent_message"), $context->email) : app_lang("talent_contract_email_failed_message"),
-            "contract_id" => $contract_id,
+            "bundle_id" => (int) $bundle_id,
+            "contract_ids" => $contract_ids,
+            "titles" => $titles,
             "emailed" => $emailed,
             "email" => $context->email,
             "link" => $link,
@@ -419,15 +516,16 @@ class Talent_contract_service {
     }
 
     //Sends the link again, for someone who lost the email or never got it. The token is only stored as a hash, so this makes a new one:
-    //the earlier link stops working. The mail goes to the talent's address on file now when it is valid (that is how a typo gets fixed),
-    //and the address the signer has to confirm follows it. A lapsed contract comes back to life with a fresh expiry.
+    //the earlier link stops working. It belongs to the bundle, so every waiting or lapsed agreement in it comes along on the new link
+    //(one email lists them) with a fresh expiry. The mail goes to the talent's address on file now when it is valid (that is how a typo
+    //gets fixed), and the address the signer has to confirm follows it.
     function resend($contract_id, $actor) {
         if (!is_numeric($contract_id)) {
             return $this->_fail("talent_contract_error_cannot_resend");
         }
 
         $contract = $this->Talent_contract_model->get_public($contract_id);
-        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "expired")) {
+        if (!$contract || !$contract->id || $contract->deleted || !($contract->status === "sent" || $contract->status === "expired") || !$this->Talent_contract_bundle_model->find($contract->bundle_id)) {
             return $this->_fail("talent_contract_error_cannot_resend");
         }
 
@@ -449,11 +547,12 @@ class Talent_contract_service {
         $db->transBegin();
 
         try {
-            //the card first, then the contract, as in issue() and void()
+            //the card, then the bundle, then its contracts in id order: the same order signing takes them in
             $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $contract->talent_project_id . " FOR UPDATE");
-            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contract_bundles") . " WHERE id=" . (int) $contract->bundle_id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE bundle_id=" . (int) $contract->bundle_id . " ORDER BY id FOR UPDATE");
 
-            //signed, declined or voided in the meantime: nothing to send any more. And only the newest contract of a casting link can come
+            //signed, declined or voided in the meantime: nothing to send any more. And only the newest contract of an agreement can come
             //back to life; an older lapsed one would otherwise sit next to the newer contract as a second live link.
             $latest = $this->Talent_contract_model->get_public($contract->id);
             $newest = $this->Talent_contract_model->get_latest_for_agreement($contract->talent_project_id, $contract->template_id);
@@ -462,14 +561,31 @@ class Talent_contract_service {
                 return $this->_fail("talent_contract_error_cannot_resend");
             }
 
-            $renewed = array("status" => "sent", "token_hash" => hash("sha256", $token), "token_expires_at" => $expires_at, "sent_to_email" => $to);
-            $this->_must($this->Talent_contract_model->ci_save($renewed, $contract->id), "renew the link");
-
-            $event_meta = array("to" => $to, "expires_at" => $expires_at);
-            if ($to !== (string) $contract->sent_to_email) {
-                $event_meta["previous_to"] = (string) $contract->sent_to_email;
+            //everything in the bundle that is still waiting for a signature (or lapsed) and is the newest of its own agreement
+            $renewed = array();
+            foreach ($this->Talent_contract_model->get_for_bundle($contract->bundle_id) as $mate) {
+                if (!($mate->status === "sent" || $mate->status === "expired")) {
+                    continue;
+                }
+                $mate_newest = $this->Talent_contract_model->get_latest_for_agreement($mate->talent_project_id, $mate->template_id);
+                if ($mate_newest && (int) $mate_newest->id === (int) $mate->id) {
+                    $renewed[] = $mate;
+                }
             }
-            $this->_must($this->Talent_contract_event_model->log($contract->id, "resent", $actor, $event_meta), "log the resend");
+
+            $bundle_data = array("token_hash" => hash("sha256", $token), "token_expires_at" => $expires_at, "sent_to_email" => $to);
+            $this->_must($this->Talent_contract_bundle_model->ci_save($bundle_data, $contract->bundle_id), "renew the link");
+
+            foreach ($renewed as $mate) {
+                $renew = array("status" => "sent", "token_expires_at" => $expires_at, "sent_to_email" => $to);
+                $this->_must($this->Talent_contract_model->ci_save($renew, $mate->id), "renew the contract");
+
+                $event_meta = array("to" => $to, "expires_at" => $expires_at, "bundle_id" => (int) $contract->bundle_id);
+                if ($to !== (string) $mate->sent_to_email) {
+                    $event_meta["previous_to"] = (string) $mate->sent_to_email;
+                }
+                $this->_must($this->Talent_contract_event_model->log($mate->id, "resent", $actor, $event_meta), "log the resend");
+            }
 
             $db->transCommit();
         } catch (\Throwable $ex) {
@@ -478,14 +594,24 @@ class Talent_contract_service {
             return $this->_fail("error_occurred");
         }
 
-        $link = get_uri("talent_sign/" . $contract->id . "/" . $token);
-        $emailed = $this->_send_email($context, $to, $contract->title, $link, $expires_at);
-        $this->Talent_contract_event_model->log($contract->id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $to));
+        $titles = array_map(function ($mate) {
+            return $mate->title;
+        }, $renewed);
+        $contract_ids = array_map(function ($mate) {
+            return (int) $mate->id;
+        }, $renewed);
+
+        $link = get_uri("talent_sign/" . $contract->bundle_id . "/" . $token);
+        $emailed = $this->_send_email($context, $to, $titles, $link, $expires_at);
+        foreach ($contract_ids as $renewed_id) {
+            $this->Talent_contract_event_model->log($renewed_id, $emailed ? "email_sent" : "email_failed", $actor, array("to" => $to));
+        }
 
         return array(
             "success" => true,
             "message" => $emailed ? sprintf(app_lang("talent_contract_resent_message"), $to) : app_lang("talent_contract_resend_email_failed_message"),
             "contract_id" => (int) $contract->id,
+            "contract_ids" => $contract_ids,
             "emailed" => $emailed,
             "email" => $to,
             "link" => $link,
@@ -604,41 +730,73 @@ class Talent_contract_service {
         return array("success" => true, "message" => app_lang("talent_contract_paper_saved_message"), "contract_id" => (int) $contract_id, "confirmed" => $confirmed);
     }
 
-    //The contract behind a signing link, or null when the id or token doesn't match. Every kind of mismatch looks the same on purpose.
-    function find_by_token($contract_id, $token) {
-        if (!is_numeric($contract_id) || !preg_match('/^[0-9a-f]{40}$/', (string) $token)) {
+    //The bundle behind a signing link, or null when the id or token doesn't match. Every kind of mismatch looks the same on purpose.
+    function find_bundle($bundle_id, $token) {
+        if (!is_numeric($bundle_id) || !preg_match('/^[0-9a-f]{40}$/', (string) $token)) {
+            return null;
+        }
+
+        $bundle = $this->Talent_contract_bundle_model->find($bundle_id);
+        if (!$bundle || !hash_equals((string) $bundle->token_hash, hash("sha256", $token))) {
+            return null;
+        }
+
+        return $bundle;
+    }
+
+    //a contract of the bundle, or null: what a signing request may act on is only ever what the link delivered
+    private function _contract_of_bundle($bundle, $contract_id) {
+        if (!is_numeric($contract_id)) {
             return null;
         }
 
         $contract = $this->Talent_contract_model->get_public($contract_id);
-        if (!$contract || !$contract->id || $contract->deleted || !hash_equals((string) $contract->token_hash, hash("sha256", $token))) {
+        if (!$contract || !$contract->id || $contract->deleted || (int) $contract->bundle_id !== (int) $bundle->id) {
             return null;
         }
-
         return $contract;
     }
 
-    //everything the signing page shows, or null for an unknown link. Opening the page is logged (once per person per ten minutes).
-    //$request is array(ip, user_agent).
-    function prepare_public_page($contract_id, $token, $request) {
-        $contract = $this->find_by_token($contract_id, $token);
-        if (!$contract) {
+    //Everything the signing page shows, or null for an unknown link: one entry per agreement in the link (its state, its text, blanks or
+    //the filled-in copy), the name the person signs under and a masked hint of the address they have to confirm. Opening the page is
+    //logged on every agreement still waiting (once per person per ten minutes). $request is array(ip, user_agent).
+    //The first agreement's fields are repeated at the top level for the single-document page.
+    function prepare_public_page($bundle_id, $token, $request) {
+        $bundle = $this->find_bundle($bundle_id, $token);
+        if (!$bundle) {
             return null;
         }
 
-        $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
-        $this->_record_view($contract, $request);
+        $contracts = $this->Talent_contract_model->get_for_bundle($bundle->id);
+        if (!$contracts) {
+            return null;
+        }
+
+        $documents = array();
+        $waiting = 0;
+        foreach ($contracts as $contract) {
+            $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+            if ($status === "sent") {
+                $waiting++;
+                $this->_record_view($contract, $request);
+            }
+
+            $documents[] = array("contract" => $contract, "status" => $status, "html" => $this->_display_html($contract, $status), "label" => talent_contract_label($contract->id));
+        }
 
         $company = $this->_company();
 
         return array(
-            "contract" => $contract,
-            "status" => $status,
-            "html" => $this->_display_html($contract, $status),
-            "label" => talent_contract_label($contract->id),
-            "signer_name" => $this->_signer_name($contract),
-            "masked_email" => talent_mask_email($contract->sent_to_email),
+            "bundle" => $bundle,
+            "documents" => $documents,
+            "waiting_count" => $waiting,
+            "signer_name" => $this->_signer_name($contracts[0]),
+            "masked_email" => talent_mask_email($bundle->sent_to_email),
             "company_name" => (string) $company->name,
+            "contract" => $documents[0]["contract"],
+            "status" => $documents[0]["status"],
+            "html" => $documents[0]["html"],
+            "label" => $documents[0]["label"],
         );
     }
 
@@ -670,6 +828,7 @@ class Talent_contract_service {
             "label" => talent_contract_label($contract->id),
             "signer_name" => $this->_signer_name($contract),
             "events" => $this->Talent_contract_event_model->get_for_contract($contract->id)->getResult(),
+            "bundle_mates" => $this->Talent_contract_model->get_bundle_mates($contract->id),
         );
     }
 
@@ -687,31 +846,50 @@ class Talent_contract_service {
         return $pdf;
     }
 
-    //The talent signs. Builds the signed PDF, then, under a row lock, records the signature, moves the card to Confirmed and writes the
-    //audit trail; staff are notified after the commit. The first answer to reach the lock wins (a second signature, a decline or a
-    //void that lands in between is refused).
-    function complete($contract_id, $token, $email, $consent, $signature, $request) {
-        $contract = $this->find_by_token($contract_id, $token);
-        if (!$contract) {
+    //The talent signs the agreements they ticked ($contract_ids) with one drawn signature. Each gets its own signed PDF; then, under row
+    //locks, every ticked agreement is checked again and signed together with its audit trail, and the card is settled once. If any of them
+    //stopped waiting while the page was open (withdrawn, answered, lapsed, link replaced) nothing is signed, so what was signed is what the
+    //person saw. Staff get one notification, after the commit.
+    function complete($bundle_id, $token, $contract_ids, $email, $signature, $request) {
+        $bundle = $this->find_bundle($bundle_id, $token);
+        if (!$bundle) {
             return $this->_fail("talent_sign_error_invalid");
         }
 
-        $state = talent_contract_effective_status($contract->status, $contract->token_expires_at);
-        if ($state !== "sent") {
-            return $this->_fail_for_state($state);
+        $ids = array();
+        foreach ((array) $contract_ids as $contract_id) {
+            if (is_numeric($contract_id) && !in_array((int) $contract_id, $ids, true)) {
+                $ids[] = (int) $contract_id;
+            }
+        }
+        sort($ids);
+        if (!$ids) {
+            return $this->_fail("talent_sign_error_consent");
         }
 
-        //nothing is typed: the talent signs under the legal name the contract was made out to
-        $name = $this->_signer_name($contract);
-        $email = trim((string) $email);
-        if ($name === "") {
-            return $this->_fail("talent_sign_error_name");
+        $contracts = array();
+        foreach ($ids as $contract_id) {
+            $contract = $this->_contract_of_bundle($bundle, $contract_id);
+            if (!$contract) {
+                return $this->_fail("talent_sign_error_invalid");
+            }
+
+            $state = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+            if ($state !== "sent") {
+                return count($ids) === 1 ? $this->_fail_for_state($state) : $this->_fail("talent_sign_error_changed");
+            }
+            $contracts[] = $contract;
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strcasecmp($email, (string) $contract->sent_to_email) !== 0) {
+
+        //nothing is typed: the talent signs under the legal name each contract was made out to
+        $email = trim((string) $email);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strcasecmp($email, (string) $bundle->sent_to_email) !== 0) {
             return $this->_fail("talent_sign_error_email");
         }
-        if (!$consent) {
-            return $this->_fail("talent_sign_error_consent");
+        foreach ($contracts as $contract) {
+            if ($this->_signer_name($contract) === "") {
+                return $this->_fail("talent_sign_error_name");
+            }
         }
 
         $png = $this->_read_signature($signature);
@@ -720,67 +898,83 @@ class Talent_contract_service {
         }
 
         $now = get_current_utc_time();
-        $actor = $this->_talent_actor($contract, $request);
+        $actor = $this->_talent_actor($contracts[0], $request);
         $consent_text = app_lang("talent_sign_consent");
 
+        //one signed PDF per agreement, built before any lock is taken
+        $pdfs = array();
         try {
-            $pdf = $this->_build_pdf($contract, array("name" => $name, "email" => $email, "signed_at" => $now, "ip" => $actor["ip"], "consent" => $consent_text), $png);
+            foreach ($contracts as $contract) {
+                $pdf = $this->_build_pdf($contract, array("name" => $this->_signer_name($contract), "email" => $email, "signed_at" => $now, "ip" => $actor["ip"], "consent" => $consent_text), $png);
+                $pdfs[(int) $contract->id] = array("bytes" => $pdf, "hash" => hash("sha256", $pdf));
+            }
         } catch (\Throwable $ex) {
             log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
             return $this->_fail("error_occurred");
         }
-        $pdf_hash = hash("sha256", $pdf);
 
+        $talent_project_id = (int) $contracts[0]->talent_project_id;
         $db = db_connect('default');
         $db->transBegin();
 
         try {
-            //the card first, then the contract, like issue(), void() and resend(): one lock order means they can't deadlock each other
-            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . (int) $contract->talent_project_id . " FOR UPDATE");
-            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
-
-            $latest = $this->Talent_contract_model->get_public($contract->id);
-            $state = talent_contract_effective_status($latest->status, $latest->token_expires_at);
-            if ($state !== "sent") {
-                $db->transRollback();
-                return $this->_fail_for_state($state);
-            }
+            //the card, then the bundle, then the contracts in id order: one lock order for everything that touches them, so they can't deadlock
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_projects") . " WHERE id=" . $talent_project_id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contract_bundles") . " WHERE id=" . (int) $bundle->id . " FOR UPDATE");
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id IN (" . implode(",", $ids) . ") ORDER BY id FOR UPDATE");
 
             //a link that was replaced while this request waited for the lock is a dead link
-            if (!hash_equals((string) $latest->token_hash, hash("sha256", $token))) {
+            $fresh_bundle = $this->Talent_contract_bundle_model->find($bundle->id);
+            if (!$fresh_bundle || !hash_equals((string) $fresh_bundle->token_hash, hash("sha256", $token))) {
                 $db->transRollback();
                 return $this->_fail("talent_sign_error_invalid");
             }
 
-            $signed = array(
-                "status" => "signed",
-                "signer_name" => $name,
-                "signer_email" => $email,
-                "signed_at" => $now,
-                "signed_via" => "online",
-                "signature_data" => base64_encode($png),
-                "signed_pdf_data" => base64_encode($pdf),
-                "pdf_hash" => $pdf_hash,
-                "signer_ip" => $actor["ip"],
-                "signer_user_agent" => $actor["user_agent"],
-            );
-            $this->_must($this->Talent_contract_model->ci_save($signed, $contract->id), "record the signature");
+            foreach ($ids as $contract_id) {
+                $latest = $this->Talent_contract_model->get_public($contract_id);
+                $state = talent_contract_effective_status($latest->status, $latest->token_expires_at);
+                if ($state !== "sent") {
+                    $db->transRollback();
+                    return count($ids) === 1 ? $this->_fail_for_state($state) : $this->_fail("talent_sign_error_changed");
+                }
+            }
 
-            //the signature that completes the project's required list is what confirms the card (see _settle_confirmation)
-            $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
-            $outcome = $this->_settle_confirmation($contract->talent_project_id, $contract->template_id);
+            $template_ids = array();
+            foreach ($contracts as $contract) {
+                $signed = array(
+                    "status" => "signed",
+                    "signer_name" => $this->_signer_name($contract),
+                    "signer_email" => $email,
+                    "signed_at" => $now,
+                    "signed_via" => "online",
+                    "signature_data" => base64_encode($png),
+                    "signed_pdf_data" => base64_encode($pdfs[(int) $contract->id]["bytes"]),
+                    "pdf_hash" => $pdfs[(int) $contract->id]["hash"],
+                    "signer_ip" => $actor["ip"],
+                    "signer_user_agent" => $actor["user_agent"],
+                );
+                $this->_must($this->Talent_contract_model->ci_save($signed, $contract->id), "record the signature");
+                $template_ids[] = (int) $contract->template_id;
+
+                $this->_must($this->Talent_contract_event_model->log($contract->id, "signed", $actor, array(
+                            "name" => $this->_signer_name($contract),
+                            "email" => $email,
+                            "consent" => $consent_text,
+                            "content_hash" => $contract->content_hash,
+                            "pdf_hash" => $pdfs[(int) $contract->id]["hash"],
+                            "bundle_id" => (int) $bundle->id,
+                            "signed_together" => array_values(array_diff($ids, array((int) $contract->id))),
+                        )), "log the signature");
+            }
+
+            //the signatures that complete the project's required list are what confirm the card (see _settle_confirmation), once for the whole signing
+            $assignment = $this->Talent_project_model->get_one($talent_project_id);
+            $outcome = $this->_settle_confirmation($talent_project_id, $template_ids);
             $confirmed = $outcome && $outcome["moved"];
 
-            $this->_must($this->Talent_contract_event_model->log($contract->id, "signed", $actor, array(
-                        "name" => $name,
-                        "email" => $email,
-                        "consent" => $consent_text,
-                        "content_hash" => $contract->content_hash,
-                        "pdf_hash" => $pdf_hash,
-                    )), "log the signature");
-
             if ($outcome) {
-                $this->_must($this->Talent_contract_event_model->log($contract->id, $outcome["moved"] ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $outcome["moved"] ? array("stage_id" => $outcome["stage_id"]) : array("reason" => $outcome["reason"])), "log the card move");
+                $last_id = end($ids);
+                $this->_must($this->Talent_contract_event_model->log($last_id, $outcome["moved"] ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $outcome["moved"] ? array("stage_id" => $outcome["stage_id"]) : array("reason" => $outcome["reason"])), "log the card move");
             }
 
             $db->transCommit();
@@ -790,14 +984,20 @@ class Talent_contract_service {
             return $this->_fail("error_occurred");
         }
 
-        $this->_notify("talent_contract_signed", (int) $assignment->project_id, $contract->id);
+        $this->_notify("talent_contract_signed", (int) $assignment->project_id, $ids[0]);
 
-        return array("success" => true, "message" => app_lang("talent_sign_done_message"), "confirmed" => $confirmed);
+        return array(
+            "success" => true,
+            "message" => count($ids) === 1 ? app_lang("talent_sign_done_message") : sprintf(app_lang("talent_sign_done_many_message"), count($ids)),
+            "confirmed" => $confirmed,
+            "signed" => $ids,
+        );
     }
 
-    //The talent turns the contract down. The card stays in Contract Signing; staff are told and can send a new one.
-    function decline($contract_id, $token, $reason, $request) {
-        $contract = $this->find_by_token($contract_id, $token);
+    //The talent turns one agreement down; the others in the link stay signable. The card is left alone; staff are told and can send it again.
+    function decline($bundle_id, $token, $contract_id, $reason, $request) {
+        $bundle = $this->find_bundle($bundle_id, $token);
+        $contract = $bundle ? $this->_contract_of_bundle($bundle, $contract_id) : null;
         if (!$contract) {
             return $this->_fail("talent_sign_error_invalid");
         }
@@ -814,6 +1014,8 @@ class Talent_contract_service {
         $db->transBegin();
 
         try {
+            //the bundle, then the contract: the same order signing takes them in
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contract_bundles") . " WHERE id=" . (int) $bundle->id . " FOR UPDATE");
             $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
 
             $latest = $this->Talent_contract_model->get_public($contract->id);
@@ -823,14 +1025,19 @@ class Talent_contract_service {
                 return $this->_fail_for_state($state);
             }
 
-            if (!hash_equals((string) $latest->token_hash, hash("sha256", $token))) {
+            $fresh_bundle = $this->Talent_contract_bundle_model->find($bundle->id);
+            if (!$fresh_bundle || !hash_equals((string) $fresh_bundle->token_hash, hash("sha256", $token))) {
                 $db->transRollback();
                 return $this->_fail("talent_sign_error_invalid");
             }
 
             $declined = array("status" => "declined", "decline_reason" => $reason);
             $this->_must($this->Talent_contract_model->ci_save($declined, $contract->id), "record the decline");
-            $this->_must($this->Talent_contract_event_model->log($contract->id, "declined", $actor, $reason === "" ? array() : array("reason" => $reason)), "log the decline");
+            $meta = array("bundle_id" => (int) $bundle->id);
+            if ($reason !== "") {
+                $meta["reason"] = $reason;
+            }
+            $this->_must($this->Talent_contract_event_model->log($contract->id, "declined", $actor, $meta), "log the decline");
 
             $db->transCommit();
         } catch (\Throwable $ex) {
@@ -845,9 +1052,10 @@ class Talent_contract_service {
         return array("success" => true, "message" => app_lang("talent_sign_declined_message"));
     }
 
-    //The signed PDF for its owner, or null. It is served only if it still matches the hash recorded when it was signed.
-    function get_signed_pdf($contract_id, $token, $request) {
-        $contract = $this->find_by_token($contract_id, $token);
+    //The signed PDF of one agreement in the link, or null. It is served only if it still matches the hash recorded when it was signed.
+    function get_signed_pdf($bundle_id, $token, $contract_id, $request) {
+        $bundle = $this->find_bundle($bundle_id, $token);
+        $contract = $bundle ? $this->_contract_of_bundle($bundle, $contract_id) : null;
         if (!$contract) {
             return null;
         }
@@ -1331,7 +1539,8 @@ class Talent_contract_service {
 
     //true when the mail server accepted it. In a non-production environment core's mailer throws on failure instead of returning
     //false, so both outcomes are handled; the error text can hold SMTP details, so it goes to the log only.
-    private function _send_email($context, $to, $title, $link, $expires_at) {
+    //$titles are the agreements in this link: one title reads as itself, several as "3 agreements" with the full list in the body.
+    private function _send_email($context, $to, $titles, $link, $expires_at) {
         $Email_templates_model = model("App\Models\Email_templates_model");
         $company = $this->_company();
 
@@ -1340,6 +1549,12 @@ class Talent_contract_service {
         $subject = get_array_value($template, "subject_default") ? get_array_value($template, "subject_default") : $default["subject"];
         $message = get_array_value($template, "message_default") ? get_array_value($template, "message_default") : $default["message"];
 
+        $titles = array_values((array) $titles);
+        $title = count($titles) === 1 ? $titles[0] : sprintf(app_lang("talent_contract_bundle_title"), count($titles));
+        $list = "<ul>" . implode("", array_map(function ($item) {
+                            return "<li>" . $this->_e($item) . "</li>";
+                        }, $titles)) . "</ul>";
+
         $name = $context->preferred_name ? $context->preferred_name : $context->legal_name;
         $expiry_date = $this->_date($expires_at, true);
 
@@ -1347,6 +1562,7 @@ class Talent_contract_service {
             "TALENT_NAME" => $this->_e($name),
             "PROJECT_TITLE" => $this->_e($context->project_title),
             "CONTRACT_TITLE" => $this->_e($title),
+            "AGREEMENT_LIST" => $list,
             "CONTRACT_URL" => $this->_e($link),
             "EXPIRY_DATE" => $this->_e($expiry_date),
             "COMPANY_NAME" => $this->_e($company->name),

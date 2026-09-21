@@ -210,7 +210,7 @@ app_hooks()->add_filter('app_filter_notification_description', function ($descri
 //lists the "Contract request" mail (and the variables it can use) under Settings > Email templates, in a Talent group
 app_hooks()->add_filter('app_filter_email_templates', function ($templates_array) {
     $templates_array["talent"] = array(
-        "talent_contract_request" => array("TALENT_NAME", "PROJECT_TITLE", "CONTRACT_TITLE", "CONTRACT_URL", "EXPIRY_DATE", "COMPANY_NAME", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
+        "talent_contract_request" => array("TALENT_NAME", "PROJECT_TITLE", "CONTRACT_TITLE", "AGREEMENT_LIST", "CONTRACT_URL", "EXPIRY_DATE", "COMPANY_NAME", "LOGO_URL", "SIGNATURE", "RECIPIENTS_EMAIL_ADDRESS"),
     );
     return $templates_array;
 });
