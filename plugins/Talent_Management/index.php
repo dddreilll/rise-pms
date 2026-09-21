@@ -88,6 +88,9 @@ register_installation_hook("Talent_Management", function ($item_purchase_code) {
 
     //the "Contract request" mail, editable under Settings > Email templates
     talent_ensure_email_template($db, $db_prefix);
+
+    //the "signed" / "declined" notifications: without a notification_settings row core creates nothing for an event
+    talent_ensure_notification_settings($db, $db_prefix);
 });
 
 //RISE runs this when an admin clicks "Updates" on the plugin and shows the output in a modal. It brings an existing install
@@ -120,6 +123,14 @@ register_uninstallation_hook("Talent_Management", function () {
 
     //the email template row lives in a core table, so it goes with the plugin
     $db->query("DELETE FROM `" . $db_prefix . "email_templates` WHERE template_name='talent_contract_request'");
+
+    //so does the notification plumbing: settings, the notifications already raised, and the plugin_* column on core's table
+    $events = "'" . implode("','", talent_notification_events()) . "'";
+    $db->query("DELETE FROM `" . $db_prefix . "notifications` WHERE event IN ($events)");
+    $db->query("DELETE FROM `" . $db_prefix . "notification_settings` WHERE event IN ($events)");
+    if (talent_column_exists($db, $db_prefix . "notifications", "plugin_talent_contract_id")) {
+        $db->query("ALTER TABLE `" . $db_prefix . "notifications` DROP COLUMN `plugin_talent_contract_id`");
+    }
 
     //custom field data lives in core tables (related_to='talent') - clean it up so uninstall leaves no orphaned rows
     $db->query("DELETE FROM `" . $db_prefix . "custom_field_values` WHERE related_to_type='talent'");
@@ -162,6 +173,34 @@ app_hooks()->add_filter('app_filter_role_permissions_save_data', function ($perm
     $request = \Config\Services::request();
     $permissions["talent_management"] = $request->getPost("talent_management");
     return $permissions;
+});
+
+//staff hear about a contract being signed or declined through core's notifications: the events, where a click goes, and the lines under them.
+//A click opens the project; core has no way to deep-link into a plugin's tab, so staff go on to the Talent tab from there.
+app_hooks()->add_filter('app_filter_notification_config', function ($events) {
+    $project_link = function ($options) {
+        return array("url" => (isset($options->project_id) && $options->project_id) ? get_uri("projects/view/" . $options->project_id) : "");
+    };
+
+    foreach (talent_notification_events() as $event) {
+        $events[$event] = array("notify_to" => array("project_members", "team_members", "team"), "info" => $project_link);
+    }
+    return $events;
+});
+
+app_hooks()->add_filter('app_filter_notification_category_suggestion', function ($suggestions) {
+    $suggestions[] = array("id" => "talent", "text" => app_lang("talent"));
+    return $suggestions;
+});
+
+app_hooks()->add_filter('app_filter_notification_description', function ($descriptions, $notification) {
+    if (in_array($notification->event, talent_notification_events()) && !empty($notification->plugin_talent_contract_id)) {
+        $description = talent_contract_notification_description($notification->plugin_talent_contract_id);
+        if ($description) {
+            $descriptions[] = $description;
+        }
+    }
+    return $descriptions;
 });
 
 //lists the "Contract request" mail (and the variables it can use) under Settings > Email templates, in a Talent group

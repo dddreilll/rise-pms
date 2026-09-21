@@ -29,4 +29,30 @@ class Talent_contract_model extends Crud_model {
 
         return $this->db->query($sql)->getRow();
     }
+
+    //everything the public signing page needs except the signed PDF, which can be large and is fetched on its own
+    function get_public($contract_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $contract_id = $this->_get_clean_value($contract_id);
+
+        $sql = "SELECT $talent_contracts_table.id, $talent_contracts_table.talent_project_id, $talent_contracts_table.template_id, $talent_contracts_table.title,
+                $talent_contracts_table.content, $talent_contracts_table.content_hash, $talent_contracts_table.token_hash, $talent_contracts_table.token_expires_at,
+                $talent_contracts_table.status, $talent_contracts_table.sent_to_email, $talent_contracts_table.sent_at, $talent_contracts_table.signer_name,
+                $talent_contracts_table.signer_email, $talent_contracts_table.signed_at, $talent_contracts_table.signature_data, $talent_contracts_table.pdf_hash,
+                $talent_contracts_table.decline_reason, $talent_contracts_table.deleted
+                FROM $talent_contracts_table
+                WHERE $talent_contracts_table.id=$contract_id";
+
+        return $this->db->query($sql)->getRow();
+    }
+
+    function get_signed_pdf_data($contract_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $contract_id = $this->_get_clean_value($contract_id);
+
+        $row = $this->db->query("SELECT $talent_contracts_table.signed_pdf_data FROM $talent_contracts_table WHERE $talent_contracts_table.id=$contract_id")->getRow();
+        return $row ? (string) $row->signed_pdf_data : "";
+    }
 }

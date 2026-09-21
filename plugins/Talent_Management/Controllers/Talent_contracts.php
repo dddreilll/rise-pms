@@ -63,6 +63,8 @@ class Talent_contracts extends Security_Controller {
             $blocked_message = app_lang("talent_contract_error_pending");
         } else if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
             $blocked_message = app_lang("talent_contract_error_no_email");
+        } else if (trim((string) $context->legal_name) === "") {
+            $blocked_message = app_lang("talent_contract_error_no_legal_name");
         } else if (count($templates_dropdown) < 2) {
             $blocked_message = app_lang("talent_contract_error_no_templates");
         }
@@ -76,6 +78,36 @@ class Talent_contracts extends Security_Controller {
         $view_data["can_manage_templates"] = talent_can_manage_contract_templates();
 
         return $this->template->view('Talent_Management\Views\talent_contracts\send_modal_form', $view_data);
+    }
+
+    //a contract behind a row of the project's talent list: the text as sent, or as signed, with its state and activity
+    function view_modal_form() {
+        $this->validate_submitted_data(array(
+            "contract_id" => "required|numeric"
+        ));
+
+        $view_data = $this->Talent_contract_service->get_contract_view($this->request->getPost("contract_id"));
+        if (!$view_data) {
+            show_404();
+        }
+
+        return $this->template->view('Talent_Management\Views\talent_contracts\view_modal_form', $view_data);
+    }
+
+    //the signed PDF, on the staff member's own login
+    function download($contract_id = 0) {
+        validate_numeric_value($contract_id);
+
+        $pdf = $this->Talent_contract_service->get_signed_pdf_for_staff($contract_id, $this->_actor());
+        if (!$pdf) {
+            show_404();
+        }
+
+        $this->response->setHeader("Content-Type", "application/pdf");
+        $this->response->setHeader("Content-Disposition", 'attachment; filename="' . $pdf["file_name"] . '"');
+        $this->response->setHeader("Cache-Control", "no-store, max-age=0");
+        $this->response->setBody($pdf["bytes"]);
+        return $this->response;
     }
 
     //the merged contract text, so nothing goes out unread

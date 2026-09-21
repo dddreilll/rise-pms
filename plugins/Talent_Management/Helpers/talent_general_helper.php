@@ -144,13 +144,26 @@ if (!function_exists('talent_contract_send_action_html')) {
     }
 }
 
-//badge + button for one row of the project's talent list or one kanban card
+//opens the contract of a row (as sent, or as signed) with its activity and, once signed, the PDF
+if (!function_exists('talent_contract_view_action_html')) {
+
+    function talent_contract_view_action_html($contract_id) {
+        if (!$contract_id) {
+            return "";
+        }
+
+        return modal_anchor(get_uri("talent_contracts/view_modal_form"), "<i data-feather='eye' class='icon-16'></i>", array("class" => "btn btn-default btn-sm", "title" => app_lang("talent_contract_view"), "data-post-contract_id" => $contract_id, "data-modal-lg" => "1"));
+    }
+}
+
+//badge + view + send buttons for one row of the project's talent list or one kanban card
 if (!function_exists('talent_contract_cell_html')) {
 
     function talent_contract_cell_html($row) {
         $badge = talent_contract_status_html($row->contract_status, $row->contract_expires_at);
+        $view = talent_contract_view_action_html($row->contract_id);
         $action = talent_contract_send_action_html($row->talent_project_id, $row->contract_status, $row->contract_expires_at);
-        return trim($badge . " " . $action);
+        return trim(implode(" ", array_filter(array($badge, $view, $action))));
     }
 }
 
@@ -170,5 +183,52 @@ if (!function_exists('talent_contract_default_email')) {
             . "<p>{SIGNATURE}</p>"
             . "</div></div></div>",
         );
+    }
+}
+
+//jordan@example.com -> j*****@example.com: enough to recognise the address on the signing page without handing it to whoever holds the link
+if (!function_exists('talent_mask_email')) {
+
+    function talent_mask_email($email) {
+        $parts = explode("@", (string) $email, 2);
+        if (count($parts) !== 2 || $parts[0] === "") {
+            return "";
+        }
+        return substr($parts[0], 0, 1) . str_repeat("*", max(1, min(5, strlen($parts[0]) - 1))) . "@" . $parts[1];
+    }
+}
+
+//text typed by a signer goes into 3-byte utf8 columns; a 4-byte character (emoji) would cut the rest of the value off, so it is dropped
+if (!function_exists('talent_strip_4byte_chars')) {
+
+    function talent_strip_4byte_chars($text) {
+        $stripped = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', (string) $text);
+
+        //null means the input wasn't valid UTF-8
+        return $stripped === null ? "" : $stripped;
+    }
+}
+
+//the lines added under a "signed" / "declined" notification: which contract, and who answered it
+if (!function_exists('talent_contract_notification_description')) {
+
+    function talent_contract_notification_description($contract_id) {
+        $db = db_connect('default');
+        $prefix = get_db_prefix();
+
+        $row = $db->query("SELECT c.id, c.title, c.status, c.signer_name, t.legal_name, t.preferred_name
+                FROM `" . $prefix . "talent_contracts` c
+                LEFT JOIN `" . $prefix . "talent_projects` tp ON tp.id=c.talent_project_id
+                LEFT JOIN `" . $prefix . "talent` t ON t.id=tp.talent_id
+                WHERE c.id=" . (int) $contract_id)->getRow();
+        if (!$row) {
+            return "";
+        }
+
+        //a signature is under the legal name; otherwise use the name staff know the person by
+        $who = ($row->status === "signed" && $row->signer_name) ? $row->signer_name : ($row->preferred_name ? $row->preferred_name : $row->legal_name);
+
+        return "<div>" . esc($row->title) . " (" . esc(talent_contract_label($row->id)) . ")</div>"
+                . "<div>" . app_lang("talent") . ": " . esc($who) . "</div>";
     }
 }

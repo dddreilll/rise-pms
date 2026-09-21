@@ -66,7 +66,9 @@ if (!function_exists('talent_contract_table_definitions')) {
                 PRIMARY KEY (`id`)
             ) $table_options;",
 
-            //one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token
+            //one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token.
+            //The drawn signature (PNG) and the signed PDF are kept here as base64 text: nothing depends on where files/ lives or survives
+            //a redeploy, there is no public file URL to guess, and text passes the 3-byte utf8 connection where raw binary would not.
             "talent_contracts" => "CREATE TABLE IF NOT EXISTS `" . $db_prefix . "talent_contracts` (
                 `id` int(11) NOT NULL AUTO_INCREMENT,
                 `talent_project_id` int(11) NOT NULL,
@@ -83,8 +85,8 @@ if (!function_exists('talent_contract_table_definitions')) {
                 `signer_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signer_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signed_at` datetime DEFAULT NULL,
-                `signature_file` text COLLATE utf8_unicode_ci,
-                `signed_pdf_file` text COLLATE utf8_unicode_ci,
+                `signature_data` mediumtext COLLATE utf8_unicode_ci,
+                `signed_pdf_data` mediumtext COLLATE utf8_unicode_ci,
                 `pdf_hash` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signer_ip` varchar(45) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
                 `signer_user_agent` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
@@ -131,6 +133,20 @@ if (!function_exists('talent_ensure_schema_structure')) {
                 $db->query($sql);
                 $changes[] = "Created table " . $table;
             }
+        }
+
+        //slice 2 kept the signature and PDF as file references (columns that were never filled); they now live in the row itself
+        $contracts_table = $db_prefix . "talent_contracts";
+        if (talent_column_exists($db, $contracts_table, "signature_file")) {
+            $db->query("ALTER TABLE `$contracts_table` CHANGE `signature_file` `signature_data` mediumtext COLLATE utf8_unicode_ci, CHANGE `signed_pdf_file` `signed_pdf_data` mediumtext COLLATE utf8_unicode_ci");
+            $changes[] = "Changed talent_contracts to keep the signature and signed PDF in the row";
+        }
+
+        //core's notifications table takes plugin data in columns named plugin_*; this one says which contract a notification is about
+        $notifications_table = $db_prefix . "notifications";
+        if (!talent_column_exists($db, $notifications_table, "plugin_talent_contract_id")) {
+            $db->query("ALTER TABLE `$notifications_table` ADD `plugin_talent_contract_id` int(11) NOT NULL DEFAULT '0'");
+            $changes[] = "Added plugin_talent_contract_id to notifications";
         }
 
         return $changes;
@@ -256,6 +272,59 @@ if (!function_exists('talent_ensure_email_template')) {
     }
 }
 
+//events staff are told about when a talent answers a contract
+if (!function_exists('talent_notification_events')) {
+
+    function talent_notification_events() {
+        return array("talent_contract_signed", "talent_contract_declined");
+    }
+}
+
+//core's create_notification() silently does nothing for an event without a row in notification_settings, so these are seeded.
+//Web notifications to the project's members are on by default; admins change that under Settings > Notifications > Talent.
+if (!function_exists('talent_notification_settings_exist')) {
+
+    function talent_notification_settings_exist($db, $db_prefix) {
+        $events = array_map(function ($event) use ($db) {
+            return $db->escape($event);
+        }, talent_notification_events());
+
+        $row = $db->query("SELECT COUNT(DISTINCT event) AS total FROM `" . $db_prefix . "notification_settings` WHERE event IN (" . implode(",", $events) . ")")->getRow();
+        return $row && (int) $row->total === count($events);
+    }
+}
+
+if (!function_exists('talent_ensure_notification_settings')) {
+
+    function talent_ensure_notification_settings($db, $db_prefix) {
+        $table = $db_prefix . "notification_settings";
+        $changes = array();
+
+        foreach (talent_notification_events() as $event) {
+            if ($db->query("SELECT id FROM `$table` WHERE event=" . $db->escape($event) . " LIMIT 1")->getRow()) {
+                continue;
+            }
+
+            $max = $db->query("SELECT MAX(sort) AS sort FROM `$table`")->getRow();
+            $db->table($table)->insert(array(
+                "event" => $event,
+                "category" => "talent",
+                "enable_email" => 0,
+                "enable_web" => 1,
+                "enable_slack" => 0,
+                "notify_to_team" => "",
+                "notify_to_team_members" => "",
+                "notify_to_terms" => "project_members",
+                "sort" => ($max ? (int) $max->sort : 0) + 1,
+                "deleted" => 0,
+            ));
+            $changes[] = "Created notification setting " . $event;
+        }
+
+        return $changes;
+    }
+}
+
 //full upkeep pass. The named lock stops two requests that land right after a deploy from creating the stages twice.
 if (!function_exists('talent_ensure_schema')) {
 
@@ -273,6 +342,7 @@ if (!function_exists('talent_ensure_schema')) {
             $changes = talent_ensure_schema_structure($db, $db_prefix);
             $changes = array_merge($changes, talent_ensure_system_stages($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_email_template($db, $db_prefix));
+            $changes = array_merge($changes, talent_ensure_notification_settings($db, $db_prefix));
         } finally {
             $db->query("SELECT RELEASE_LOCK('talent_management_schema')");
         }
@@ -295,8 +365,13 @@ if (!function_exists('talent_ensure_schema_once')) {
             $db = db_connect('default');
             $db_prefix = get_db_prefix();
 
-            //the email template is the last thing the update adds, so finding it means the update finished
-            if (!talent_column_exists($db, $db_prefix . "talent_status", "system_key") || !talent_table_exists($db, $db_prefix . "talent_contract_events") || !talent_email_template_exists($db, $db_prefix)) {
+            //cheapest checks first, and the events table is created together with the rest of the contract tables
+            if (!talent_column_exists($db, $db_prefix . "talent_status", "system_key")
+                    || !talent_table_exists($db, $db_prefix . "talent_contract_events")
+                    || !talent_column_exists($db, $db_prefix . "talent_contracts", "signature_data")
+                    || !talent_column_exists($db, $db_prefix . "notifications", "plugin_talent_contract_id")
+                    || !talent_email_template_exists($db, $db_prefix)
+                    || !talent_notification_settings_exist($db, $db_prefix)) {
                 talent_ensure_schema();
             }
         } catch (\Throwable $ex) {

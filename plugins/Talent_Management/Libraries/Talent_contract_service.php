@@ -5,6 +5,7 @@ namespace Talent_Management\Libraries;
 use Talent_Management\Models\Talent_contract_event_model;
 use Talent_Management\Models\Talent_contract_model;
 use Talent_Management\Models\Talent_contract_template_model;
+use Talent_Management\Models\Talent_model;
 use Talent_Management\Models\Talent_project_model;
 use Talent_Management\Models\Talent_status_model;
 
@@ -15,6 +16,7 @@ class Talent_contract_service {
     private $Talent_contract_model;
     private $Talent_contract_event_model;
     private $Talent_contract_template_model;
+    private $Talent_model;
     private $Talent_project_model;
     private $Talent_status_model;
 
@@ -22,6 +24,7 @@ class Talent_contract_service {
         $this->Talent_contract_model = new Talent_contract_model();
         $this->Talent_contract_event_model = new Talent_contract_event_model();
         $this->Talent_contract_template_model = new Talent_contract_template_model();
+        $this->Talent_model = new Talent_model();
         $this->Talent_project_model = new Talent_project_model();
         $this->Talent_status_model = new Talent_status_model();
     }
@@ -47,14 +50,9 @@ class Talent_contract_service {
         }
 
         $values = $this->_merge_values($context, $template->title, $notes, get_current_utc_time());
-
-        $blank = "<span style=\"color: #999;\">________</span>";
         $values["CONTRACT_ID"] = "TC-#####";
-        foreach (array("SIGNER_NAME", "SIGNER_EMAIL", "SIGNING_DATE", "SIGNATURE") as $key) {
-            $values[$key] = $blank;
-        }
 
-        return $this->_render($template->content, $values);
+        return $this->_render($template->content, $values + $this->_blank_signature_values());
     }
 
     //Sends a contract for a casting link: freezes the text, creates the signing link, moves the card to Contract Signing and emails
@@ -66,6 +64,12 @@ class Talent_contract_service {
         }
         if (!filter_var($context->email, FILTER_VALIDATE_EMAIL)) {
             return $this->_fail("talent_contract_error_no_email");
+        }
+
+        //the talent signs under their legal name; it is fixed here, so the signature record always matches the name printed in the text
+        $legal_name = trim((string) $context->legal_name);
+        if ($legal_name === "") {
+            return $this->_fail("talent_contract_error_no_legal_name");
         }
 
         $template = $this->Talent_contract_template_model->get_one($template_id);
@@ -115,6 +119,7 @@ class Talent_contract_service {
                 "token_hash" => hash("sha256", $token),
                 "token_expires_at" => $expires_at,
                 "status" => "sent",
+                "signer_name" => $legal_name,
                 "sent_to_email" => $context->email,
                 "sent_by" => (int) get_array_value($actor, "id"),
                 "sent_at" => $now,
@@ -136,6 +141,7 @@ class Talent_contract_service {
 
             $this->_must($this->Talent_contract_event_model->log($contract_id, "sent", $actor, array(
                         "to" => $context->email,
+                        "signer_name" => $legal_name,
                         "template_id" => (int) $template->id,
                         "expires_at" => $expires_at,
                         "content_hash" => $content_hash,
@@ -163,8 +169,485 @@ class Talent_contract_service {
         );
     }
 
+    //the contract behind a signing link, or null when the id or token doesn't match. Every kind of mismatch looks the same on purpose.
+    function find_by_token($contract_id, $token) {
+        if (!is_numeric($contract_id) || !preg_match('/^[0-9a-f]{40}$/', (string) $token)) {
+            return null;
+        }
+
+        $contract = $this->Talent_contract_model->get_public($contract_id);
+        if (!$contract || !$contract->id || $contract->deleted || !hash_equals((string) $contract->token_hash, hash("sha256", $token))) {
+            return null;
+        }
+
+        return $contract;
+    }
+
+    //everything the signing page shows, or null for an unknown link. Opening the page is logged (once per person per ten minutes).
+    //$request is array(ip, user_agent).
+    function prepare_public_page($contract_id, $token, $request) {
+        $contract = $this->find_by_token($contract_id, $token);
+        if (!$contract) {
+            return null;
+        }
+
+        $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+        $this->_record_view($contract, $request);
+
+        $company = $this->_company();
+
+        return array(
+            "contract" => $contract,
+            "status" => $status,
+            "html" => $this->_display_html($contract, $status),
+            "label" => talent_contract_label($contract->id),
+            "signer_name" => $this->_signer_name($contract),
+            "masked_email" => talent_mask_email($contract->sent_to_email),
+            "company_name" => (string) $company->name,
+        );
+    }
+
+    //The contract as staff see it from the project's list: the text as sent (or as signed), its state and its activity trail.
+    //Opening it is not logged; the trail is about what the talent did. Null for an unknown contract.
+    function get_contract_view($contract_id) {
+        if (!is_numeric($contract_id)) {
+            return null;
+        }
+
+        $contract = $this->Talent_contract_model->get_public($contract_id);
+        if (!$contract || !$contract->id || $contract->deleted) {
+            return null;
+        }
+
+        $status = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+
+        return array(
+            "contract" => $contract,
+            "status" => $status,
+            "html" => $this->_display_html($contract, $status),
+            "label" => talent_contract_label($contract->id),
+            "signer_name" => $this->_signer_name($contract),
+            "events" => $this->Talent_contract_event_model->get_for_contract($contract->id)->getResult(),
+        );
+    }
+
+    //The signed PDF for a staff member, on their own login instead of a token. Same hash check as the talent's download.
+    function get_signed_pdf_for_staff($contract_id, $actor) {
+        $view = $this->get_contract_view($contract_id);
+        if (!$view) {
+            return null;
+        }
+
+        $pdf = $this->_stored_pdf($view["contract"]);
+        if ($pdf) {
+            $this->Talent_contract_event_model->log($view["contract"]->id, "downloaded", $actor);
+        }
+        return $pdf;
+    }
+
+    //The talent signs. Builds the signed PDF, then, under a row lock, records the signature, moves the card to Confirmed and writes the
+    //audit trail; staff are notified after the commit. The first answer to reach the lock wins (a second signature, a decline or a
+    //void that lands in between is refused).
+    function complete($contract_id, $token, $email, $consent, $signature, $request) {
+        $contract = $this->find_by_token($contract_id, $token);
+        if (!$contract) {
+            return $this->_fail("talent_sign_error_invalid");
+        }
+
+        $state = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+        if ($state !== "sent") {
+            return $this->_fail_for_state($state);
+        }
+
+        //nothing is typed: the talent signs under the legal name the contract was made out to
+        $name = $this->_signer_name($contract);
+        $email = trim((string) $email);
+        if ($name === "") {
+            return $this->_fail("talent_sign_error_name");
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strcasecmp($email, (string) $contract->sent_to_email) !== 0) {
+            return $this->_fail("talent_sign_error_email");
+        }
+        if (!$consent) {
+            return $this->_fail("talent_sign_error_consent");
+        }
+
+        $png = $this->_read_signature($signature);
+        if ($png === null) {
+            return $this->_fail("talent_sign_error_signature");
+        }
+
+        $now = get_current_utc_time();
+        $actor = $this->_talent_actor($contract, $request);
+        $consent_text = app_lang("talent_sign_consent");
+
+        try {
+            $pdf = $this->_build_pdf($contract, array("name" => $name, "email" => $email, "signed_at" => $now, "ip" => $actor["ip"], "consent" => $consent_text), $png);
+        } catch (\Throwable $ex) {
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+        $pdf_hash = hash("sha256", $pdf);
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
+
+            $latest = $this->Talent_contract_model->get_public($contract->id);
+            $state = talent_contract_effective_status($latest->status, $latest->token_expires_at);
+            if ($state !== "sent") {
+                $db->transRollback();
+                return $this->_fail_for_state($state);
+            }
+
+            $signed = array(
+                "status" => "signed",
+                "signer_name" => $name,
+                "signer_email" => $email,
+                "signed_at" => $now,
+                "signature_data" => base64_encode($png),
+                "signed_pdf_data" => base64_encode($pdf),
+                "pdf_hash" => $pdf_hash,
+                "signer_ip" => $actor["ip"],
+                "signer_user_agent" => $actor["user_agent"],
+            );
+            $this->_must($this->Talent_contract_model->ci_save($signed, $contract->id), "record the signature");
+
+            //the signature is what unlocks Confirmed. A card that was unassigned in the meantime, or a pipeline that lost its
+            //Confirmed stage, doesn't undo a valid signature; it is noted in the audit trail instead.
+            $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
+            $confirmed_stage_id = get_array_value($this->Talent_status_model->get_system_stage_ids(), "confirmed");
+            $confirmed = false;
+            if ($assignment->id && !$assignment->deleted && $confirmed_stage_id) {
+                $card = array("talent_status_id" => $confirmed_stage_id);
+                $this->_must($this->Talent_project_model->ci_save($card, $assignment->id), "move the card");
+                $confirmed = true;
+            }
+
+            $this->_must($this->Talent_contract_event_model->log($contract->id, "signed", $actor, array(
+                        "name" => $name,
+                        "email" => $email,
+                        "consent" => $consent_text,
+                        "content_hash" => $contract->content_hash,
+                        "pdf_hash" => $pdf_hash,
+                    )), "log the signature");
+
+            $this->_must($this->Talent_contract_event_model->log($contract->id, $confirmed ? "card_confirmed" : "confirm_skipped", array("type" => "system"), $confirmed ? array("stage_id" => (int) $confirmed_stage_id) : array("reason" => ($assignment->id && !$assignment->deleted) ? "no_confirmed_stage" : "assignment_removed")), "log the card move");
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        $this->_notify("talent_contract_signed", (int) $assignment->project_id, $contract->id);
+
+        return array("success" => true, "message" => app_lang("talent_sign_done_message"), "confirmed" => $confirmed);
+    }
+
+    //The talent turns the contract down. The card stays in Contract Signing; staff are told and can send a new one.
+    function decline($contract_id, $token, $reason, $request) {
+        $contract = $this->find_by_token($contract_id, $token);
+        if (!$contract) {
+            return $this->_fail("talent_sign_error_invalid");
+        }
+
+        $state = talent_contract_effective_status($contract->status, $contract->token_expires_at);
+        if ($state !== "sent") {
+            return $this->_fail_for_state($state);
+        }
+
+        $reason = $this->_clean_text($reason, 1000);
+        $actor = $this->_talent_actor($contract, $request);
+
+        $db = db_connect('default');
+        $db->transBegin();
+
+        try {
+            $db->query("SELECT id FROM " . $db->prefixTable("talent_contracts") . " WHERE id=" . (int) $contract->id . " FOR UPDATE");
+
+            $latest = $this->Talent_contract_model->get_public($contract->id);
+            $state = talent_contract_effective_status($latest->status, $latest->token_expires_at);
+            if ($state !== "sent") {
+                $db->transRollback();
+                return $this->_fail_for_state($state);
+            }
+
+            $declined = array("status" => "declined", "decline_reason" => $reason);
+            $this->_must($this->Talent_contract_model->ci_save($declined, $contract->id), "record the decline");
+            $this->_must($this->Talent_contract_event_model->log($contract->id, "declined", $actor, $reason === "" ? array() : array("reason" => $reason)), "log the decline");
+
+            $db->transCommit();
+        } catch (\Throwable $ex) {
+            $db->transRollback();
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
+        $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
+        $this->_notify("talent_contract_declined", (int) $assignment->project_id, $contract->id);
+
+        return array("success" => true, "message" => app_lang("talent_sign_declined_message"));
+    }
+
+    //The signed PDF for its owner, or null. It is served only if it still matches the hash recorded when it was signed.
+    function get_signed_pdf($contract_id, $token, $request) {
+        $contract = $this->find_by_token($contract_id, $token);
+        if (!$contract) {
+            return null;
+        }
+
+        $pdf = $this->_stored_pdf($contract);
+        if ($pdf) {
+            $this->Talent_contract_event_model->log($contract->id, "downloaded", $this->_talent_actor($contract, $request));
+        }
+        return $pdf;
+    }
+
+    //the stored signed PDF, only if the contract is signed and the bytes still match the hash recorded at signing
+    private function _stored_pdf($contract) {
+        if ($contract->status !== "signed") {
+            return null;
+        }
+
+        $bytes = base64_decode($this->Talent_contract_model->get_signed_pdf_data($contract->id), true);
+        if (!$bytes || !hash_equals((string) $contract->pdf_hash, hash("sha256", $bytes))) {
+            log_message('error', 'The signed PDF of contract ' . (int) $contract->id . ' is missing or no longer matches its recorded hash.');
+            return null;
+        }
+
+        return array("bytes" => $bytes, "file_name" => talent_contract_label($contract->id) . ".pdf");
+    }
+
+    //The name the talent signs under: the legal name fixed when the contract was sent. Contracts sent before that was recorded fall back
+    //to the talent's legal name on file now.
+    private function _signer_name($contract) {
+        if (trim((string) $contract->signer_name) !== "") {
+            return trim($contract->signer_name);
+        }
+
+        $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
+        $talent = $this->Talent_model->get_one($assignment->talent_id);
+        return trim((string) $talent->legal_name);
+    }
+
+    //the frozen text as a reader sees it: blanks while it is waiting, the filled-in copy (with the drawn signature) once it is signed
+    private function _display_html($contract, $status) {
+        if ($status !== "signed") {
+            return $this->_render($contract->content, $this->_blank_signature_values());
+        }
+
+        $png = $contract->signature_data ? base64_decode($contract->signature_data, true) : null;
+        return $this->_fill_signature($contract->content, $contract->signer_name, $contract->signer_email, $contract->signed_at, $png ? $png : null, false);
+    }
+
     private function _fail($language_key) {
         return array("success" => false, "message" => app_lang($language_key));
+    }
+
+    //what to tell someone holding a link whose contract can't be answered any more
+    private function _fail_for_state($state) {
+        $keys = array(
+            "signed" => "talent_sign_error_already_signed",
+            "declined" => "talent_sign_error_declined",
+            "expired" => "talent_sign_error_expired",
+            "voided" => "talent_sign_error_voided",
+        );
+        return $this->_fail(isset($keys[$state]) ? $keys[$state] : "talent_sign_error_invalid");
+    }
+
+    //the person on the other end of a public request; ip and user agent are cut to the column sizes and stripped of 4-byte characters
+    private function _talent_actor($contract, $request) {
+        $assignment = $this->Talent_project_model->get_one($contract->talent_project_id);
+
+        $ip = talent_strip_4byte_chars((string) get_array_value($request, "ip"));
+        $user_agent = talent_strip_4byte_chars((string) get_array_value($request, "user_agent"));
+
+        return array(
+            "type" => "talent",
+            "id" => (int) $assignment->talent_id,
+            "ip" => substr($ip, 0, 45),
+            "user_agent" => function_exists("mb_strcut") ? mb_strcut($user_agent, 0, 255, "UTF-8") : substr($user_agent, 0, 255),
+        );
+    }
+
+    //a page that gets opened again and again (refreshes, mail scanners) shouldn't bury the trail
+    private function _record_view($contract, $request) {
+        $actor = $this->_talent_actor($contract, $request);
+
+        $last = $this->Talent_contract_event_model->get_last($contract->id, "viewed");
+        if ($last && $last->ip === $actor["ip"] && strtotime($last->created_at . " UTC") > time() - 600) {
+            return;
+        }
+
+        $this->Talent_contract_event_model->log($contract->id, "viewed", $actor);
+    }
+
+    //staff are told by the system bot ("0"); a failure here must never undo an answer that is already saved
+    private function _notify($event, $project_id, $contract_id) {
+        if (!$project_id) {
+            return;
+        }
+
+        try {
+            log_notification($event, array("project_id" => $project_id, "plugin_talent_contract_id" => $contract_id), "0");
+        } catch (\Throwable $ex) {
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+        }
+    }
+
+    //the four placeholders the frozen text keeps until it is signed, shown as blanks while it isn't
+    private function _blank_signature_values() {
+        $blank = "<span style=\"color: #999;\">________</span>";
+        return array("SIGNER_NAME" => $blank, "SIGNER_EMAIL" => $blank, "SIGNING_DATE" => $blank, "SIGNATURE" => $blank);
+    }
+
+    //the signed copy of the text. The browser takes the image as a data URI, TCPDF only takes it as "@" + base64 (it silently drops data URIs).
+    private function _fill_signature($content, $name, $email, $signed_at, $png, $for_pdf) {
+        $image = "";
+        if ($png !== null) {
+            $encoded = base64_encode($png);
+            $image = $for_pdf ? "<img class=\"signature-image\" src=\"@" . $encoded . "\" style=\"width: 240px;\" />" : "<img class=\"signature-image\" src=\"data:image/png;base64," . $encoded . "\" alt=\"\" style=\"max-width: 220px; height: auto;\" />";
+        }
+
+        return $this->_render($content, array(
+                    "SIGNER_NAME" => $this->_e($name),
+                    "SIGNER_EMAIL" => $this->_e($email),
+                    "SIGNING_DATE" => $this->_e($this->_date($signed_at, true)),
+                    "SIGNATURE" => $image,
+        ));
+    }
+
+    //the signed agreement: the frozen text with the signature filled in, followed by the record that ties it to this signing
+    private function _build_pdf($contract, $record, $png) {
+        $body = $this->_fill_signature($contract->content, $record["name"], $record["email"], $record["signed_at"], $png, true);
+
+        $pdf = new Talent_pdf();
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetCellPadding(1.5);
+        $pdf->setImageScale(1.42);
+        $pdf->SetTitle($contract->title . " " . talent_contract_label($contract->id));
+        $pdf->AddPage();
+
+        $page_width_in_pixels = ($pdf->getPageWidth() / 25.4) * 91;
+
+        $html = view('Talent_Management\Views\talent_sign\contract_pdf', array(
+            "body" => $body,
+            "record" => array(
+                app_lang("talent_sign_record_contract") => talent_contract_label($contract->id) . " - " . $contract->title,
+                app_lang("talent_sign_record_signer") => $record["name"] . " <" . $record["email"] . ">",
+                app_lang("talent_sign_record_signed_at") => $record["signed_at"] . " UTC",
+                app_lang("talent_sign_record_ip") => $record["ip"],
+                app_lang("talent_sign_record_fingerprint") => $contract->content_hash,
+                app_lang("talent_sign_record_consent") => $record["consent"],
+            ),
+        ));
+
+        //core's rebuild_html() fixes table widths and image paths for TCPDF, but it also pins every <p> to line-height 16px, and under
+        //that TCPDF squashes hard line breaks (a multi-line address, the notes) on top of each other. That one property is dropped again.
+        $html = preg_replace('/(<p\b[^>]*?style="[^"]*?)\s*line-height:\s*16px;/i', '$1', rebuild_html($html, $page_width_in_pixels));
+
+        $pdf->writeHTML($html, true, false, true, false, '');
+        return $pdf->Output('', 'S');
+    }
+
+    //free text (a decline reason): line breaks are kept
+    private function _clean_text($value, $max_length) {
+        $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', str_replace("\r\n", "\n", talent_strip_4byte_chars($value)));
+        if ($value === null) {
+            return "";
+        }
+
+        $value = trim($value);
+        return function_exists("mb_substr") ? mb_substr($value, 0, $max_length, "UTF-8") : substr($value, 0, $max_length);
+    }
+
+    //A drawn signature arrives as a PNG data URI from the browser, i.e. from someone we don't trust. It is accepted only if it decodes as
+    //a PNG of a sensible size with real ink on it, and is then re-encoded (flattened on white, capped in width) so only pixels are kept.
+    //Returns the PNG bytes or null.
+    private function _read_signature($data_uri) {
+        if (!is_string($data_uri) || !preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', trim($data_uri), $match) || strlen($match[1]) > 900000) {
+            return null;
+        }
+
+        $png = base64_decode($match[1], true);
+        if ($png === false || substr($png, 0, 8) !== "\x89PNG\r\n\x1a\n") {
+            return null;
+        }
+
+        $info = @getimagesizefromstring($png);
+        if (!$info || $info[2] !== IMAGETYPE_PNG || $info[0] < 100 || $info[1] < 40 || $info[0] > 2400 || $info[1] > 1200) {
+            return null;
+        }
+
+        //without GD there is no way to look inside the image; the checks above still stand
+        if (!function_exists("imagecreatefromstring")) {
+            return $png;
+        }
+
+        //a damaged PNG makes GD warn; if warnings are turned into exceptions this must still be a refusal, not a server error
+        $image = null;
+        $flat = null;
+        try {
+            $image = @imagecreatefromstring($png);
+            if (!$image) {
+                return null;
+            }
+            imagepalettetotruecolor($image);
+
+            if (!$this->_has_ink($image)) {
+                return null;
+            }
+
+            $width = imagesx($image);
+            $height = imagesy($image);
+            $target_width = min($width, 900);
+            $target_height = max(1, (int) round($height * ($target_width / $width)));
+
+            $flat = imagecreatetruecolor($target_width, $target_height);
+            imagefill($flat, 0, 0, imagecolorallocate($flat, 255, 255, 255));
+            imagecopyresampled($flat, $image, 0, 0, 0, 0, $target_width, $target_height, $width, $height);
+
+            ob_start();
+            imagepng($flat);
+            $clean = ob_get_clean();
+
+            return $clean ? $clean : null;
+        } catch (\Throwable $ex) {
+            return null;
+        } finally {
+            if ($image) {
+                imagedestroy($image);
+            }
+            if ($flat) {
+                imagedestroy($flat);
+            }
+        }
+    }
+
+    //a blank pad exports a plain white (or fully transparent) image, so a few dozen dark opaque pixels is what separates a signature from nothing
+    private function _has_ink($image) {
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $ink = 0;
+
+        for ($y = 0; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x++) {
+                $pixel = imagecolorat($image, $x, $y);
+                $alpha = ($pixel >> 24) & 0x7F; //127 is fully transparent
+                $brightness = (($pixel >> 16) & 0xFF) + (($pixel >> 8) & 0xFF) + ($pixel & 0xFF);
+
+                if ($alpha < 100 && $brightness < 600 && ++$ink >= 40) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function _must($result, $what) {
