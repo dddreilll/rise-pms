@@ -69,14 +69,22 @@ class Talent_project_model extends Crud_model {
         $talent_projects_table = $this->db->prefixTable("talent_projects");
         $projects_table = $this->db->prefixTable("projects");
         $talent_status_table = $this->db->prefixTable("talent_status");
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
 
         $talent_id = $this->_get_clean_value($talent_id);
 
+        //each project also carries the newest contract of that casting link (any state), like the project's own talent list does
         $sql = "SELECT $talent_projects_table.id AS talent_project_id, $projects_table.id AS project_id, $projects_table.title AS project_title, $projects_table.status AS project_status,
-                $talent_status_table.title AS talent_status_title, $talent_status_table.color AS talent_status_color
+                $talent_status_table.title AS talent_status_title, $talent_status_table.color AS talent_status_color,
+                $talent_contracts_table.id AS contract_id, $talent_contracts_table.status AS contract_status,
+                $talent_contracts_table.token_expires_at AS contract_expires_at, $talent_contracts_table.sent_at AS contract_sent_at
                 FROM $talent_projects_table
                 LEFT JOIN $projects_table ON $projects_table.id=$talent_projects_table.project_id
                 LEFT JOIN $talent_status_table ON $talent_status_table.id=$talent_projects_table.talent_status_id
+                LEFT JOIN $talent_contracts_table ON $talent_contracts_table.id=(
+                    SELECT MAX(latest_contract.id) FROM $talent_contracts_table AS latest_contract
+                    WHERE latest_contract.talent_project_id=$talent_projects_table.id AND latest_contract.deleted=0
+                )
                 WHERE $talent_projects_table.deleted=0 AND $projects_table.deleted=0 AND $talent_projects_table.talent_id=$talent_id
                 ORDER BY $talent_projects_table.id DESC";
 

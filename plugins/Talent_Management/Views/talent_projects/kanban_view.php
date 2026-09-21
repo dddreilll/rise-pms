@@ -102,12 +102,32 @@
 
         $item.attr("data-sort", newSort);
 
+        //Sortable has already moved the card, so a refusal (e.g. Confirmed without a signed contract) or a failure has to put it back:
+        //the board is simply reloaded from what the server holds
+        var putCardsBack = function () {
+            if (window.reloadProjectTalent) {
+                window.reloadProjectTalent();
+            } else {
+                location.reload();
+            }
+        };
+
         $.ajax({
             url: '<?php echo_uri("talent_projects/save_sort_and_status") ?>',
             type: "POST",
+            dataType: "json",
             data: {id: id, sort: newSort, talent_status_id: status},
-            success: function () {
+            success: function (result) {
                 appLoader.hide();
+
+                if (result && result.success === false) {
+                    appAlert.error(result.message, {duration: 8000});
+                    putCardsBack();
+                }
+            },
+            error: function () {
+                appLoader.hide();
+                putCardsBack();
             }
         });
     };

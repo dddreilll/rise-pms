@@ -30,6 +30,20 @@ class Talent_contract_model extends Crud_model {
         return $this->db->query($sql)->getRow();
     }
 
+    //has this casting link got a signature on file? A voided or declined contract doesn't count, only a signed one.
+    function has_signed($talent_project_id) {
+        $talent_contracts_table = $this->db->prefixTable("talent_contracts");
+
+        $talent_project_id = $this->_get_clean_value($talent_project_id);
+
+        $sql = "SELECT $talent_contracts_table.id
+                FROM $talent_contracts_table
+                WHERE $talent_contracts_table.deleted=0 AND $talent_contracts_table.status='signed' AND $talent_contracts_table.talent_project_id=$talent_project_id
+                LIMIT 1";
+
+        return $this->db->query($sql)->getRow() ? true : false;
+    }
+
     //everything the public signing page needs except the signed PDF, which can be large and is fetched on its own
     function get_public($contract_id) {
         $talent_contracts_table = $this->db->prefixTable("talent_contracts");

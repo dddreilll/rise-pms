@@ -41,6 +41,17 @@ class Talent_contract_service {
         );
     }
 
+    //Why a casting link can't enter the Confirmed stage yet, as a language key; null when it can. Confirmed is for people who have signed:
+    //a pending, declined, expired or missing contract all count as "not yet", but the message tells the first apart from the rest.
+    function get_confirm_block_reason($talent_project_id) {
+        if ($this->Talent_contract_model->has_signed($talent_project_id)) {
+            return null;
+        }
+
+        $state = $this->get_state($talent_project_id);
+        return $state["status"] === "sent" ? "talent_contract_gate_pending" : "talent_contract_gate_missing";
+    }
+
     //what the staff member reads before sending; the signature fields show as blanks so the layout is clear. Null if it can't be built.
     function preview($template_id, $talent_project_id, $notes = "") {
         $context = $this->Talent_project_model->get_context($talent_project_id);

@@ -14,8 +14,14 @@
             columns: [
                 {title: '<?php echo app_lang("project"); ?>', "class": "all"},
                 {title: '<?php echo app_lang("status"); ?>'},
+                {title: '<?php echo app_lang("talent_contract"); ?>'},
                 {title: '<i data-feather="menu" class="icon-16"></i>', "class": "text-center option w100"}
             ]
         });
     });
+
+    //the Send contract modal calls this after sending, so the new badge shows without a page reload
+    window.reloadProjectTalent = function () {
+        $("#talent-assigned-projects-table").appTable({reload: true});
+    };
 </script>

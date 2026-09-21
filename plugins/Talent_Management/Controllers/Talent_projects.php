@@ -3,6 +3,7 @@
 namespace Talent_Management\Controllers;
 
 use App\Controllers\Security_Controller;
+use Talent_Management\Libraries\Talent_contract_service;
 use Talent_Management\Models\Talent_model;
 use Talent_Management\Models\Talent_project_model;
 use Talent_Management\Models\Talent_status_model;
@@ -131,15 +132,42 @@ class Talent_projects extends Security_Controller {
         $id = $this->request->getPost("id");
         $talent_status_id = $this->request->getPost("talent_status_id");
 
-        $data = array(
-            "sort" => $this->request->getPost("sort")
-        );
+        $casting_link = $this->Talent_project_model->get_one($id);
+        if (!$casting_link->id || $casting_link->deleted) {
+            echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
+            return;
+        }
+
+        $data = array();
+        if (is_numeric($this->request->getPost("sort"))) {
+            $data["sort"] = $this->request->getPost("sort");
+        }
 
         if ($talent_status_id) {
+            $status = $this->Talent_status_model->get_one($talent_status_id);
+            if (!$status->id || $status->deleted) {
+                echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
+                return;
+            }
+
+            //Confirmed is only for people who have signed. The gate is on ENTERING the stage: a card already there can still be
+            //reordered, and leaving it is free. The signature itself moves the card there without passing through here.
+            if ($status->system_key === "confirmed" && (int) $casting_link->talent_status_id !== (int) $status->id) {
+                $reason = (new Talent_contract_service())->get_confirm_block_reason($id);
+                if ($reason) {
+                    echo json_encode(array("success" => false, "message" => app_lang($reason)));
+                    return;
+                }
+            }
+
             $data["talent_status_id"] = $talent_status_id;
         }
 
-        $this->Talent_project_model->ci_save($data, $id);
+        if (!$data || $this->Talent_project_model->ci_save($data, $id)) {
+            echo json_encode(array("success" => true));
+        } else {
+            echo json_encode(array("success" => false, "message" => app_lang("error_occurred")));
+        }
     }
 
     function unassign() {
@@ -169,6 +197,7 @@ class Talent_projects extends Security_Controller {
             $result_data[] = array(
                 anchor(get_uri("projects/view/" . $data->project_id), $data->project_title),
                 js_anchor($data->talent_status_title, array("style" => "background-color: $data->talent_status_color", "class" => "badge")),
+                talent_contract_cell_html($data),
                 js_anchor("<i data-feather='x' class='icon-16'></i>", array("title" => app_lang("remove_from_project"), "class" => "delete", "data-id" => $data->talent_project_id, "data-action-url" => get_uri("talent_projects/unassign"), "data-action" => "delete-confirmation")),
             );
         }
