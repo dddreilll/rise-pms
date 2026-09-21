@@ -899,7 +899,9 @@ class Talent_contract_service {
 
         $now = get_current_utc_time();
         $actor = $this->_talent_actor($contracts[0], $request);
-        $consent_text = app_lang("talent_sign_consent");
+
+        //the consent wording on the page depends on whether the link holds one agreement or several; that same text goes on the record
+        $consent_text = app_lang(count($this->Talent_contract_model->get_for_bundle($bundle->id)) > 1 ? "talent_sign_consent_many" : "talent_sign_consent");
 
         //one signed PDF per agreement, built before any lock is taken
         $pdfs = array();
