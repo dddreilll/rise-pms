@@ -13,12 +13,15 @@
 
         <div class="tab-title clearfix no-border">
             <div class="title-button-group">
+                <?php echo modal_anchor(get_uri("talent_project_agreements/modal_form"), "<i data-feather='file-text' class='icon-16'></i> " . app_lang("talent_project_agreements"), array("class" => "btn btn-default", "title" => app_lang("talent_project_agreements"), "data-post-project_id" => $project_id)); ?>
                 <?php echo modal_anchor(get_uri("talent_projects/modal_assign_form/" . $project_id), "<i data-feather='plus-circle' class='icon-16'></i> " . app_lang("assign_talent"), array("class" => "btn btn-default", "title" => app_lang("assign_talent"))); ?>
             </div>
         </div>
     </ul>
 
     <div class="tab-content">
+        <div class="text-off pl15 pr15 pt10" id="project-talent-agreements-summary"><?php echo esc($agreements_summary); ?></div>
+
         <div role="tabpanel" class="tab-pane fade show active" id="project-talent-list-panel">
             <div class="table-responsive">
                 <table id="project-talent-table" class="display" cellspacing="0" width="100%"></table>

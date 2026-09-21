@@ -60,7 +60,22 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contract_templates` (
   `created_by` int(11) NOT NULL DEFAULT '0',
   `created_at` datetime DEFAULT NULL,
   `deleted` tinyint(1) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`id`)
+  `starter_key` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `starter_key` (`starter_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+-- the agreements a project requires of its talent before they can be confirmed (chosen from the templates). Configuration, not a
+-- record: rows are removed for real, and what was signed lives in talent_contracts. Uninstalling drops this table.
+CREATE TABLE IF NOT EXISTS `{PREFIX}talent_project_agreements` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `project_id` int(11) NOT NULL,
+  `template_id` int(11) NOT NULL,
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `created_by` int(11) NOT NULL DEFAULT '0',
+  `created_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `project_template` (`project_id`, `template_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token.
@@ -93,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}talent_contracts` (
   `deleted` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `talent_project_id` (`talent_project_id`),
+  KEY `talent_project_template` (`talent_project_id`, `template_id`),
   KEY `status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 

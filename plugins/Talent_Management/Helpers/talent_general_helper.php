@@ -100,6 +100,71 @@ if (!function_exists('talent_contract_default_template')) {
     }
 }
 
+//Starter agreements: the layout and merge fields only. Every "[...]" is a prompt for the wording the company (and its lawyer) writes;
+//none of the terms are supplied here. Keyed so each one is added once and never put back if an admin deletes it.
+if (!function_exists('talent_starter_templates')) {
+
+    function talent_starter_templates() {
+        $section = function ($heading, $prompt) {
+            return "<h4>" . $heading . "</h4><p>[" . $prompt . "]</p>";
+        };
+
+        $opening = function ($what) {
+            return "<h2 style=\"text-align: center;\">{CONTRACT_TITLE}</h2>"
+                . "<p>Date: {CONTRACT_DATE}</p>"
+                . "<p>This " . $what . " is between <strong>{COMPANY_NAME}</strong> (the \"Company\") and <strong>{TALENT_LEGAL_NAME}</strong> (the \"Talent\") in connection with the project <strong>{PROJECT_TITLE}</strong>.</p>";
+        };
+
+        $closing = "<p>{CONTRACT_NOTES}</p>"
+            . "<table style=\"width: 100%;\"><tbody><tr>"
+            . "<td style=\"width: 50%;\">Signed by: {SIGNER_NAME}<br />Date: {SIGNING_DATE}</td>"
+            . "<td style=\"width: 50%;\">{SIGNATURE}</td>"
+            . "</tr></tbody></table>";
+
+        return array(
+            "nda" => array(
+                "title" => "Non-Disclosure & Confidentiality Agreement",
+                "content" => $opening("agreement")
+                . $section("1. Confidential information", "Define what counts as confidential information.")
+                . $section("2. What the Talent must and must not do", "State how confidential information may be used, shared and protected.")
+                . $section("3. Exceptions", "List what is not treated as confidential.")
+                . $section("4. How long this lasts", "State the period the obligations continue for.")
+                . $section("5. Return or destruction of material", "State what happens to material when the project ends.")
+                . $section("6. Governing law", "State which law applies and where disputes are handled.")
+                . $closing,
+            ),
+            "conduct" => array(
+                "title" => "Code of Conduct & Anti-Harassment Policy",
+                "content" => $opening("policy")
+                . $section("1. Purpose and who it applies to", "Explain why the policy exists and who it covers.")
+                . $section("2. Expected conduct", "Describe the behaviour expected of everyone on set and around the production.")
+                . $section("3. Unacceptable conduct", "Describe harassment, discrimination and other conduct that is not allowed.")
+                . $section("4. Raising a concern", "Explain how and to whom a concern can be reported, and how it is handled.")
+                . $section("5. No retaliation", "State how people who raise concerns are protected.")
+                . $section("6. Consequences", "State what can happen when the policy is broken.")
+                . $section("7. Acknowledgement", "State what the Talent confirms by signing.")
+                . $closing,
+            ),
+        );
+    }
+}
+
+//one line saying what a project requires of its talent (plain text: callers escape it, or set it with .text())
+if (!function_exists('talent_project_agreements_summary')) {
+
+    function talent_project_agreements_summary($templates) {
+        if (!$templates) {
+            return app_lang("talent_project_agreements_none");
+        }
+
+        $titles = array_map(function ($template) {
+            return $template->title;
+        }, $templates);
+
+        return sprintf(app_lang("talent_project_agreements_summary"), implode(", ", $titles));
+    }
+}
+
 //how long an emailed signing link stays valid
 if (!function_exists('talent_contract_expiry_days')) {
 

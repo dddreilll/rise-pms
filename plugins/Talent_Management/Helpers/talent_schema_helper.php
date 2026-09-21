@@ -48,6 +48,13 @@ if (!function_exists('talent_column_exists')) {
     }
 }
 
+if (!function_exists('talent_index_exists')) {
+
+    function talent_index_exists($db, $table, $index) {
+        return $db->query("SHOW INDEX FROM `$table` WHERE Key_name=" . $db->escape($index))->getRow() ? true : false;
+    }
+}
+
 //frozen contract text and its audit trail live in these tables. utf8 like the rest of RISE, which is why
 //talent_encode_4byte_chars() exists: a 4-byte character would otherwise cut the stored text short.
 if (!function_exists('talent_contract_table_definitions')) {
@@ -63,7 +70,22 @@ if (!function_exists('talent_contract_table_definitions')) {
                 `created_by` int(11) NOT NULL DEFAULT '0',
                 `created_at` datetime DEFAULT NULL,
                 `deleted` tinyint(1) NOT NULL DEFAULT '0',
-                PRIMARY KEY (`id`)
+                `starter_key` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                KEY `starter_key` (`starter_key`)
+            ) $table_options;",
+
+            //the agreements a project requires of its talent before they can be confirmed (chosen from the templates). Configuration, not a
+            //record: rows are removed for real, and what was signed lives in talent_contracts.
+            "talent_project_agreements" => "CREATE TABLE IF NOT EXISTS `" . $db_prefix . "talent_project_agreements` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `project_id` int(11) NOT NULL,
+                `template_id` int(11) NOT NULL,
+                `sort` int(11) NOT NULL DEFAULT '0',
+                `created_by` int(11) NOT NULL DEFAULT '0',
+                `created_at` datetime DEFAULT NULL,
+                PRIMARY KEY (`id`),
+                UNIQUE KEY `project_template` (`project_id`, `template_id`)
             ) $table_options;",
 
             //one row per contract sent for a casting link; content is the frozen snapshot, token_hash is sha256 of the emailed token.
@@ -96,6 +118,7 @@ if (!function_exists('talent_contract_table_definitions')) {
                 `deleted` tinyint(1) NOT NULL DEFAULT '0',
                 PRIMARY KEY (`id`),
                 KEY `talent_project_id` (`talent_project_id`),
+                KEY `talent_project_template` (`talent_project_id`, `template_id`),
                 KEY `status` (`status`)
             ) $table_options;",
 
@@ -147,6 +170,19 @@ if (!function_exists('talent_ensure_schema_structure')) {
         if (!talent_column_exists($db, $contracts_table, "signed_via")) {
             $db->query("ALTER TABLE `$contracts_table` ADD `signed_via` varchar(10) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'online' AFTER `signed_at`");
             $changes[] = "Added signed_via to talent_contracts";
+        }
+
+        //a starter template is remembered by its key, so one the admin deleted is never put back
+        $templates_table = $db_prefix . "talent_contract_templates";
+        if (!talent_column_exists($db, $templates_table, "starter_key")) {
+            $db->query("ALTER TABLE `$templates_table` ADD `starter_key` varchar(50) COLLATE utf8_unicode_ci DEFAULT NULL, ADD KEY `starter_key` (`starter_key`)");
+            $changes[] = "Added starter_key to talent_contract_templates";
+        }
+
+        //agreements are tracked per casting link and template, so that pair is looked up a lot
+        if (!talent_index_exists($db, $contracts_table, "talent_project_template")) {
+            $db->query("ALTER TABLE `$contracts_table` ADD KEY `talent_project_template` (`talent_project_id`, `template_id`)");
+            $changes[] = "Added an index on talent_contracts (casting link, template)";
         }
 
         //core's notifications table takes plugin data in columns named plugin_*; this one says which contract a notification is about
@@ -243,6 +279,45 @@ if (!function_exists('talent_ensure_system_stages')) {
             } else if ($item["sort"] !== $position) {
                 $db->table($status_table)->where("id", $item["id"])->update(array("sort" => $position));
             }
+        }
+
+        return $changes;
+    }
+}
+
+//starter agreements, added once each: a key that already has a row (even a deleted one) is never inserted again, and nothing is overwritten
+if (!function_exists('talent_starter_templates_exist')) {
+
+    function talent_starter_templates_exist($db, $db_prefix) {
+        $keys = array_map(function ($key) use ($db) {
+            return $db->escape($key);
+        }, array_keys(talent_starter_templates()));
+
+        $row = $db->query("SELECT COUNT(DISTINCT starter_key) AS total FROM `" . $db_prefix . "talent_contract_templates` WHERE starter_key IN (" . implode(",", $keys) . ")")->getRow();
+        return $row && (int) $row->total === count($keys);
+    }
+}
+
+if (!function_exists('talent_ensure_starter_templates')) {
+
+    function talent_ensure_starter_templates($db, $db_prefix) {
+        $table = $db_prefix . "talent_contract_templates";
+        $changes = array();
+
+        foreach (talent_starter_templates() as $key => $starter) {
+            if ($db->query("SELECT id FROM `$table` WHERE starter_key=" . $db->escape($key) . " LIMIT 1")->getRow()) {
+                continue;
+            }
+
+            $db->table($table)->insert(array(
+                "title" => $starter["title"],
+                "content" => $starter["content"],
+                "created_by" => 0,
+                "created_at" => get_current_utc_time(),
+                "deleted" => 0,
+                "starter_key" => $key,
+            ));
+            $changes[] = "Added starter template " . $starter["title"];
         }
 
         return $changes;
@@ -348,6 +423,7 @@ if (!function_exists('talent_ensure_schema')) {
         try {
             $changes = talent_ensure_schema_structure($db, $db_prefix);
             $changes = array_merge($changes, talent_ensure_system_stages($db, $db_prefix));
+            $changes = array_merge($changes, talent_ensure_starter_templates($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_email_template($db, $db_prefix));
             $changes = array_merge($changes, talent_ensure_notification_settings($db, $db_prefix));
         } finally {
@@ -377,6 +453,9 @@ if (!function_exists('talent_ensure_schema_once')) {
                     || !talent_table_exists($db, $db_prefix . "talent_contract_events")
                     || !talent_column_exists($db, $db_prefix . "talent_contracts", "signature_data")
                     || !talent_column_exists($db, $db_prefix . "talent_contracts", "signed_via")
+                    || !talent_table_exists($db, $db_prefix . "talent_project_agreements")
+                    || !talent_column_exists($db, $db_prefix . "talent_contract_templates", "starter_key")
+                    || !talent_starter_templates_exist($db, $db_prefix)
                     || !talent_column_exists($db, $db_prefix . "notifications", "plugin_talent_contract_id")
                     || !talent_email_template_exists($db, $db_prefix)
                     || !talent_notification_settings_exist($db, $db_prefix)) {

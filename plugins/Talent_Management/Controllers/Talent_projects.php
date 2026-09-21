@@ -5,6 +5,7 @@ namespace Talent_Management\Controllers;
 use App\Controllers\Security_Controller;
 use Talent_Management\Libraries\Talent_contract_service;
 use Talent_Management\Models\Talent_model;
+use Talent_Management\Models\Talent_project_agreement_model;
 use Talent_Management\Models\Talent_project_model;
 use Talent_Management\Models\Talent_status_model;
 
@@ -36,6 +37,7 @@ class Talent_projects extends Security_Controller {
         validate_numeric_value($project_id);
 
         $view_data["project_id"] = $project_id;
+        $view_data["agreements_summary"] = talent_project_agreements_summary((new Talent_project_agreement_model())->get_templates_for_project($project_id));
         return $this->template->view('Talent_Management\Views\talent_projects\project_tab', $view_data);
     }
 

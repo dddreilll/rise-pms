@@ -86,6 +86,9 @@ register_installation_hook("Talent_Management", function ($item_purchase_code) {
     //nothing to do on a fresh pipeline; repairs stages left behind by an earlier install
     talent_ensure_system_stages($db, $db_prefix);
 
+    //the two starter agreements (Non-Disclosure & Confidentiality, Code of Conduct & Anti-Harassment), each added once
+    talent_ensure_starter_templates($db, $db_prefix);
+
     //the "Contract request" mail, editable under Settings > Email templates
     talent_ensure_email_template($db, $db_prefix);
 
@@ -117,6 +120,7 @@ register_uninstallation_hook("Talent_Management", function () {
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent`");
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_status`");
     $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_contract_templates`");
+    $db->query("DROP TABLE IF EXISTS `" . $db_prefix . "talent_project_agreements`");
 
     //talent_contracts and talent_contract_events are kept on purpose: they hold the signed legal record (frozen contract text,
     //signer, timestamps, IP) and shouldn't disappear because a plugin was removed. Drop them by hand if that's really wanted.
