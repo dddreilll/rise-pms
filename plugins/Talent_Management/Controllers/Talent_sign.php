@@ -65,19 +65,6 @@ class Talent_sign extends Security_Controller {
         ));
     }
 
-    function decline() {
-        $this->_private_headers();
-
-        $this->validate_submitted_data(array(
-            "bundle_id" => "required|numeric",
-            "contract_id" => "required|numeric"
-        ));
-
-        echo json_encode($this->Talent_contract_service->decline(
-                        $this->request->getPost("bundle_id"), (string) $this->request->getPost("token"), $this->request->getPost("contract_id"), $this->request->getPost("reason"), $this->_request()
-        ));
-    }
-
     function download($bundle_id = 0, $token = "", $contract_id = 0) {
         $this->_private_headers();
 

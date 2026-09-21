@@ -65,7 +65,6 @@ $routes->post('talent_project_agreements/save', 'Talent_project_agreements::save
 //the talent's signing page: public, reached from the emailed link with no login (the 40-character token in the URL is the credential)
 $routes->get('talent_sign/(:num)/(:alphanum)', 'Talent_sign::index/$1/$2', ['namespace' => $namespace]);
 $routes->post('talent_sign/sign', 'Talent_sign::sign', ['namespace' => $namespace]);
-$routes->post('talent_sign/decline', 'Talent_sign::decline', ['namespace' => $namespace]);
 $routes->get('talent_sign/download/(:num)/(:alphanum)/(:num)', 'Talent_sign::download/$1/$2/$3', ['namespace' => $namespace]);
 
 //project <-> talent linkage (list view)

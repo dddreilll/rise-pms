@@ -82,17 +82,7 @@ $consent_key = $multi ? "talent_sign_consent_many" : "talent_sign_consent";
                                         <?php echo anchor(get_uri("talent_sign/download/" . (int) $bundle->id . "/" . $token . "/" . (int) $contract->id), "<i data-feather='download' class='icon-16'></i> " . app_lang("talent_sign_download"), array("class" => "btn btn-default")); ?>
                                     </div>
                                 </div>
-                            <?php } else if ($status === "sent") { ?>
-                                <div class="p15 b-t">
-                                    <a href="javascript:;" class="talent-decline-toggle" data-contract="<?php echo (int) $contract->id; ?>"><?php echo app_lang($multi ? "talent_sign_decline_this" : "talent_sign_decline_link"); ?></a>
-
-                                    <div class="hide mt15" id="talent-decline-panel-<?php echo (int) $contract->id; ?>">
-                                        <p><?php echo app_lang("talent_sign_decline_intro"); ?></p>
-                                        <textarea id="talent-decline-reason-<?php echo (int) $contract->id; ?>" class="form-control mb10" rows="3" maxlength="1000" placeholder="<?php echo app_lang("talent_sign_decline_reason"); ?>"></textarea>
-                                        <button type="button" class="btn btn-danger talent-decline-submit" data-contract="<?php echo (int) $contract->id; ?>"><?php echo app_lang("talent_sign_decline_submit"); ?></button>
-                                    </div>
-                                </div>
-                            <?php } else { ?>
+                            <?php } else if ($status !== "sent") { ?>
                                 <div class="p15 b-t">
                                     <div class="text-off"><i data-feather="info" class="icon-16"></i> <?php echo app_lang("talent_sign_state_" . $status); ?></div>
                                 </div>
@@ -260,36 +250,6 @@ $consent_key = $multi ? "talent_sign_consent_many" : "talent_sign_consent";
                                 location.reload();
                             }, 900);
                         }
-                    });
-
-                    $(".talent-decline-toggle").on("click", function () {
-                        $("#talent-decline-panel-" + $(this).attr("data-contract")).toggleClass("hide");
-                    });
-
-                    //declining one agreement leaves the others in the link as they are
-                    $(".talent-decline-submit").on("click", function () {
-                        var $button = $(this).attr("disabled", "disabled");
-                        var contractId = $button.attr("data-contract");
-                        $.ajax({
-                            url: "<?php echo get_uri("talent_sign/decline"); ?>",
-                            type: "POST",
-                            dataType: "json",
-                            data: {bundle_id: "<?php echo (int) $bundle->id; ?>", contract_id: contractId, token: "<?php echo esc($token); ?>", reason: $("#talent-decline-reason-" + contractId).val()},
-                            success: function (result) {
-                                if (result.success) {
-                                    appAlert.success(result.message, {duration: 8000});
-                                    setTimeout(function () {
-                                        location.reload();
-                                    }, 900);
-                                } else {
-                                    appAlert.error(result.message);
-                                    $button.removeAttr("disabled");
-                                }
-                            },
-                            error: function () {
-                                $button.removeAttr("disabled");
-                            }
-                        });
                     });
 <?php } ?>
             });

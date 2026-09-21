@@ -996,7 +996,9 @@ class Talent_contract_service {
         );
     }
 
-    //The talent turns one agreement down; the others in the link stay signable. The card is left alone; staff are told and can send it again.
+    //Records that one agreement was turned down; the others in the link stay signable. The card is left alone; staff are told and can send it
+    //again. The talent's own page no longer offers this (declining is out of scope there): the method and the declined state stay for the
+    //staff side and for records that were declined earlier.
     function decline($bundle_id, $token, $contract_id, $reason, $request) {
         $bundle = $this->find_bundle($bundle_id, $token);
         $contract = $bundle ? $this->_contract_of_bundle($bundle, $contract_id) : null;
