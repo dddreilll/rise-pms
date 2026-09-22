@@ -519,6 +519,83 @@ if (!function_exists('talent_ensure_schema')) {
     }
 }
 
+//Encrypts the signed PDFs that were stored before encryption existed (plain base64). It runs from the Updates button only, not from the
+//per-request guard below, because finding them means reading every stored PDF. One row at a time, and each is decrypted again and compared
+//before it replaces the old value; it is safe to run twice, and it stops after $seconds so a big backlog is finished by clicking Updates
+//again. Returns the lines the Updates window shows.
+if (!function_exists('talent_encrypt_legacy_pdfs')) {
+
+    function talent_encrypt_legacy_pdfs($db, $db_prefix, $seconds = 20) {
+        $table = $db_prefix . "talent_contracts";
+        $changes = array();
+
+        if (!talent_column_exists($db, $table, "signed_pdf_data")) {
+            return $changes;
+        }
+
+        $lock = $db->query("SELECT GET_LOCK('talent_management_pdf_encryption', 0) AS acquired")->getRow();
+        if (!$lock || (int) $lock->acquired !== 1) {
+            return array("Signed PDFs are being encrypted by another update. Click Updates again in a moment.");
+        }
+
+        try {
+            $ids = $db->query("SELECT id FROM `$table` WHERE signed_pdf_data<>'' AND signed_pdf_data NOT LIKE 'enc1:%' ORDER BY id")->getResult();
+            $deadline = microtime(true) + $seconds;
+            $encrypted = 0;
+            $unreadable = array();
+            $left = 0;
+
+            foreach ($ids as $position => $row) {
+                if (microtime(true) > $deadline) {
+                    $left = count($ids) - $position;
+                    break;
+                }
+
+                $stored = (string) $db->query("SELECT signed_pdf_data FROM `$table` WHERE id=" . (int) $row->id)->getRow()->signed_pdf_data;
+                if (talent_is_encrypted($stored)) {
+                    continue;
+                }
+
+                $plain = base64_decode($stored, true);
+                if ($plain === false || $plain === "") {
+                    $unreadable[] = (int) $row->id;
+                    continue;
+                }
+
+                try {
+                    $cipher = talent_encrypt($plain);
+                    if (talent_decrypt($cipher) !== $plain) {
+                        throw new \RuntimeException("the encrypted copy did not decrypt to the same bytes");
+                    }
+                } catch (\Throwable $ex) {
+                    //no key, or no OpenSSL: it would fail for every row, so stop here and say why
+                    log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+                    $changes[] = "Could not encrypt the signed PDFs: " . $ex->getMessage();
+                    return $changes;
+                }
+
+                //the NOT LIKE keeps a row that was encrypted by someone else in the meantime from being encrypted twice
+                $db->query("UPDATE `$table` SET signed_pdf_data=" . $db->escape($cipher) . " WHERE id=" . (int) $row->id . " AND signed_pdf_data NOT LIKE 'enc1:%'");
+                $encrypted++;
+            }
+
+            if ($encrypted) {
+                $changes[] = "Encrypted " . $encrypted . " signed PDF" . ($encrypted === 1 ? "" : "s");
+            }
+            if ($unreadable) {
+                $changes[] = "Left " . count($unreadable) . " stored PDF" . (count($unreadable) === 1 ? "" : "s") . " alone because they could not be read (contract ids " . implode(", ", $unreadable) . ")";
+            }
+            if ($left) {
+                $changes[] = $left . " more signed PDF" . ($left === 1 ? "" : "s") . " to encrypt: click Updates again";
+            }
+        } finally {
+            $db->query("SELECT RELEASE_LOCK('talent_management_pdf_encryption')");
+        }
+
+        return $changes;
+    }
+}
+
 //self-healing guard for the controllers that need the new schema: a redeploy without clicking "Updates" fixes itself on first use
 if (!function_exists('talent_ensure_schema_once')) {
 

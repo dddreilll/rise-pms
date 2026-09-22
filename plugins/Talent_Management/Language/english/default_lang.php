@@ -206,6 +206,7 @@ $lang["notification_talent_contract_signed"] = "signed a contract";
 $lang["notification_talent_contract_declined"] = "declined a contract";
 $lang["talent_update_done"] = "Talent Management is updated";
 $lang["talent_update_up_to_date"] = "Talent Management is already up to date";
+$lang["talent_update_key_warning"] = "RISE's encryption key is still the placeholder (enter_encryption_key). Signed agreements and the details people type into them are encrypted with this key, so set a real ENCRYPTION_KEY before using real data, and do not change it afterwards: anything encrypted with the old key can no longer be read.";
 $lang["talent_update_failed"] = "The update couldn't be completed";
 $lang["legal_name"] = "Legal Name";
 $lang["preferred_name"] = "Preferred Name";

@@ -466,3 +466,90 @@ if (!function_exists('talent_contract_notification_description')) {
                 . "<div>" . app_lang("talent") . ": " . esc($who) . "</div>";
     }
 }
+
+//---------------------------------------------------------------- encryption of what is stored
+//Signed PDFs (and, from the next part on, typed answers) are stored encrypted with RISE's own encrypter and key: AES-256 with an HMAC, the
+//same one core uses for its encoded ids. A stored value is "enc1:" + base64 of the cipher text; the prefix tells it apart from a PDF that
+//was stored before this existed (plain base64), so old rows keep working until the Updates button encrypts them.
+
+//the encrypter, made once per request; $reset makes the next call read the key again (used when the key is changed under a running test)
+if (!function_exists('talent_encrypter')) {
+
+    function talent_encrypter($reset = false) {
+        static $encrypter = null;
+
+        if ($reset) {
+            $encrypter = null;
+            return null;
+        }
+        if ($encrypter === null) {
+            $encrypter = get_encrypter();
+        }
+        return $encrypter;
+    }
+}
+
+if (!function_exists('talent_is_encrypted')) {
+
+    function talent_is_encrypted($stored) {
+        return strncmp((string) $stored, "enc1:", 5) === 0;
+    }
+}
+
+//Encrypts a string. It throws when it can't (no key, no OpenSSL), so a caller can never store plain text by mistake.
+if (!function_exists('talent_encrypt')) {
+
+    function talent_encrypt($plain) {
+        return "enc1:" . base64_encode(talent_encrypter()->encrypt((string) $plain));
+    }
+}
+
+//The plain string, or null when the value isn't in the encrypted format, is damaged, or was made with another key. Never throws; the
+//reason goes to the log.
+if (!function_exists('talent_decrypt')) {
+
+    function talent_decrypt($stored) {
+        if (!talent_is_encrypted($stored)) {
+            return null;
+        }
+
+        $cipher = base64_decode(substr((string) $stored, 5), true);
+        if ($cipher === false || $cipher === "") {
+            return null;
+        }
+
+        try {
+            return talent_encrypter()->decrypt($cipher);
+        } catch (\Throwable $ex) {
+            log_message('error', 'A stored value could not be decrypted (damaged, or the encryption key was changed): ' . $ex->getMessage());
+            return null;
+        }
+    }
+}
+
+//the bytes of a stored signed PDF: decrypted, or, for one stored before encryption, decoded from plain base64. Null when unreadable.
+if (!function_exists('talent_read_pdf')) {
+
+    function talent_read_pdf($stored) {
+        $stored = (string) $stored;
+        if ($stored === "") {
+            return null;
+        }
+        if (talent_is_encrypted($stored)) {
+            return talent_decrypt($stored);
+        }
+
+        $bytes = base64_decode($stored, true);
+        return $bytes === false ? null : $bytes;
+    }
+}
+
+//RISE ships with a placeholder key. Everything here is encrypted with whatever key is set, so the placeholder is fine for trying the
+//plugin out but not for real data, and changing the key later makes what was stored unreadable.
+if (!function_exists('talent_encryption_key_is_placeholder')) {
+
+    function talent_encryption_key_is_placeholder() {
+        $key = trim((string) config('App')->encryption_key);
+        return $key === "" || $key === "enter_encryption_key";
+    }
+}

@@ -99,10 +99,18 @@ register_installation_hook("Talent_Management", function ($item_purchase_code) {
 //RISE runs this when an admin clicks "Updates" on the plugin and shows the output in a modal. It brings an existing install
 //(1.1.0 and older) up to the current schema; every step is idempotent, so clicking twice is harmless.
 register_update_hook("Talent_Management", function () {
-    $view_data = array("changes" => array(), "error" => "");
+    $view_data = array("changes" => array(), "error" => "", "warnings" => array());
 
     try {
         $view_data["changes"] = talent_ensure_schema();
+
+        //signed PDFs are stored encrypted from now on; the ones stored before that are encrypted here, once
+        $view_data["changes"] = array_merge($view_data["changes"], talent_encrypt_legacy_pdfs(db_connect('default'), get_db_prefix()));
+
+        //everything encrypted here depends on RISE's key, so a placeholder key is worth saying out loud
+        if (talent_encryption_key_is_placeholder()) {
+            $view_data["warnings"][] = app_lang("talent_update_key_warning");
+        }
     } catch (\Throwable $ex) {
         log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
         $view_data["error"] = $ex->getMessage();

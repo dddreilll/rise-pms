@@ -762,6 +762,14 @@ class Talent_contract_service {
         $pdf_hash = hash("sha256", $pdf);
         $now = get_current_utc_time();
 
+        //stored encrypted like every signed PDF; the hash stays that of the plain bytes, so it can be checked after decrypting
+        try {
+            $stored_pdf = talent_encrypt($pdf);
+        } catch (\Throwable $ex) {
+            log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
+            return $this->_fail("error_occurred");
+        }
+
         $db = db_connect('default');
         $db->transBegin();
 
@@ -797,7 +805,7 @@ class Talent_contract_service {
                 //noon UTC keeps the date the same in every timezone; only the day is known
                 "signed_at" => $signed_on . " 12:00:00",
                 "signed_via" => "paper",
-                "signed_pdf_data" => base64_encode($pdf),
+                "signed_pdf_data" => $stored_pdf,
                 "pdf_hash" => $pdf_hash,
                 "created_at" => $now,
             );
@@ -1000,12 +1008,12 @@ class Talent_contract_service {
         //the consent wording on the page depends on whether the link holds one agreement or several; that same text goes on the record
         $consent_text = app_lang(count($this->Talent_contract_model->get_for_bundle($bundle->id)) > 1 ? "talent_sign_consent_many" : "talent_sign_consent");
 
-        //one signed PDF per agreement, built before any lock is taken
+        //one signed PDF per agreement, built (and encrypted for storage) before any lock is taken
         $pdfs = array();
         try {
             foreach ($contracts as $contract) {
                 $pdf = $this->_build_pdf($contract, array("name" => $this->_signer_name($contract), "email" => $email, "signed_at" => $now, "ip" => $actor["ip"], "consent" => $consent_text), $png);
-                $pdfs[(int) $contract->id] = array("bytes" => $pdf, "hash" => hash("sha256", $pdf));
+                $pdfs[(int) $contract->id] = array("stored" => talent_encrypt($pdf), "hash" => hash("sha256", $pdf));
             }
         } catch (\Throwable $ex) {
             log_message('error', '[ERROR] {exception}', ['exception' => $ex]);
@@ -1047,7 +1055,7 @@ class Talent_contract_service {
                     "signed_at" => $now,
                     "signed_via" => "online",
                     "signature_data" => base64_encode($png),
-                    "signed_pdf_data" => base64_encode($pdfs[(int) $contract->id]["bytes"]),
+                    "signed_pdf_data" => $pdfs[(int) $contract->id]["stored"],
                     "pdf_hash" => $pdfs[(int) $contract->id]["hash"],
                     "signer_ip" => $actor["ip"],
                     "signer_user_agent" => $actor["user_agent"],
@@ -1168,16 +1176,17 @@ class Talent_contract_service {
         return $pdf;
     }
 
-    //the stored signed PDF, only if the contract is signed and the bytes still match the hash recorded at signing. Staff may also
+    //the stored signed PDF, only if the contract is signed and the bytes (once decrypted) still match the hash recorded at signing. Staff may also
     //fetch the copy of a contract that was signed and withdrawn afterwards; the talent's link never serves it.
     private function _stored_pdf($contract, $include_withdrawn = false) {
         if (!($contract->status === "signed" || ($include_withdrawn && $contract->status === "voided" && $contract->signed_at))) {
             return null;
         }
 
-        $bytes = base64_decode($this->Talent_contract_model->get_signed_pdf_data($contract->id), true);
+        //stored encrypted (or, from before that, as plain base64); a copy that can't be decrypted is treated like one that doesn't match
+        $bytes = talent_read_pdf($this->Talent_contract_model->get_signed_pdf_data($contract->id));
         if (!$bytes || !hash_equals((string) $contract->pdf_hash, hash("sha256", $bytes))) {
-            log_message('error', 'The signed PDF of contract ' . (int) $contract->id . ' is missing or no longer matches its recorded hash.');
+            log_message('error', 'The signed PDF of contract ' . (int) $contract->id . ' is missing, can not be decrypted, or no longer matches its recorded hash.');
             return null;
         }
 

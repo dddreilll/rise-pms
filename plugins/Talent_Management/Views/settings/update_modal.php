@@ -1,3 +1,4 @@
+<?php $warnings = isset($warnings) ? $warnings : array(); ?>
 <div class="modal-body clearfix">
     <div class="container-fluid">
         <?php if ($error) { ?>
@@ -12,6 +13,10 @@
             </ul>
         <?php } else { ?>
             <div class="text-success"><i data-feather="check-circle" class="icon-16"></i> <?php echo app_lang("talent_update_up_to_date"); ?></div>
+        <?php } ?>
+
+        <?php foreach ($warnings as $warning) { ?>
+            <div class="alert alert-warning mt15 mb0"><i data-feather="alert-triangle" class="icon-16"></i> <?php echo esc($warning); ?></div>
         <?php } ?>
     </div>
 </div>
