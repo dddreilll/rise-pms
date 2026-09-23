@@ -1,2 +1,17 @@
 writable/logs/*.log
 app/Config/activated_plugins.json
+
+# User-uploaded content under files/.
+# The index.html guards stay tracked so the folders survive a fresh clone,
+# and files/system/ keeps RISE's stock assets (default logos, import samples).
+files/general/*
+!files/general/index.html
+files/profile_images/*
+!files/profile_images/index.html
+files/project_files/*
+!files/project_files/index.html
+files/temp/*
+!files/temp/index.html
+files/timeline_files/*
+!files/timeline_files/index.html
+files/system/_file*
